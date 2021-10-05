@@ -3,7 +3,7 @@
 
 # Import stuff.
 
-# In[9]:
+# In[1]:
 
 
 import math
@@ -22,10 +22,10 @@ from ovito.plugins.StdModPython import SelectTypeModifier, DeleteSelectedModifie
 
 # Load structure.
 
-# In[10]:
+# In[ ]:
 
 
-pipeline = import_file("../LSF_supercell_min.lmp")
+pipeline = import_file("LSF_supercell_md3.lmp")
 def assign_particle_types(frame, data):
     atom_types = data.particles_.particle_types_
     # atom_types.type_by_id_(1).radius = 1.35   # Assing r to atom 1. Needed for polydisperse Voronio tess.
@@ -36,7 +36,7 @@ pipeline.modifiers.append(assign_particle_types)
 
 # Load both lists.
 
-# In[11]:
+# In[ ]:
 
 
 df_gb = pd.read_csv('IDs_gb.csv')
@@ -48,15 +48,15 @@ list_bulk = df_bulk['Particle Identifier'].values
 
 # Select cations by ID.
 
-# In[12]:
+# In[ ]:
 
 
 def modify(frame, data):
     #Specify the IDs of all atoms that are to remain here
     target_ids = list_gb #  list_bulk for bulk ions
     ids = data.particles["Particle Identifier"]
-    list_ids = np.in1d(ids, target_ids, assume_unique=True, invert=False)
-    selection = data.particles_.create_property("Selection", data=list_ids)
+    list_ids = np.in1d(ids, target_ids, assume_unique = True, invert = False)
+    selection = data.particles_.create_property("Selection", data = list_ids)
 
 
 pipeline.modifiers.append(modify)
@@ -73,5 +73,5 @@ data = pipeline.compute()
 export_file(pipeline, "gb.lmp", "lammps/data", atom_style="charge")
            # columns=["Particle Identifier", "Position.X", "Position.Y", "Position.Z", "Particle Type"])
 
-
+get_ipython().system('jupyter nbconvert --to script compare_regions.ipynb')
 

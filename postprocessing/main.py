@@ -40,7 +40,7 @@ pipeline.modifiers.append(SelectTypeModifier(
 ))
 pipeline.modifiers.append(DeleteSelectedModifier())
 
-# Set up the Voronoi analysis modifier.
+# Set up the Voronoi analysis.py modifier.
 voro = VoronoiAnalysisModifier(
     compute_indices=True,
     use_radii=False,

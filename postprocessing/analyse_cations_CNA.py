@@ -47,7 +47,7 @@ pipeline.modifiers.append(SelectTypeModifier(
 
 pipeline.modifiers.append(DeleteSelectedModifier())
 
-# Set up the Voronoi analysis modifier.
+# Set up the Voronoi analysis.py modifier.
 cna = CommonNeighborAnalysisModifier(
     mode=CommonNeighborAnalysisModifier.Mode.IntervalCutoff
 )

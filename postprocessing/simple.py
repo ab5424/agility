@@ -5,10 +5,10 @@
 # Purpose: mimic operation of examples/COUPLE/simple/simple.cpp via Python
 
 # Serial syntax: simple.py in.lammps
-#                in.lammps = LAMMPS input script
+#                in.lammps = LAMMPS inputs.py script
 
 # Parallel syntax: mpirun -np 4 simple.py in.lammps
-#                  in.lammps = LAMMPS input script
+#                  in.lammps = LAMMPS inputs.py script
 # also need to uncomment either Pypar or mpi4py sections below
 
 from __future__ import print_function
