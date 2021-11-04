@@ -15,12 +15,7 @@ from scipy.constants import codata
 
 class GBStructure:
     """
-    This class The :py:class:`polypy.read.Trajectory` class evaluates the positions
-    of all atoms in the simulation.
-    Args:
-        backend (:py:class:`str`): List of unique atom names in trajectory.
-        filename (:py:attr:`str`): Datatype of the original dataset
-        e.g. DL_POLY HISTORY or CONFIG.
+    This is the fundamental class of a grain boundary object.
     """
 
     def __init__(self, backend, filename):
@@ -28,7 +23,7 @@ class GBStructure:
         self.filename = filename
         self.data = None
 
-        if self.backend not in ['ovito', 'pymatgen', 'babel', 'pyiron', 'ase']:
+        if self.backend not in ['ovito', 'pymatgen', 'babel', 'pyiron', 'ase', 'lammps']:
             # Put error here
             pass
 
@@ -36,15 +31,17 @@ class GBStructure:
             from ovito.io import import_file
             self.pipeline = import_file(str(filename))
 
+        if self.backend == 'pymatgen':
+            from pymatgen.core import Structure
+            self.data.structure = Structure.from_file(filename)
+
     def delete_particles(self, particle_type):
         """
         Deletes a specific type of particles from a structure. This can be particularly useful if there is a mobile type
         in the structure. Note that for ovito structures you need to make sure that type information is included.
         Args:
-            particle_type (:py:class:`str`): Timestep of desired CONFIG.
+            particle_type (:py:class:`str`):
         Returns:
-            config_trajectory (:py:class:`polypy.read.Trajectory`):
-            Trajectory object for desired CONFIG.
         """
         if self.backend == "ovito":
             from ovito.plugins.StdModPython import SelectTypeModifier, DeleteSelectedModifier
@@ -54,7 +51,7 @@ class GBStructure:
 
             self.pipeline.modifiers.append(assign_particle_types)
 
-            # Select oxygen ions and delete them
+            # Select atoms and delete them
             self.pipeline.modifiers.append(SelectTypeModifier(
                 operate_on="particles",
                 property="Particle Type",
@@ -64,18 +61,19 @@ class GBStructure:
             self.pipeline.modifiers.append(DeleteSelectedModifier())
 
         elif self.backend == 'pymatgen':
-            pass
+            self.data.structure.remove_species(particle_type)
+
         elif self.backend == 'babel':
             pass
 
-    def select_particles(self, list_ids, invert=False, delete=True, expand=True, expand_cutoff=3.2, neighbors=None,
-                         iterations=1):
+    def select_particles(self, list_ids, invert=True, delete=True, expand=False, expand_cutoff=3.2,
+                         nearest_neighbors=None, iterations=1):
         """
         Selects particles by ID
         Args:
+            nearest_neighbors:
             delete:
             iterations:
-            neighbors:
             expand_cutoff:
             expand:
             invert:
@@ -95,10 +93,10 @@ class GBStructure:
 
             if expand:
                 from ovito.plugins.ParticlesPython import ExpandSelectionModifier
-                if neighbors:
+                if nearest_neighbors:
                     self.pipeline.modifiers.append(
                         ExpandSelectionModifier(mode=ExpandSelectionModifier.ExpansionMode.Nearest,
-                                                num_neighbors=neighbors,
+                                                num_neighbors=nearest_neighbors,
                                                 iterations=iterations))
                 else:
                     self.pipeline.modifiers.append(
@@ -115,6 +113,7 @@ class GBStructure:
         if self.backend == 'ovito':
             from ovito.plugins.StdModPython import InvertSelectionModifier
             self.pipeline.modifiers.append(InvertSelectionModifier())
+
         if self.backend == 'pymatgen':
             # Todo: Look which ids are in the list and invert by self.structure
             pass
@@ -172,7 +171,7 @@ class GBStructure:
         if self.backend == 'ovito':
             self.data = self.pipeline.compute()
 
-    def get_bulk_ions(self):
+    def get_gb_atoms(self):
 
         if self.backend == 'ovito':
             if 'Structure Type' in self.data.particles.keys():
@@ -182,14 +181,49 @@ class GBStructure:
                 df_gb = df[df['Structure Type'] == 0]
                 return list(df_gb['Particle Identifier'])
 
+    def get_bulk_atoms(self):
+
+        if self.backend == 'ovito':
+            if 'Structure Type' in self.data.particles.keys():
+                df = pd.DataFrame(list(zip(self.data.particles['Particle Identifier'],
+                                           self.data.particles['Structure Type'], )),
+                                  columns=['Particle Identifier', 'Structure Type'])
+                df_gb = df[df['Structure Type'] != 0]
+                return list(df_gb['Particle Identifier'])
+
+    def get_type(self, atom_type):
+
+        if self.backend == 'ovito':
+            # Currently doesn't work!
+            # def assign_particle_types(frame, data):
+            #     atom_types = data.particles_.particle_types_
+            #
+            # self.pipeline.modifiers.append(assign_particle_types)
+            # self.set_analysis()
+            df = pd.DataFrame(list(zip(self.data.particles['Particle Identifier'],
+                                       self.data.particles['Particle Type'], )),
+                              columns=['Particle Identifier', 'Particle Type'])
+            df_atom = df[df['Particle Type'].eq(atom_type)]
+            return list(df_atom['Particle Identifier'])
+
     # Todo: Verkippungswinkel
     # Todo: Grain Index
+
+    def get_fraction(self, numerator, denominator):
+
+        if self.backend == 'ovito':
+            num = sum([len(self.get_type(i)) for i in numerator])
+            den = sum([len(self.get_type(i)) for i in denominator])
+            return num/den
+
 
 
 class GBStructureTimeseries(GBStructure):
     """
     This is a class containing multiple snapshots from a time series.
     """
+    # Todo: get diffusion data
+    # Todo: differentiate between along/across GB
 
     def remove_timesteps(self, timesteps_to_exclude):
         """

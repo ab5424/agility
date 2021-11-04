@@ -49,3 +49,10 @@ def plot_face_order(data=None):
 
     hist_plot = sns.displot(df, x="Max Face Order", discrete=True)
     return hist_plot.fig
+
+
+# TODO: Visualize Misorientation distribution function
+# https://www.osti.gov/pages/servlets/purl/1657149
+# https://mtex-toolbox.github.io/index.html
+
+# TODO: get RDFs https://github.com/by256/rdfpy https://rdfpy.readthedocs.io/en/latest/introduction_and_examples.html#example-rdf-of-a-crystal-structure
