@@ -54,10 +54,11 @@ class GBStructure:
         Returns:
         """
         if self.backend == "ovito":
-            from ovito.plugins.StdModPython import (
-                SelectTypeModifier,
-                DeleteSelectedModifier,
-            )
+            # from ovito.plugins.StdModPython import (
+            #     SelectTypeModifier,
+            #     DeleteSelectedModifier,
+            # )
+            from ovito.modifiers import SelectTypeModifier, DeleteSelectedModifier
 
             def assign_particle_types(frame, data):
                 atom_types = data.particles_.particle_types_
