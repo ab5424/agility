@@ -317,7 +317,7 @@ class GBStructure:
 
         if self.backend == "ovito":
             if "Structure Type" in self.data.particles.keys():
-                df = pd.DataFrame(
+                df_temp = pd.DataFrame(
                     list(
                         zip(
                             self.data.particles["Particle Identifier"],
@@ -326,14 +326,14 @@ class GBStructure:
                     ),
                     columns=["Particle Identifier", "Structure Type"],
                 )
-                df_gb = df[df["Structure Type"] == 0]
+                df_gb = df_temp[df_temp["Structure Type"] == 0]
                 return list(df_gb["Particle Identifier"])
 
     def get_bulk_atoms(self):
 
         if self.backend == "ovito":
             if "Structure Type" in self.data.particles.keys():
-                df = pd.DataFrame(
+                df_temp = pd.DataFrame(
                     list(
                         zip(
                             self.data.particles["Particle Identifier"],
@@ -342,7 +342,7 @@ class GBStructure:
                     ),
                     columns=["Particle Identifier", "Structure Type"],
                 )
-                df_gb = df[df["Structure Type"] != 0]
+                df_gb = df_temp[df_temp["Structure Type"] != 0]
                 return list(df_gb["Particle Identifier"])
 
     def get_type(self, atom_type):
