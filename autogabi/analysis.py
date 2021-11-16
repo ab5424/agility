@@ -168,17 +168,17 @@ class GBStructure:
             from ovito.plugins.ParticlesPython import CommonNeighborAnalysisModifier
 
             if mode == "IntervalCutoff":
-                m = CommonNeighborAnalysisModifier.Mode.IntervalCutoff
+                cna_mode = CommonNeighborAnalysisModifier.Mode.IntervalCutoff
             elif mode == "AdaptiveCutoff":
-                m = CommonNeighborAnalysisModifier.Mode.AdaptiveCutoff
+                cna_mode = CommonNeighborAnalysisModifier.Mode.AdaptiveCutoff
             elif mode == "FixedCutoff":
-                m = CommonNeighborAnalysisModifier.Mode.FixedCutoff
+                cna_mode = CommonNeighborAnalysisModifier.Mode.FixedCutoff
             elif mode == "BondBased":
-                m = CommonNeighborAnalysisModifier.Mode.BondBased
+                cna_mode = CommonNeighborAnalysisModifier.Mode.BondBased
             else:
                 print("Selected CNA Mode unknown.")
                 sys.exit(1)
-            cna = CommonNeighborAnalysisModifier(mode=m, cutoff=cutoff)
+            cna = CommonNeighborAnalysisModifier(mode=cna_mode, cutoff=cutoff)
             self.pipeline.modifiers.append(cna)
 
     def perform_voroni_analysis(self):
