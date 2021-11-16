@@ -21,7 +21,7 @@ if __name__ == "__main__":
         author='Alexander Bonkowski',
         author_email='alexander.bonkowski@rwth-aachen.de',
         license='MIT license',
-        packages=['polypy'],
+        packages=['autogabi'],
         zip_safe=False,
         install_requires=['scipy', 'numpy', 'pandas'],
         classifiers=['Programming Language :: Python',
