@@ -10,6 +10,7 @@
 
 def get_grain_orientation(backend):
     if backend == 'ovito':
+
         # First, perform PTM
         # Iterate over all ions to get grains
         #   Pick one fcc ion, if > 2 ffc neighbors, count to grain, otherwise disregard

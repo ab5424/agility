@@ -166,6 +166,87 @@ class GBStructure:
         # https://tess.readthedocs.io/en/stable/
         # https://github.com/materialsproject/pymatgen/blob/v2022.0.14/pymatgen/analysis/structure_analyzer.py#L61-L174
 
+    def perform_ptm(self, enabled: list = ['fcc', 'hpc', 'bcc'], compute: bool=True, *args, **kwargs):
+        """
+
+        Args:
+            enabled (list): List of strings for enabled structure types. Possible values:
+                fcc-hcp-bcc-ico-sc-dcub-dhex-graphene
+
+                output_deformation_gradient = False
+                output_interatomic_distance = False
+                output_ordering = False
+                output_orientation = False
+                output_rmsd = False
+                rmsd_cutoff = 0.1
+
+        Returns:
+
+        """
+
+        if self.backend == 'ovito':
+
+            from ovito.plugins.ParticlesPython import PolyhedralTemplateMatchingModifier
+            ptm = PolyhedralTemplateMatchingModifier(*args, **kwargs)
+
+            # Enabled by default: FCC, HCP, BCC
+            if 'fcc' not in enabled:
+                ptm.structures[PolyhedralTemplateMatchingModifier.Type.FCC].enabled = False
+            if 'hcp' not in enabled:
+                ptm.structures[PolyhedralTemplateMatchingModifier.Type.HCP].enabled = False
+            if 'bcc' not in enabled:
+                ptm.structures[PolyhedralTemplateMatchingModifier.Type.BCC].enabled = False
+            if 'ico' in enabled:
+                ptm.structures[PolyhedralTemplateMatchingModifier.Type.ICO].enabled = True
+            if 'sc' in enabled:
+                ptm.structures[PolyhedralTemplateMatchingModifier.Type.SC].enabled = True
+            if 'dcub' in enabled:
+                ptm.structures[PolyhedralTemplateMatchingModifier.Type.CUBIC_DIAMOND].enabled = True
+            if 'dhex' in enabled:
+                ptm.structures[PolyhedralTemplateMatchingModifier.Type.HEX_DIAMOND].enabled = True
+            if 'graphene' in enabled:
+                ptm.structures[PolyhedralTemplateMatchingModifier.Type.GRAPHENE].enabled = True
+
+            self.pipeline.modifiers.append(ptm)
+
+            if compute:
+                self.data = self.pipeline.compute()
+
+        elif self.backend == 'lammps':
+            # https://docs.lammps.org/compute_ptm_atom.html
+            pass
+        else:
+            # print error
+            pass
+
+    def perform_ajm(self):
+        # AcklandJonesModifier
+        pass
+
+    def get_distinct_grains(self, *args, **kwargs):
+        """
+        Get distinct grains from the structure.
+        Args:
+            ovito:
+                    algorithm = GrainSegmentationModifier.Algorithm.GraphClusteringAuto
+                    color_particles = True
+                    handle_stacking_faults = True
+                    merging_threshold = 0.0
+                    min_grain_size = 100
+                    orphan_adoption = True
+
+        Returns:
+
+        """
+
+        if self.backend == 'ovito':
+            from ovito.plugins.CrystalAnalysisPython import GrainSegmentationModifier
+            gsm = GrainSegmentationModifier(*args, **kwargs)
+            self.pipeline.modifiers.append(gsm)
+            self.data = self.pipeline.compute()
+
+
+
     def set_analysis(self):
 
         if self.backend == 'ovito':
