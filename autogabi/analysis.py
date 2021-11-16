@@ -168,17 +168,24 @@ class GBStructure:
 
     def perform_ptm(self, enabled: list = ['fcc', 'hpc', 'bcc'], compute: bool=True, *args, **kwargs):
         """
+        Perform Polyhedral template matching.
+        https://github.com/pmla/polyhedral-template-matching
 
         Args:
             enabled (list): List of strings for enabled structure types. Possible values:
                 fcc-hcp-bcc-ico-sc-dcub-dhex-graphene
-
+            for ovito:
                 output_deformation_gradient = False
                 output_interatomic_distance = False
                 output_ordering = False
                 output_orientation = False
                 output_rmsd = False
                 rmsd_cutoff = 0.1
+            for lammps:
+                ID = 1
+                group-ID = all
+                threshold = 0.1
+                group2-ID = all
 
         Returns:
 
