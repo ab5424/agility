@@ -23,16 +23,25 @@ class GBStructure:
         self.filename = filename
         self.data = None
 
-        if self.backend not in ['ovito', 'pymatgen', 'babel', 'pyiron', 'ase', 'lammps']:
+        if self.backend not in [
+            "ovito",
+            "pymatgen",
+            "babel",
+            "pyiron",
+            "ase",
+            "lammps",
+        ]:
             # Put error here
             pass
 
-        if self.backend == 'ovito':
+        if self.backend == "ovito":
             from ovito.io import import_file
+
             self.pipeline = import_file(str(filename))
 
-        if self.backend == 'pymatgen':
+        if self.backend == "pymatgen":
             from pymatgen.core import Structure
+
             self.data.structure = Structure.from_file(filename)
 
     def delete_particles(self, particle_type):
@@ -44,7 +53,10 @@ class GBStructure:
         Returns:
         """
         if self.backend == "ovito":
-            from ovito.plugins.StdModPython import SelectTypeModifier, DeleteSelectedModifier
+            from ovito.plugins.StdModPython import (
+                SelectTypeModifier,
+                DeleteSelectedModifier,
+            )
 
             def assign_particle_types(frame, data):
                 atom_types = data.particles_.particle_types_
@@ -52,22 +64,32 @@ class GBStructure:
             self.pipeline.modifiers.append(assign_particle_types)
 
             # Select atoms and delete them
-            self.pipeline.modifiers.append(SelectTypeModifier(
-                operate_on="particles",
-                property="Particle Type",
-                types={particle_type}
-            ))
+            self.pipeline.modifiers.append(
+                SelectTypeModifier(
+                    operate_on="particles",
+                    property="Particle Type",
+                    types={particle_type},
+                )
+            )
 
             self.pipeline.modifiers.append(DeleteSelectedModifier())
 
-        elif self.backend == 'pymatgen':
+        elif self.backend == "pymatgen":
             self.data.structure.remove_species(particle_type)
 
-        elif self.backend == 'babel':
+        elif self.backend == "babel":
             pass
 
-    def select_particles(self, list_ids, invert=True, delete=True, expand=False, expand_cutoff=3.2,
-                         nearest_neighbors=None, iterations=1):
+    def select_particles(
+        self,
+        list_ids,
+        invert=True,
+        delete=True,
+        expand=False,
+        expand_cutoff=3.2,
+        nearest_neighbors=None,
+        iterations=1,
+    ):
         """
         Selects particles by ID
         Args:
@@ -82,7 +104,8 @@ class GBStructure:
         Returns:
 
         """
-        if self.backend == 'ovito':
+        if self.backend == "ovito":
+
             def modify(frame, data):
                 # Specify the IDs of all atoms that are to remain here
                 ids = data.particles["Particle Identifier"]
@@ -93,16 +116,23 @@ class GBStructure:
 
             if expand:
                 from ovito.plugins.ParticlesPython import ExpandSelectionModifier
+
                 if nearest_neighbors:
                     self.pipeline.modifiers.append(
-                        ExpandSelectionModifier(mode=ExpandSelectionModifier.ExpansionMode.Nearest,
-                                                num_neighbors=nearest_neighbors,
-                                                iterations=iterations))
+                        ExpandSelectionModifier(
+                            mode=ExpandSelectionModifier.ExpansionMode.Nearest,
+                            num_neighbors=nearest_neighbors,
+                            iterations=iterations,
+                        )
+                    )
                 else:
                     self.pipeline.modifiers.append(
-                        ExpandSelectionModifier(cutoff=expand_cutoff,
-                                                mode=ExpandSelectionModifier.ExpansionMode.Cutoff,
-                                                iterations=iterations))
+                        ExpandSelectionModifier(
+                            cutoff=expand_cutoff,
+                            mode=ExpandSelectionModifier.ExpansionMode.Cutoff,
+                            iterations=iterations,
+                        )
+                    )
             if invert:
                 self._invert_selection()  # for bulk ions
             if delete:
@@ -110,39 +140,42 @@ class GBStructure:
 
     def _invert_selection(self, list_ids=None):
 
-        if self.backend == 'ovito':
+        if self.backend == "ovito":
             from ovito.plugins.StdModPython import InvertSelectionModifier
+
             self.pipeline.modifiers.append(InvertSelectionModifier())
 
-        if self.backend == 'pymatgen':
+        if self.backend == "pymatgen":
             # Todo: Look which ids are in the list and invert by self.structure
             pass
 
     def _delete_delection(self):
 
-        if self.backend == 'ovito':
+        if self.backend == "ovito":
             from ovito.plugins.StdModPython import DeleteSelectedModifier
+
             self.pipeline.modifiers.append(DeleteSelectedModifier())
 
-    def perform_cna(self, mode='IntervalCutoff', cutoff=3.2):
+    def perform_cna(self, mode="IntervalCutoff", cutoff=3.2):
         """
         Performs Common neighbor analysis.
         Returns:
 
         """
 
-        if self.backend == 'ovito':
+        if self.backend == "ovito":
             from ovito.plugins.ParticlesPython import CommonNeighborAnalysisModifier
-            if mode == 'IntervalCutoff':
+
+            if mode == "IntervalCutoff":
                 m = CommonNeighborAnalysisModifier.Mode.IntervalCutoff
-            elif mode == 'AdaptiveCutoff':
+            elif mode == "AdaptiveCutoff":
                 m = CommonNeighborAnalysisModifier.Mode.AdaptiveCutoff
-            elif mode == 'FixedCutoff':
+            elif mode == "FixedCutoff":
                 m = CommonNeighborAnalysisModifier.Mode.FixedCutoff
-            elif mode == 'BondBased':
+            elif mode == "BondBased":
                 m = CommonNeighborAnalysisModifier.Mode.BondBased
             else:
-                print('Selected CNA Mode unknown.')
+                print("Selected CNA Mode unknown.")
                 sys.exit(1)
             cna = CommonNeighborAnalysisModifier(mode=m, cutoff=cutoff)
             self.pipeline.modifiers.append(cna)
@@ -154,19 +187,24 @@ class GBStructure:
 
         """
 
-        if self.backend == 'ovito':
+        if self.backend == "ovito":
             from ovito.plugins.ParticlesPython import VoronoiAnalysisModifier
+
             voro = VoronoiAnalysisModifier(
-                compute_indices=True,
-                use_radii=False,
-                edge_threshold=0.0
+                compute_indices=True, use_radii=False, edge_threshold=0.0
             )
             self.pipeline.modifiers.append(voro)
 
         # https://tess.readthedocs.io/en/stable/
         # https://github.com/materialsproject/pymatgen/blob/v2022.0.14/pymatgen/analysis/structure_analyzer.py#L61-L174
 
-    def perform_ptm(self, enabled: list = ['fcc', 'hpc', 'bcc'], compute: bool=True, *args, **kwargs):
+    def perform_ptm(
+        self,
+        enabled: list = ["fcc", "hpc", "bcc"],
+        compute: bool = True,
+        *args,
+        **kwargs
+    ):
         """
         Perform Polyhedral template matching.
         https://github.com/pmla/polyhedral-template-matching
@@ -191,35 +229,52 @@ class GBStructure:
 
         """
 
-        if self.backend == 'ovito':
+        if self.backend == "ovito":
 
             from ovito.plugins.ParticlesPython import PolyhedralTemplateMatchingModifier
+
             ptm = PolyhedralTemplateMatchingModifier(*args, **kwargs)
 
             # Enabled by default: FCC, HCP, BCC
-            if 'fcc' not in enabled:
-                ptm.structures[PolyhedralTemplateMatchingModifier.Type.FCC].enabled = False
-            if 'hcp' not in enabled:
-                ptm.structures[PolyhedralTemplateMatchingModifier.Type.HCP].enabled = False
-            if 'bcc' not in enabled:
-                ptm.structures[PolyhedralTemplateMatchingModifier.Type.BCC].enabled = False
-            if 'ico' in enabled:
-                ptm.structures[PolyhedralTemplateMatchingModifier.Type.ICO].enabled = True
-            if 'sc' in enabled:
-                ptm.structures[PolyhedralTemplateMatchingModifier.Type.SC].enabled = True
-            if 'dcub' in enabled:
-                ptm.structures[PolyhedralTemplateMatchingModifier.Type.CUBIC_DIAMOND].enabled = True
-            if 'dhex' in enabled:
-                ptm.structures[PolyhedralTemplateMatchingModifier.Type.HEX_DIAMOND].enabled = True
-            if 'graphene' in enabled:
-                ptm.structures[PolyhedralTemplateMatchingModifier.Type.GRAPHENE].enabled = True
+            if "fcc" not in enabled:
+                ptm.structures[
+                    PolyhedralTemplateMatchingModifier.Type.FCC
+                ].enabled = False
+            if "hcp" not in enabled:
+                ptm.structures[
+                    PolyhedralTemplateMatchingModifier.Type.HCP
+                ].enabled = False
+            if "bcc" not in enabled:
+                ptm.structures[
+                    PolyhedralTemplateMatchingModifier.Type.BCC
+                ].enabled = False
+            if "ico" in enabled:
+                ptm.structures[
+                    PolyhedralTemplateMatchingModifier.Type.ICO
+                ].enabled = True
+            if "sc" in enabled:
+                ptm.structures[
+                    PolyhedralTemplateMatchingModifier.Type.SC
+                ].enabled = True
+            if "dcub" in enabled:
+                ptm.structures[
+                    PolyhedralTemplateMatchingModifier.Type.CUBIC_DIAMOND
+                ].enabled = True
+            if "dhex" in enabled:
+                ptm.structures[
+                    PolyhedralTemplateMatchingModifier.Type.HEX_DIAMOND
+                ].enabled = True
+            if "graphene" in enabled:
+                ptm.structures[
+                    PolyhedralTemplateMatchingModifier.Type.GRAPHENE
+                ].enabled = True
 
             self.pipeline.modifiers.append(ptm)
 
             if compute:
                 self.data = self.pipeline.compute()
 
-        elif self.backend == 'lammps':
+        elif self.backend == "lammps":
             # https://docs.lammps.org/compute_ptm_atom.html
             pass
         else:
@@ -246,70 +301,87 @@ class GBStructure:
 
         """
 
-        if self.backend == 'ovito':
+        if self.backend == "ovito":
             from ovito.plugins.CrystalAnalysisPython import GrainSegmentationModifier
+
             gsm = GrainSegmentationModifier(*args, **kwargs)
             self.pipeline.modifiers.append(gsm)
             self.data = self.pipeline.compute()
 
-
-
     def set_analysis(self):
 
-        if self.backend == 'ovito':
+        if self.backend == "ovito":
             self.data = self.pipeline.compute()
 
     def get_gb_atoms(self):
 
-        if self.backend == 'ovito':
-            if 'Structure Type' in self.data.particles.keys():
-                df = pd.DataFrame(list(zip(self.data.particles['Particle Identifier'],
-                                           self.data.particles['Structure Type'], )),
-                                  columns=['Particle Identifier', 'Structure Type'])
-                df_gb = df[df['Structure Type'] == 0]
-                return list(df_gb['Particle Identifier'])
+        if self.backend == "ovito":
+            if "Structure Type" in self.data.particles.keys():
+                df = pd.DataFrame(
+                    list(
+                        zip(
+                            self.data.particles["Particle Identifier"],
+                            self.data.particles["Structure Type"],
+                        )
+                    ),
+                    columns=["Particle Identifier", "Structure Type"],
+                )
+                df_gb = df[df["Structure Type"] == 0]
+                return list(df_gb["Particle Identifier"])
 
     def get_bulk_atoms(self):
 
-        if self.backend == 'ovito':
-            if 'Structure Type' in self.data.particles.keys():
-                df = pd.DataFrame(list(zip(self.data.particles['Particle Identifier'],
-                                           self.data.particles['Structure Type'], )),
-                                  columns=['Particle Identifier', 'Structure Type'])
-                df_gb = df[df['Structure Type'] != 0]
-                return list(df_gb['Particle Identifier'])
+        if self.backend == "ovito":
+            if "Structure Type" in self.data.particles.keys():
+                df = pd.DataFrame(
+                    list(
+                        zip(
+                            self.data.particles["Particle Identifier"],
+                            self.data.particles["Structure Type"],
+                        )
+                    ),
+                    columns=["Particle Identifier", "Structure Type"],
+                )
+                df_gb = df[df["Structure Type"] != 0]
+                return list(df_gb["Particle Identifier"])
 
     def get_type(self, atom_type):
 
-        if self.backend == 'ovito':
+        if self.backend == "ovito":
             # Currently doesn't work!
             # def assign_particle_types(frame, data):
             #     atom_types = data.particles_.particle_types_
             #
             # self.pipeline.modifiers.append(assign_particle_types)
             # self.set_analysis()
-            df = pd.DataFrame(list(zip(self.data.particles['Particle Identifier'],
-                                       self.data.particles['Particle Type'], )),
-                              columns=['Particle Identifier', 'Particle Type'])
-            df_atom = df[df['Particle Type'].eq(atom_type)]
-            return list(df_atom['Particle Identifier'])
+            df = pd.DataFrame(
+                list(
+                    zip(
+                        self.data.particles["Particle Identifier"],
+                        self.data.particles["Particle Type"],
+                    )
+                ),
+                columns=["Particle Identifier", "Particle Type"],
+            )
+            df_atom = df[df["Particle Type"].eq(atom_type)]
+            return list(df_atom["Particle Identifier"])
 
     # Todo: Verkippungswinkel
     # Todo: Grain Index
 
     def get_fraction(self, numerator, denominator):
 
-        if self.backend == 'ovito':
+        if self.backend == "ovito":
             num = sum([len(self.get_type(i)) for i in numerator])
             den = sum([len(self.get_type(i)) for i in denominator])
-            return num/den
-
+            return num / den
 
 
 class GBStructureTimeseries(GBStructure):
     """
     This is a class containing multiple snapshots from a time series.
     """
+
     # Todo: get diffusion data
     # Todo: differentiate between along/across GB
 
