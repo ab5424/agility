@@ -11,7 +11,6 @@ import sys
 
 import numpy as np
 import pandas as pd
-from scipy import integrate
 from scipy.constants import codata
 
 
@@ -111,7 +110,7 @@ class GBStructure:
         """
         if self.backend == "ovito":
 
-            def modify(frame, data):
+            def modify(frame, data):  # pylint: disable=W0613
                 # Specify the IDs of all atoms that are to remain here
                 ids = data.particles["Particle Identifier"]
                 l_ids = np.in1d(ids, list_ids, assume_unique=True, invert=False)
@@ -144,7 +143,7 @@ class GBStructure:
             if delete:
                 self._delete_delection()
 
-    def _invert_selection(self, list_ids=None):
+    def _invert_selection(self):
 
         if self.backend == "ovito":
             from ovito.plugins.StdModPython import InvertSelectionModifier
@@ -318,11 +317,21 @@ class GBStructure:
             self.data = self.pipeline.compute()
 
     def set_analysis(self):
+        """
+        Compute results. Important function for the ovito backend.
+        Returns:
+
+        """
 
         if self.backend == "ovito":
             self.data = self.pipeline.compute()
 
     def get_gb_atoms(self):
+        """
+        Get the atoms at the grain boundary, as determined by structural analysis.
+        Returns:
+
+        """
 
         if self.backend == "ovito":
             if "Structure Type" in self.data.particles.keys():
@@ -339,6 +348,11 @@ class GBStructure:
                 return list(df_gb["Particle Identifier"])
 
     def get_bulk_atoms(self):
+        """
+        Get the atoms in the bulk, as determined by structural analysis.
+        Returns:
+
+        """
 
         if self.backend == "ovito":
             if "Structure Type" in self.data.particles.keys():
@@ -355,6 +369,14 @@ class GBStructure:
                 return list(df_gb["Particle Identifier"])
 
     def get_type(self, atom_type):
+        """
+        Get all atoms by type
+        Args:
+            atom_type:
+
+        Returns:
+
+        """
 
         if self.backend == "ovito":
             # Currently doesn't work!
@@ -363,7 +385,7 @@ class GBStructure:
             #
             # self.pipeline.modifiers.append(assign_particle_types)
             # self.set_analysis()
-            df = pd.DataFrame(
+            df_temp = pd.DataFrame(
                 list(
                     zip(
                         self.data.particles["Particle Identifier"],
@@ -372,13 +394,22 @@ class GBStructure:
                 ),
                 columns=["Particle Identifier", "Particle Type"],
             )
-            df_atom = df[df["Particle Type"].eq(atom_type)]
+            df_atom = df_temp[df_temp["Particle Type"].eq(atom_type)]
             return list(df_atom["Particle Identifier"])
 
     # Todo: Verkippungswinkel
     # Todo: Grain Index
 
     def get_fraction(self, numerator, denominator):
+        """
+        Helper function to get fraction of ions/atoms.
+        Args:
+            numerator:
+            denominator:
+
+        Returns:
+
+        """
 
         if self.backend == "ovito":
             num = sum([len(self.get_type(i)) for i in numerator])
