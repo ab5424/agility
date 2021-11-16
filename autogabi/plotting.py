@@ -15,6 +15,15 @@ from scipy.constants import codata
 
 
 def render_ovito(pipeline=None, res_factor: int = 1):
+    """
+    Render an ovito pipeline object.
+    Args:
+        pipeline: The ovito pipeline to be rendered.
+        res_factor: Faactor to scale the resolution of the redering.
+
+    Returns:
+
+    """
     from ovito.plugins.PyScript import Viewport
     from ovito.plugins.TachyonPython import TachyonRenderer
 

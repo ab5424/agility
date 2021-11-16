@@ -1,7 +1,9 @@
 # Copyright (c) Alexander Bonkowski.
 # Distributed under the terms of the MIT License.
 
-"""Setup.py for autogabi."""
+"""
+Setup.py for autogabi.
+"""
 
 import os
 from setuptools import setup

@@ -1,10 +1,12 @@
-"""
-Analysis functions
-"""
-
 # Copyright (c) Alexander Bonkowski
 # Distributed under the terms of the MIT License
 # author: Alexander Bonkowski
+
+"""
+Analysis functions.
+"""
+
+
 import sys
 
 import numpy as np
@@ -58,7 +60,8 @@ class GBStructure:
             #     SelectTypeModifier,
             #     DeleteSelectedModifier,
             # )
-            from ovito.modifiers import SelectTypeModifier, DeleteSelectedModifier
+            from ovito.modifiers import (DeleteSelectedModifier,
+                                         SelectTypeModifier)
 
             def assign_particle_types(frame, data):
                 atom_types = data.particles_.particle_types_
@@ -117,7 +120,8 @@ class GBStructure:
             self.pipeline.modifiers.append(modify)
 
             if expand:
-                from ovito.plugins.ParticlesPython import ExpandSelectionModifier
+                from ovito.plugins.ParticlesPython import \
+                    ExpandSelectionModifier
 
                 if nearest_neighbors:
                     self.pipeline.modifiers.append(
@@ -166,7 +170,8 @@ class GBStructure:
         """
 
         if self.backend == "ovito":
-            from ovito.plugins.ParticlesPython import CommonNeighborAnalysisModifier
+            from ovito.plugins.ParticlesPython import \
+                CommonNeighborAnalysisModifier
 
             if mode == "IntervalCutoff":
                 cna_mode = CommonNeighborAnalysisModifier.Mode.IntervalCutoff
@@ -233,7 +238,8 @@ class GBStructure:
 
         if self.backend == "ovito":
 
-            from ovito.plugins.ParticlesPython import PolyhedralTemplateMatchingModifier
+            from ovito.plugins.ParticlesPython import \
+                PolyhedralTemplateMatchingModifier
 
             ptm = PolyhedralTemplateMatchingModifier(*args, **kwargs)
 
@@ -304,7 +310,8 @@ class GBStructure:
         """
 
         if self.backend == "ovito":
-            from ovito.plugins.CrystalAnalysisPython import GrainSegmentationModifier
+            from ovito.plugins.CrystalAnalysisPython import \
+                GrainSegmentationModifier
 
             gsm = GrainSegmentationModifier(*args, **kwargs)
             self.pipeline.modifiers.append(gsm)
