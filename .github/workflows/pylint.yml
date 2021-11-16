@@ -21,4 +21,4 @@ jobs:
         pip install pylint
     - name: Analysing the code with pylint
       run: |
-        pylint $(find . -name "*.py" | xargs)
+        pylint -d C0415,E0611,E0401 $(find . -name "*.py" | xargs)
