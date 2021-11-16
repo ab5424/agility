@@ -25,12 +25,14 @@ def render_ovito(pipeline=None, res_factor: int = 1):
     vp.zoom_all(size=(640, 480))
 
     tachyon = TachyonRenderer(shadows=False, direct_light_intensity=1.1)
-    image = vp.render_image(size=(res_factor * 640, res_factor * 480),
-                            # filename="figure.png",
-                            background=(1, 1, 1),
-                            alpha=True,
-                            renderer=tachyon,
-                            crop=True)
+    image = vp.render_image(
+        size=(res_factor * 640, res_factor * 480),
+        # filename="figure.png",
+        background=(1, 1, 1),
+        alpha=True,
+        renderer=tachyon,
+        crop=True,
+    )
 
     return image
 
@@ -44,10 +46,17 @@ def plot_face_order(data=None):
     Returns:
 
     """
-    df = pd.DataFrame(list(zip(data.particles['Particle Identifier'], data.particles['Max Face Order'], )),
-                      columns=['Particle Identifier', 'Max Face Order'])
+    df_temp = pd.DataFrame(
+        list(
+            zip(
+                data.particles["Particle Identifier"],
+                data.particles["Max Face Order"],
+            )
+        ),
+        columns=["Particle Identifier", "Max Face Order"],
+    )
 
-    hist_plot = sns.displot(df, x="Max Face Order", discrete=True)
+    hist_plot = sns.displot(df_temp, x="Max Face Order", discrete=True)
     return hist_plot.fig
 
 
