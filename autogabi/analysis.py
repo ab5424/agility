@@ -46,8 +46,9 @@ class GBStructure:
 
     def delete_particles(self, particle_type):
         """
-        Deletes a specific type of particles from a structure. This can be particularly useful if there is a mobile type
-        in the structure. Note that for ovito structures you need to make sure that type information is included.
+        Deletes a specific type of particles from a structure. This can be particularly useful if
+        there is a mobile type in the structure. Note that for ovito structures you need to make
+        sure that type information is included.
         Args:
             particle_type (:py:class:`str`):
         Returns:
