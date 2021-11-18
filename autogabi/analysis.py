@@ -35,15 +35,47 @@ class GBStructure:
             # Put error here
             pass
 
+
+        if self.backend == "lammps":
+            # Determine if a jupyter notebook is used
+            try:
+                shell = get_ipython().__class__.__name__
+                if shell == 'ZMQInteractiveShell':
+                    ipy = True  # Jupyter notebook or qtconsole
+                elif shell == 'TerminalInteractiveShell':
+                    ipy = False  # Terminal running IPython
+                else:
+                    ipy = False  # Other type (?)
+            except NameError:
+                ipy = False  # Probably standard Python interpreter
+
+            if ipy:
+                from lammps import IPyLammps
+                self.lmp = IPyLammps()
+            else:
+                from lammps import PyLammps
+                self.lmp = PyLammps()
+
+            self.lmp.units("metal")
+
+        if filename:
+            self.read_file(filename)
+
+    def read_file(self, filename):
+
         if self.backend == "ovito":
             from ovito.io import import_file
-
             self.pipeline = import_file(str(filename))
 
         if self.backend == "pymatgen":
             from pymatgen.core import Structure
-
             self.data.structure = Structure.from_file(filename)
+
+        if self.backend == "lammps":
+
+            # Read dump or read data?
+            self.lmp.read_data(filename)
+
 
     def delete_particles(self, particle_type):
         """
@@ -62,8 +94,8 @@ class GBStructure:
             from ovito.modifiers import (DeleteSelectedModifier,
                                          SelectTypeModifier)
 
-            def assign_particle_types(frame, data):
-                atom_types = data.particles_.particle_types_
+            def assign_particle_types(frame, data):  # pylint: disable=W0613
+                atom_types = data.particles_.particle_types_  # pylint: disable=W0612
 
             self.pipeline.modifiers.append(assign_particle_types)
 
@@ -186,6 +218,10 @@ class GBStructure:
             cna = CommonNeighborAnalysisModifier(mode=cna_mode, cutoff=cutoff)
             self.pipeline.modifiers.append(cna)
 
+        elif self.backend == "lammps":
+            n_compute = 1
+            self.lmp.compute(f"{n_compute} all cna/atom {cutoff}")
+
     def perform_voroni_analysis(self):
         """
         Performs Voronoi analysis.
@@ -288,9 +324,27 @@ class GBStructure:
             # print error
             pass
 
-    def perform_ajm(self):
-        # AcklandJonesModifier
-        pass
+    def perform_ajm(self, compute: bool = True):
+        """
+        Ackland-Jones analysis.
+        Returns:
+
+        """
+        if self.backend == "ovito":
+            from ovito.plugins.ParticlesPython import AcklandJonesModifier
+            ajm = AcklandJonesModifier()
+            self.pipeline.modifiers.append(ptm)
+
+            if compute:
+                self.data = self.pipeline.compute()
+
+        if self.backend == "lammps":
+            n_compute = 1
+            self.lmp.compute(f"{n_compute} all ackland/atom")
+
+            if compute:
+                self.lmp.run()
+
 
     def get_distinct_grains(self, *args, **kwargs):
         """
@@ -436,4 +490,5 @@ class GBStructureTimeseries(GBStructure):
         """
         pass
 
-    # Todo: Add differentiation between diffusion along a grain boundary, transverse to the GB, and between grains
+    # Todo: Add differentiation between diffusion along a grain boundary, transverse to the GB,
+    # and between grains

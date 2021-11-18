@@ -16,13 +16,15 @@ __email__ = "alexander.bonkowski@rwth-aachen.de"
 __date__ = "29/09/2021"
 
 module_dir = os.path.dirname(os.path.abspath(__file__))
+with open(os.path.join(module_dir, "README.md")) as readme:
+    long_description = readme
 
 if __name__ == "__main__":
     setup(
         name="autogabi",
         version="0.0.1",
         description="Molecular Dynamics analysis.py",
-        long_description=open(os.path.join(module_dir, "README.md")).read(),
+        long_description=long_description,
         long_description_content_type="text/markdown",
         url="https://github.com/ab5424/auto-gabi",
         author="Alexander Bonkowski",
