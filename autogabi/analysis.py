@@ -327,6 +327,7 @@ class GBStructure:
     def perform_ajm(self, compute: bool = True):
         """
         Ackland-Jones analysis.
+        https://doi.org/10.1103/PhysRevB.73.054104
         Returns:
 
         """
