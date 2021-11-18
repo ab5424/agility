@@ -334,7 +334,7 @@ class GBStructure:
         if self.backend == "ovito":
             from ovito.plugins.ParticlesPython import AcklandJonesModifier
             ajm = AcklandJonesModifier()
-            self.pipeline.modifiers.append(ptm)
+            self.pipeline.modifiers.append(ajm)
 
             if compute:
                 self.data = self.pipeline.compute()
@@ -342,6 +342,28 @@ class GBStructure:
         if self.backend == "lammps":
             n_compute = 1
             self.lmp.compute(f"{n_compute} all ackland/atom")
+
+            if compute:
+                self.lmp.run()
+
+    def perform_csp(self, num_neighbors: int = 12):
+        """
+        Centrosymmetric parameter.
+        Use 12 for fcc and 8 for bcc, respectively
+        Returns:
+
+        """
+        if self.backend == "ovito":
+            from ovito.plugins.ParticlesPython import CentroSymmetryModifier
+            csp = CentroSymmetryModifier()
+            self.pipeline.modifiers.append(csp)
+
+            if compute:
+                self.data = self.pipeline.compute()
+
+        if self.backend == "lammps":
+            n_compute = 1
+            self.lmp.compute(f"{n_compute} all centro/atom {num_neighbors}")
 
             if compute:
                 self.lmp.run()
