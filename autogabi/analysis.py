@@ -387,7 +387,7 @@ class GBStructure:
             if compute:
                 self.lmp.run()
 
-    def perform_csp(self, num_neighbors: int = 12):
+    def perform_csp(self, num_neighbors: int = 12, compute: bool = True):
         """
         Centrosymmetric parameter.
         Use 12 for fcc and 8 for bcc, respectively
