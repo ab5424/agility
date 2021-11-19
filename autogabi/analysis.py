@@ -61,7 +61,7 @@ class GBStructure:
         if filename:
             self.read_file(filename)
 
-    def read_file(self, filename):
+    def read_file(self, filename, type: str = "data"):
         """
         Read structure from file.
 
@@ -83,7 +83,14 @@ class GBStructure:
         if self.backend == "lammps":
 
             # Read dump or read data?
-            self.lmp.read_data(filename)
+            if type == "data":
+                self.lmp.read_data(filename)
+            elif type == "dump":
+                self.lmp.read_dump(filename)
+            elif type == "restart":
+                self.lmp.read_restart(filename)
+            else:
+                print("Please specify the type of lammps file to read.")
 
 
     def delete_particles(self, particle_type):
