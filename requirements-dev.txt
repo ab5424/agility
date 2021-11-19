@@ -5,3 +5,4 @@ black
 pylint
 mypy
 pytest
+data-science-types

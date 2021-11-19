@@ -308,6 +308,7 @@ class GBStructure:
     ):
         """
         Perform Polyhedral template matching.
+        https://dx.doi.org/10.1088/0965-0393/24/5/055007
         https://github.com/pmla/polyhedral-template-matching
 
         Args:
