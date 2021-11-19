@@ -232,6 +232,17 @@ class GBStructure:
             n_compute = 1
             self.lmp.compute(f"{n_compute} all cna/atom {cutoff}")
 
+    def perfom_cnp(self, cutoff: float = 3.20):
+        """
+        Performs Common Neighborhood Parameter calculation.
+
+        Returns:
+
+        """
+
+        if self.backend == "lammps":
+            self.lmp.compute(f"compute 1 all cnp/atom {cutoff}")
+
     def perform_voroni_analysis(self):
         """
         Performs Voronoi analysis.
@@ -282,9 +293,9 @@ class GBStructure:
 
     def perform_ptm(
         self,
+        *args,
         enabled: list = ["fcc", "hpc", "bcc"],
         compute: bool = True,
-        *args,
         **kwargs
     ):
         """
@@ -467,6 +478,13 @@ class GBStructure:
                 )
                 df_gb = df_temp[df_temp["Structure Type"] == 0]
                 return list(df_gb["Particle Identifier"])
+        elif self.backend == "lammps":
+            # TODO
+            return None
+        else:
+            print("Method not implemented.")
+            sys.exit(1)
+
 
     def get_bulk_atoms(self):
         """
