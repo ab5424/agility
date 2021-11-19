@@ -65,6 +65,7 @@ def plot_face_order(data=None, plot_property="Max Face Order"):
     hist_plot = sns.displot(df_temp, x=plot_property, discrete=True)
     return hist_plot.fig
 
+
 # TODO: Visualize Misorientation distribution function
 # https://www.osti.gov/pages/servlets/purl/1657149
 # https://mtex-toolbox.github.io/index.html

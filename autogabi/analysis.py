@@ -157,7 +157,8 @@ class GBStructure:
             def modify(frame, data):  # pylint: disable=W0613
                 # Specify the IDs of all atoms that are to remain here
                 ids = data.particles["Particle Identifier"]
-                l_ids = np.in1d(ids, list_ids, assume_unique=True, invert=False)
+                l_ids = np.in1d(
+                    ids, list_ids, assume_unique=True, invert=False)
                 selection = data.particles_.create_property(
                     "Selection", data=l_ids
                 )  # pylint: disable=W0612
@@ -298,7 +299,7 @@ class GBStructure:
         **kwargs,
     ):
         """Perform Polyhedral template matching.
-        
+
         https://dx.doi.org/10.1088/0965-0393/24/5/055007
         https://github.com/pmla/polyhedral-template-matching.
 
