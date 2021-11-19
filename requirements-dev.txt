@@ -6,3 +6,6 @@ coverage
 seaborn
 pandas
 jupyter
+ovito
+pymatgen
+ase
