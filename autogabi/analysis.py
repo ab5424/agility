@@ -541,7 +541,7 @@ class GBStructure:
             )
             df_atom = df_temp[df_temp["Particle Type"].eq(atom_type)]
             return list(df_atom["Particle Identifier"])
-        
+
         elif self.backend == "lammps":
             # TODO
             return None
@@ -568,7 +568,9 @@ class GBStructure:
             den = sum([len(self.get_type(i)) for i in denominator])
             return num / den
 
-        else
+        else:
+            print("Method not implemented.")
+            return None
 
 
 class GBStructureTimeseries(GBStructure):
