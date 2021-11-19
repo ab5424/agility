@@ -11,7 +11,6 @@ import sys
 
 import numpy as np
 import pandas as pd
-from scipy.constants import codata
 
 
 class GBStructure:
