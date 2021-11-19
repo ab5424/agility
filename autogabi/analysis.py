@@ -34,15 +34,14 @@ class GBStructure:
             # Put error here
             pass
 
-
         if self.backend == "lammps":
             # Determine if a jupyter notebook is used
             # Taken from shorturl.at/aikzP
             try:
                 shell = get_ipython().__class__.__name__
-                if shell == 'ZMQInteractiveShell':
+                if shell == "ZMQInteractiveShell":
                     ipy = True  # Jupyter notebook or qtconsole
-                elif shell == 'TerminalInteractiveShell':
+                elif shell == "TerminalInteractiveShell":
                     ipy = False  # Terminal running IPython
                 else:
                     ipy = False  # Other type (?)
@@ -51,9 +50,11 @@ class GBStructure:
 
             if ipy:
                 from lammps import IPyLammps
+
                 self.lmp = IPyLammps()
             else:
                 from lammps import PyLammps
+
                 self.lmp = PyLammps()
 
             self.lmp.units("metal")
@@ -74,10 +75,12 @@ class GBStructure:
 
         if self.backend == "ovito":
             from ovito.io import import_file
+
             self.pipeline = import_file(str(filename))
 
         if self.backend == "pymatgen":
             from pymatgen.core import Structure
+
             self.data.structure = Structure.from_file(filename)
 
         if self.backend == "lammps":
@@ -91,7 +94,6 @@ class GBStructure:
                 self.lmp.read_restart(filename)
             else:
                 print("Please specify the type of lammps file to read.")
-
 
     def delete_particles(self, particle_type):
         """
@@ -107,8 +109,7 @@ class GBStructure:
             #     SelectTypeModifier,
             #     DeleteSelectedModifier,
             # )
-            from ovito.modifiers import (DeleteSelectedModifier,
-                                         SelectTypeModifier)
+            from ovito.modifiers import DeleteSelectedModifier, SelectTypeModifier
 
             def assign_particle_types(frame, data):  # pylint: disable=W0613
                 atom_types = data.particles_.particle_types_  # pylint: disable=W0612
@@ -162,13 +163,14 @@ class GBStructure:
                 # Specify the IDs of all atoms that are to remain here
                 ids = data.particles["Particle Identifier"]
                 l_ids = np.in1d(ids, list_ids, assume_unique=True, invert=False)
-                selection = data.particles_.create_property("Selection", data=l_ids)  # pylint: disable=W0612
+                selection = data.particles_.create_property(
+                    "Selection", data=l_ids
+                )  # pylint: disable=W0612
 
             self.pipeline.modifiers.append(modify)
 
             if expand:
-                from ovito.plugins.ParticlesPython import \
-                    ExpandSelectionModifier
+                from ovito.plugins.ParticlesPython import ExpandSelectionModifier
 
                 if nearest_neighbors:
                     self.pipeline.modifiers.append(
@@ -217,8 +219,7 @@ class GBStructure:
         """
 
         if self.backend == "ovito":
-            from ovito.plugins.ParticlesPython import \
-                CommonNeighborAnalysisModifier
+            from ovito.plugins.ParticlesPython import CommonNeighborAnalysisModifier
 
             if mode == "IntervalCutoff":
                 cna_mode = CommonNeighborAnalysisModifier.Mode.IntervalCutoff
@@ -303,7 +304,7 @@ class GBStructure:
         *args,
         enabled: list = ["fcc", "hpc", "bcc"],
         compute: bool = True,
-        **kwargs
+        **kwargs,
     ):
         """
         Perform Polyhedral template matching.
@@ -331,8 +332,7 @@ class GBStructure:
 
         if self.backend == "ovito":
 
-            from ovito.plugins.ParticlesPython import \
-                PolyhedralTemplateMatchingModifier
+            from ovito.plugins.ParticlesPython import PolyhedralTemplateMatchingModifier
 
             ptm = PolyhedralTemplateMatchingModifier(*args, **kwargs)
 
@@ -391,6 +391,7 @@ class GBStructure:
         """
         if self.backend == "ovito":
             from ovito.plugins.ParticlesPython import AcklandJonesModifier
+
             ajm = AcklandJonesModifier()
             self.pipeline.modifiers.append(ajm)
 
@@ -413,6 +414,7 @@ class GBStructure:
         """
         if self.backend == "ovito":
             from ovito.plugins.ParticlesPython import CentroSymmetryModifier
+
             csp = CentroSymmetryModifier()
             self.pipeline.modifiers.append(csp)
 
@@ -426,7 +428,6 @@ class GBStructure:
 
             if compute:
                 self.lmp.run()
-
 
     def get_distinct_grains(self, *args, **kwargs):
         """
@@ -445,8 +446,7 @@ class GBStructure:
         """
 
         if self.backend == "ovito":
-            from ovito.plugins.CrystalAnalysisPython import \
-                GrainSegmentationModifier
+            from ovito.plugins.CrystalAnalysisPython import GrainSegmentationModifier
 
             gsm = GrainSegmentationModifier(*args, **kwargs)
             self.pipeline.modifiers.append(gsm)
@@ -491,7 +491,6 @@ class GBStructure:
         else:
             print("Method not implemented.")
             return None
-
 
     def get_bulk_atoms(self):
         """
