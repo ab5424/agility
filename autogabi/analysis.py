@@ -483,7 +483,7 @@ class GBStructure:
             return None
         else:
             print("Method not implemented.")
-            sys.exit(1)
+            return None
 
 
     def get_bulk_atoms(self):
@@ -506,6 +506,12 @@ class GBStructure:
                 )
                 df_gb = df_temp[df_temp["Structure Type"] != 0]
                 return list(df_gb["Particle Identifier"])
+        elif self.backend == "lammps":
+            # TODO
+            return None
+        else:
+            print("Method not implemented.")
+            return None
 
     def get_type(self, atom_type):
         """
@@ -535,6 +541,13 @@ class GBStructure:
             )
             df_atom = df_temp[df_temp["Particle Type"].eq(atom_type)]
             return list(df_atom["Particle Identifier"])
+        
+        elif self.backend == "lammps":
+            # TODO
+            return None
+        else:
+            print("Method not implemented.")
+            return None
 
     # Todo: Verkippungswinkel
     # Todo: Grain Index
@@ -554,6 +567,8 @@ class GBStructure:
             num = sum([len(self.get_type(i)) for i in numerator])
             den = sum([len(self.get_type(i)) for i in denominator])
             return num / den
+
+        else
 
 
 class GBStructureTimeseries(GBStructure):
