@@ -38,6 +38,7 @@ class GBStructure:
 
         if self.backend == "lammps":
             # Determine if a jupyter notebook is used
+            # Taken from shorturl.at/aikzP
             try:
                 shell = get_ipython().__class__.__name__
                 if shell == 'ZMQInteractiveShell':
@@ -219,6 +220,7 @@ class GBStructure:
             self.pipeline.modifiers.append(cna)
 
         elif self.backend == "lammps":
+            #https://docs.lammps.org/compute_cna_atom.html
             n_compute = 1
             self.lmp.compute(f"{n_compute} all cna/atom {cutoff}")
 
@@ -339,7 +341,7 @@ class GBStructure:
             if compute:
                 self.data = self.pipeline.compute()
 
-        if self.backend == "lammps":
+        elif self.backend == "lammps":
             n_compute = 1
             self.lmp.compute(f"{n_compute} all ackland/atom")
 
@@ -361,7 +363,8 @@ class GBStructure:
             if compute:
                 self.data = self.pipeline.compute()
 
-        if self.backend == "lammps":
+        elif self.backend == "lammps":
+            # https://docs.lammps.org/compute_centro_atom.html
             n_compute = 1
             self.lmp.compute(f"{n_compute} all centro/atom {num_neighbors}")
 
@@ -402,6 +405,9 @@ class GBStructure:
 
         if self.backend == "ovito":
             self.data = self.pipeline.compute()
+
+        elif self.backend == "lammps":
+            self.lmp.run(1)
 
     def get_gb_atoms(self):
         """

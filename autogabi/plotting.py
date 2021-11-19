@@ -15,9 +15,10 @@ def render_ovito(pipeline=None, res_factor: int = 1):
     Render an ovito pipeline object.
     Args:
         pipeline: The ovito pipeline to be rendered.
-        res_factor: Faactor to scale the resolution of the redering.
+        res_factor: Factor to scale the resolution of the redering. 2=Full HD, 4=4K
 
     Returns:
+        image: Image object. Can be saved via image.save("figure.png")
 
     """
     from ovito.plugins.PyScript import Viewport
