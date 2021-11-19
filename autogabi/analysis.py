@@ -63,6 +63,15 @@ class GBStructure:
             self.read_file(filename)
 
     def read_file(self, filename):
+        """
+        Read structure from file.
+
+        Args:
+            filename:
+
+        Returns:
+
+        """
 
         if self.backend == "ovito":
             from ovito.io import import_file
@@ -147,7 +156,7 @@ class GBStructure:
                 # Specify the IDs of all atoms that are to remain here
                 ids = data.particles["Particle Identifier"]
                 l_ids = np.in1d(ids, list_ids, assume_unique=True, invert=False)
-                selection = data.particles_.create_property("Selection", data=l_ids)
+                selection = data.particles_.create_property("Selection", data=l_ids)  # pylint: disable=W0612
 
             self.pipeline.modifiers.append(modify)
 
@@ -220,13 +229,39 @@ class GBStructure:
             self.pipeline.modifiers.append(cna)
 
         elif self.backend == "lammps":
-            #https://docs.lammps.org/compute_cna_atom.html
+            # https://docs.lammps.org/compute_cna_atom.html
             n_compute = 1
             self.lmp.compute(f"{n_compute} all cna/atom {cutoff}")
 
     def perform_voroni_analysis(self):
         """
         Performs Voronoi analysis.
+        Args:
+            ovito:
+                bonds_vis = False
+                edge_threshold = 0.0
+                face_threshold = 0.0
+                generate_bonds = False
+                generate_polyhedra = False
+                mesh_vis = False
+                relative_face_threshold = 0.0
+                use_radii = False
+            lammps:
+                only_group = no arg
+                occupation = no arg
+                surface arg = sgroup-ID
+                  sgroup-ID = compute the dividing surface between group-ID and sgroup-ID
+                    this keyword adds a third column to the compute output
+                radius arg = v_r
+                  v_r = radius atom style variable for a poly-disperse Voronoi tessellation
+                edge_histo arg = maxedge
+                  maxedge = maximum number of Voronoi cell edges to be accounted in the histogram
+                edge_threshold arg = minlength
+                  minlength = minimum length for an edge to be counted
+                face_threshold arg = minarea
+                  minarea = minimum area for a face to be counted
+                neighbors value = yes or no = store list of all neighbors or no
+                peratom value = yes or no = per-atom quantities accessible or no
         Returns:
 
         """
@@ -238,6 +273,10 @@ class GBStructure:
                 compute_indices=True, use_radii=False, edge_threshold=0.0
             )
             self.pipeline.modifiers.append(voro)
+
+        elif self.backend == "lammps":
+            # https://docs.lammps.org/compute_voronoi_atom.html
+            self.lmp.compute("1 all voronoi/atom")
 
         # https://tess.readthedocs.io/en/stable/
         # https://github.com/materialsproject/pymatgen/blob/v2022.0.14/pymatgen/analysis/structure_analyzer.py#L61-L174
