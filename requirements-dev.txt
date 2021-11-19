@@ -1,11 +1,7 @@
-matplotlib
-numpy
-scipy
-coveralls
-coverage
-seaborn
-pandas
-jupyter
 ovito
 pymatgen
 ase
+black
+pylint
+mypy
+pytest

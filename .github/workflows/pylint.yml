@@ -19,6 +19,24 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements-dev.txt
         pip install pylint
-    - name: Analysing the code with pylint
+    - name: mypy
+      run: |
+        mypy --version
+        rm -rf .mypy_cache
+        mypy $(find . -name "*.py" | xargs)
+    - name: pydocstyle
+      run: |
+        pydocstyle --count pymatgen
+    - name: pylint
       run: |
         pylint --exit-zero -d C0415,E0611,E0401 $(find . -name "*.py" | xargs)
+    - name: black
+      run: |
+        black --version
+        black --check --diff --color $(find . -name "*.py" | xargs)
+    - name: flake8
+      run: |
+        flake8 --version
+        flake8 --count --show-source --statistics $(find . -name "*.py" | xargs)
+        # exit-zero treats all errors as warnings.
+        flake8 --count --exit-zero --max-complexity=20 --statistics $(find . -name "*.py" | xargs)
