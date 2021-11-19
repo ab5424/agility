@@ -6,3 +6,4 @@ pylint
 mypy
 pytest
 data-science-types
+pydocstyle

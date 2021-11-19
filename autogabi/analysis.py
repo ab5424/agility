@@ -2,9 +2,7 @@
 # Distributed under the terms of the MIT License
 # author: Alexander Bonkowski
 
-"""
-Analysis functions.
-"""
+"""Analysis functions."""
 
 
 import sys
@@ -14,11 +12,10 @@ import pandas as pd
 
 
 class GBStructure:
-    """
-    This is the fundamental class of a grain boundary object.
-    """
+    """This is the fundamental class of a grain boundary object."""
 
     def __init__(self, backend, filename):
+        """Initialize."""
         self.backend = backend
         self.filename = filename
         self.data = None
@@ -63,16 +60,13 @@ class GBStructure:
             self.read_file(filename)
 
     def read_file(self, filename, type: str = "data"):
-        """
-        Read structure from file.
+        """Read structure from file.
 
         Args:
-            filename:
-
+            filename: File to read.
         Returns:
-
+            None
         """
-
         if self.backend == "ovito":
             from ovito.io import import_file
 
@@ -96,8 +90,9 @@ class GBStructure:
                 print("Please specify the type of lammps file to read.")
 
     def delete_particles(self, particle_type):
-        """
-        Deletes a specific type of particles from a structure. This can be particularly useful if
+        """Delete a specific type of particles from a structure.
+
+        This can be particularly useful if
         there is a mobile type in the structure. Note that for ovito structures you need to make
         sure that type information is included.
         Args:
@@ -143,8 +138,8 @@ class GBStructure:
         nearest_neighbors=None,
         iterations=1,
     ):
-        """
-        Selects particles by ID
+        """Select particles by ID.
+
         Args:
             nearest_neighbors:
             delete:
@@ -155,7 +150,7 @@ class GBStructure:
             list_ids:
 
         Returns:
-
+            None
         """
         if self.backend == "ovito":
 
@@ -212,12 +207,11 @@ class GBStructure:
             self.pipeline.modifiers.append(DeleteSelectedModifier())
 
     def perform_cna(self, mode="IntervalCutoff", cutoff=3.2):
-        """
-        Performs Common neighbor analysis.
+        """Perform Common neighbor analysis.
+
         Returns:
-
+            None
         """
-
         if self.backend == "ovito":
             from ovito.plugins.ParticlesPython import CommonNeighborAnalysisModifier
 
@@ -241,19 +235,17 @@ class GBStructure:
             self.lmp.compute(f"{n_compute} all cna/atom {cutoff}")
 
     def perfom_cnp(self, cutoff: float = 3.20):
-        """
-        Performs Common Neighborhood Parameter calculation.
+        """Perform Common Neighborhood Parameter calculation.
 
         Returns:
-
+            None
         """
-
         if self.backend == "lammps":
             self.lmp.compute(f"compute 1 all cnp/atom {cutoff}")
 
     def perform_voroni_analysis(self):
-        """
-        Performs Voronoi analysis.
+        """Perform Voronoi analysis.
+
         Args:
             ovito:
                 bonds_vis = False
@@ -281,9 +273,8 @@ class GBStructure:
                 neighbors value = yes or no = store list of all neighbors or no
                 peratom value = yes or no = per-atom quantities accessible or no
         Returns:
-
+            None
         """
-
         if self.backend == "ovito":
             from ovito.plugins.ParticlesPython import VoronoiAnalysisModifier
 
@@ -306,10 +297,10 @@ class GBStructure:
         compute: bool = True,
         **kwargs,
     ):
-        """
-        Perform Polyhedral template matching.
+        """Perform Polyhedral template matching.
+        
         https://dx.doi.org/10.1088/0965-0393/24/5/055007
-        https://github.com/pmla/polyhedral-template-matching
+        https://github.com/pmla/polyhedral-template-matching.
 
         Args:
             enabled (list): List of strings for enabled structure types. Possible values:
@@ -328,9 +319,8 @@ class GBStructure:
                 group2-ID = all
 
         Returns:
-
+            None
         """
-
         if self.backend == "ovito":
 
             from ovito.plugins.ParticlesPython import PolyhedralTemplateMatchingModifier
@@ -384,11 +374,10 @@ class GBStructure:
             pass
 
     def perform_ajm(self, compute: bool = True):
-        """
-        Ackland-Jones analysis.
+        """Ackland-Jones analysis.
+
         https://doi.org/10.1103/PhysRevB.73.054104
         Returns:
-
         """
         if self.backend == "ovito":
             from ovito.plugins.ParticlesPython import AcklandJonesModifier
@@ -407,11 +396,10 @@ class GBStructure:
                 self.lmp.run()
 
     def perform_csp(self, num_neighbors: int = 12, compute: bool = True):
-        """
-        Centrosymmetric parameter.
+        """Centrosymmetric parameter.
+
         Use 12 for fcc and 8 for bcc, respectively
         Returns:
-
         """
         if self.backend == "ovito":
             from ovito.plugins.ParticlesPython import CentroSymmetryModifier
@@ -431,8 +419,8 @@ class GBStructure:
                 self.lmp.run()
 
     def get_distinct_grains(self, *args, **kwargs):
-        """
-        Get distinct grains from the structure.
+        """Get distinct grains from the structure.
+
         Args:
             ovito:
                     algorithm = GrainSegmentationModifier.Algorithm.GraphClusteringAuto
@@ -443,9 +431,8 @@ class GBStructure:
                     orphan_adoption = True
 
         Returns:
-
+            None
         """
-
         if self.backend == "ovito":
             from ovito.plugins.CrystalAnalysisPython import GrainSegmentationModifier
 
@@ -454,12 +441,12 @@ class GBStructure:
             self.data = self.pipeline.compute()
 
     def set_analysis(self):
-        """
-        Compute results. Important function for the ovito backend.
+        """Compute results.
+
+        Important function for the ovito backend.
         Returns:
-
+            None
         """
-
         if self.backend == "ovito":
             self.data = self.pipeline.compute()
 
@@ -467,12 +454,13 @@ class GBStructure:
             self.lmp.run(1)
 
     def get_gb_atoms(self):
-        """
-        Get the atoms at the grain boundary, as determined by structural analysis.
+        """Get the atoms at the grain boundary.
+
+        For this to work, some sort of stuctural analysis has to be performed.
+
         Returns:
-
+            None
         """
-
         if self.backend == "ovito":
             if "Structure Type" in self.data.particles.keys():
                 df_temp = pd.DataFrame(
@@ -494,12 +482,11 @@ class GBStructure:
             return None
 
     def get_bulk_atoms(self):
-        """
-        Get the atoms in the bulk, as determined by structural analysis.
+        """Get the atoms in the bulk, as determined by structural analysis.
+
         Returns:
-
+            None
         """
-
         if self.backend == "ovito":
             if "Structure Type" in self.data.particles.keys():
                 df_temp = pd.DataFrame(
@@ -521,15 +508,14 @@ class GBStructure:
             return None
 
     def get_type(self, atom_type):
-        """
-        Get all atoms by type
+        """Get all atoms by type.
+
         Args:
             atom_type:
 
         Returns:
-
+            None
         """
-
         if self.backend == "ovito":
             # Currently doesn't work!
             # def assign_particle_types(frame, data):
@@ -560,16 +546,15 @@ class GBStructure:
     # Todo: Grain Index
 
     def get_fraction(self, numerator, denominator):
-        """
-        Helper function to get fraction of ions/atoms.
+        """Get fraction of ions/atoms. Helper function.
+
         Args:
             numerator:
             denominator:
 
         Returns:
-
+            None
         """
-
         if self.backend == "ovito":
             num = sum([len(self.get_type(i)) for i in numerator])
             den = sum([len(self.get_type(i)) for i in denominator])
@@ -581,16 +566,14 @@ class GBStructure:
 
 
 class GBStructureTimeseries(GBStructure):
-    """
-    This is a class containing multiple snapshots from a time series.
-    """
+    """This is a class containing multiple snapshots from a time series."""
 
     # Todo: get diffusion data
     # Todo: differentiate between along/across GB
 
     def remove_timesteps(self, timesteps_to_exclude):
-        """
-        Removes timesteps from the beggining of a simulation
+        """Remove timesteps from the beggining of a simulation.
+
         Args:
             timesteps_to_exclude (:py:class:`int`): Number of timesteps to exclude
         Returns:
