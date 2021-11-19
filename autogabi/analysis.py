@@ -157,8 +157,7 @@ class GBStructure:
             def modify(frame, data):  # pylint: disable=W0613
                 # Specify the IDs of all atoms that are to remain here
                 ids = data.particles["Particle Identifier"]
-                l_ids = np.in1d(
-                    ids, list_ids, assume_unique=True, invert=False)
+                l_ids = np.in1d(ids, list_ids, assume_unique=True, invert=False)
                 selection = data.particles_.create_property(
                     "Selection", data=l_ids
                 )  # pylint: disable=W0612
