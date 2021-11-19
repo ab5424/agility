@@ -7,3 +7,4 @@ mypy
 pytest
 data-science-types
 pydocstyle
+flake8
