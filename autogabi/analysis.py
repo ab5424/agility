@@ -111,7 +111,7 @@ class GBStructure:
         there is a mobile type in the structure. Note that for ovito structures you need to make
         sure that type information is included.
         Args:
-            particle_type (:py:class:`str`):
+            particle_type:
         Returns:
         """
         if self.backend == "ovito":
@@ -136,6 +136,9 @@ class GBStructure:
             )
 
             self.pipeline.modifiers.append(DeleteSelectedModifier())
+        elif self.backend == "lammps":
+            self.lmp.group(f"delete type {type}")
+            self.lmp.delete_atoms("group delete compress no")
 
         elif self.backend == "pymatgen":
             self.data.structure.remove_species(particle_type)
