@@ -329,37 +329,21 @@ class GBStructure:
 
             # Enabled by default: FCC, HCP, BCC
             if "fcc" not in enabled:
-                ptm.structures[
-                    PolyhedralTemplateMatchingModifier.Type.FCC
-                ].enabled = False
+                ptm.structures[PolyhedralTemplateMatchingModifier.Type.FCC].enabled = False
             if "hcp" not in enabled:
-                ptm.structures[
-                    PolyhedralTemplateMatchingModifier.Type.HCP
-                ].enabled = False
+                ptm.structures[PolyhedralTemplateMatchingModifier.Type.HCP].enabled = False
             if "bcc" not in enabled:
-                ptm.structures[
-                    PolyhedralTemplateMatchingModifier.Type.BCC
-                ].enabled = False
+                ptm.structures[PolyhedralTemplateMatchingModifier.Type.BCC].enabled = False
             if "ico" in enabled:
-                ptm.structures[
-                    PolyhedralTemplateMatchingModifier.Type.ICO
-                ].enabled = True
+                ptm.structures[PolyhedralTemplateMatchingModifier.Type.ICO].enabled = True
             if "sc" in enabled:
-                ptm.structures[
-                    PolyhedralTemplateMatchingModifier.Type.SC
-                ].enabled = True
+                ptm.structures[PolyhedralTemplateMatchingModifier.Type.SC].enabled = True
             if "dcub" in enabled:
-                ptm.structures[
-                    PolyhedralTemplateMatchingModifier.Type.CUBIC_DIAMOND
-                ].enabled = True
+                ptm.structures[PolyhedralTemplateMatchingModifier.Type.CUBIC_DIAMOND].enabled = True
             if "dhex" in enabled:
-                ptm.structures[
-                    PolyhedralTemplateMatchingModifier.Type.HEX_DIAMOND
-                ].enabled = True
+                ptm.structures[PolyhedralTemplateMatchingModifier.Type.HEX_DIAMOND].enabled = True
             if "graphene" in enabled:
-                ptm.structures[
-                    PolyhedralTemplateMatchingModifier.Type.GRAPHENE
-                ].enabled = True
+                ptm.structures[PolyhedralTemplateMatchingModifier.Type.GRAPHENE].enabled = True
 
             self.pipeline.modifiers.append(ptm)
 
