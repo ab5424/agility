@@ -80,7 +80,9 @@ class GBStructure:
         if self.backend == "lammps":
             self._init_lmp(filename=filename, **kwargs)
 
-    def _init_lmp(self, filename, type: str = "data", pair_style: str = "none", kspace_style: str = "none"):
+    def _init_lmp(
+        self, filename, type: str = "data", pair_style: str = "none", kspace_style: str = "none"
+    ):
         """Initialise lammps backend.
 
         Args:
@@ -107,14 +109,12 @@ class GBStructure:
         """Minimise structure.
 
         Returns:
-
         """
         if self.backend == "ovito":
             print(f"The {self.backend} backend does not support minimisation.")
             sys.exit(1)
         elif self.backend == "lammps":
             self.lmp = mimimise_lmp(self.lmp, *args, **kwargs)
-
 
     def delete_particles(self, particle_type):
         """Delete a specific type of particles from a structure.
@@ -236,7 +236,7 @@ class GBStructure:
 
             self.pipeline.modifiers.append(DeleteSelectedModifier())
 
-    def perform_cna(self, mode: str="IntervalCutoff", cutoff: float=3.2, compute: bool = True):
+    def perform_cna(self, mode: str = "IntervalCutoff", cutoff: float = 3.2, compute: bool = True):
         """Perform Common neighbor analysis.
 
         Args:
@@ -263,11 +263,11 @@ class GBStructure:
             cna = CommonNeighborAnalysisModifier(mode=cna_mode, cutoff=cutoff)
             self.pipeline.modifiers.append(cna)
             if compute:
-                    self.data = self.pipeline.compute()
+                self.data = self.pipeline.compute()
 
         elif self.backend == "lammps":
             # https://docs.lammps.org/compute_cna_atom.html
-            n_compute = len([i['style'] for i in self.lmp.computes if i['style'] == 'cna/atom'])
+            n_compute = len([i["style"] for i in self.lmp.computes if i["style"] == "cna/atom"])
             self.lmp.compute(f"cna_{n_compute} all cna/atom {cutoff}")
             if compute:
                 self.lmp.run(1)
