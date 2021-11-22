@@ -10,25 +10,25 @@ from setuptools import setup
 
 __author__ = "Alexander Bonkowski"
 __copyright__ = "Copyright Alexander Bonkowski (2021)"
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 __maintainer__ = "Alexander Bonkowski"
 __email__ = "alexander.bonkowski@rwth-aachen.de"
 __date__ = "29/09/2021"
 
 module_dir = os.path.dirname(os.path.abspath(__file__))
 with open(os.path.join(module_dir, "README.md")) as readme:
-    long_description = readme
+    long_description = readme.read()
 
 if __name__ == "__main__":
     setup(
         name="autogabi",
-        version="0.0.1",
+        version=__version__,
         description="Molecular Dynamics analysis.py",
         long_description=long_description,
         long_description_content_type="text/markdown",
         url="https://github.com/ab5424/auto-gabi",
-        author="Alexander Bonkowski",
-        author_email="alexander.bonkowski@rwth-aachen.de",
+        author=__author__,
+        author_email=__email__,
         license="MIT license",
         packages=["autogabi"],
         zip_safe=False,
