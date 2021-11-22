@@ -16,7 +16,7 @@ from autogabi.minimiser import mimimise_lmp
 class GBStructure:
     """This is the fundamental class of a grain boundary object."""
 
-    def __init__(self, backend, filename):
+    def __init__(self, backend, filename, **kwargs):
         """Initialize."""
         self.backend = backend
         self.filename = filename
@@ -56,12 +56,10 @@ class GBStructure:
 
                 self.lmp = PyLammps()
 
-            self.lmp.units("metal")
-
         if filename:
-            self.read_file(filename)
+            self.read_file(filename, **kwargs)
 
-    def read_file(self, filename, type: str = "data"):
+    def read_file(self, filename, **kwargs):
         """Read structure from file.
 
         Args:
@@ -80,16 +78,30 @@ class GBStructure:
             self.data.structure = Structure.from_file(filename)
 
         if self.backend == "lammps":
+            self._init_lmp(filename=filename, **kwargs)
 
-            # Read dump or read data?
-            if type == "data":
-                self.lmp.read_data(filename)
-            elif type == "dump":
-                self.lmp.read_dump(filename)
-            elif type == "restart":
-                self.lmp.read_restart(filename)
-            else:
-                print("Please specify the type of lammps file to read.")
+    def _init_lmp(self, filename, type: str = "data", pair_style: str = "none", kspace_style: str = "none"):
+        """Initialise lammps backend.
+
+        Args:
+            filename: File to read.
+            type: File type (data, dump, restart)
+            pair_style: lammps pair style
+            kspace_style:
+        """
+        self.lmp.units("metal")
+        self.lmp.atom_style("charge")
+        self.lmp.pair_style(f"{pair_style}")
+        if kspace_style:
+            self.lmp.kspace_style(f"{kspace_style}")
+        if type == "data":
+            self.lmp.read_data(filename)
+        elif type == "dump":
+            self.lmp.read_dump(filename)
+        elif type == "restart":
+            self.lmp.read_restart(filename)
+        else:
+            print("Please specify the type of lammps file to read.")
 
     def minimise(self, *args, **kwargs):
         """Minimise structure.
@@ -137,7 +149,7 @@ class GBStructure:
 
             self.pipeline.modifiers.append(DeleteSelectedModifier())
         elif self.backend == "lammps":
-            self.lmp.group(f"delete type {type}")
+            self.lmp.group(f"delete type {particle_type}")
             self.lmp.delete_atoms("group delete compress no")
 
         elif self.backend == "pymatgen":
@@ -204,7 +216,7 @@ class GBStructure:
             if invert:
                 self._invert_selection()  # for bulk ions
             if delete:
-                self._delete_delection()
+                self._delete_selection()
 
     def _invert_selection(self):
 
@@ -217,16 +229,20 @@ class GBStructure:
             # Todo: Look which ids are in the list and invert by self.structure
             pass
 
-    def _delete_delection(self):
+    def _delete_selection(self):
 
         if self.backend == "ovito":
             from ovito.plugins.StdModPython import DeleteSelectedModifier
 
             self.pipeline.modifiers.append(DeleteSelectedModifier())
 
-    def perform_cna(self, mode="IntervalCutoff", cutoff=3.2):
+    def perform_cna(self, mode: str="IntervalCutoff", cutoff: float=3.2, compute: bool = True):
         """Perform Common neighbor analysis.
 
+        Args:
+            mode: Mode of common neighbor analysis. The lammps backend uses "FixedCutoff".
+            cutoff: Cutoff for the FixedCutoff mode.
+            compute: Compute results.
         Returns:
             None
         """
@@ -246,11 +262,15 @@ class GBStructure:
                 sys.exit(1)
             cna = CommonNeighborAnalysisModifier(mode=cna_mode, cutoff=cutoff)
             self.pipeline.modifiers.append(cna)
+            if compute:
+                    self.data = self.pipeline.compute()
 
         elif self.backend == "lammps":
             # https://docs.lammps.org/compute_cna_atom.html
-            n_compute = 1
-            self.lmp.compute(f"{n_compute} all cna/atom {cutoff}")
+            n_compute = len([i['style'] for i in self.lmp.computes if i['style'] == 'cna/atom'])
+            self.lmp.compute(f"cna_{n_compute} all cna/atom {cutoff}")
+            if compute:
+                self.lmp.run(1)
 
     def perfom_cnp(self, cutoff: float = 3.20):
         """Perform Common Neighborhood Parameter calculation.
@@ -370,7 +390,10 @@ class GBStructure:
 
         elif self.backend == "lammps":
             # https://docs.lammps.org/compute_ptm_atom.html
-            pass
+            n_compute = 1
+            self.lmp.compute(f"{n_compute} all ptm/atom all 0.1")
+            if compute:
+                self.lmp.run(1)
         else:
             # print error
             pass
