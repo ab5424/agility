@@ -10,6 +10,8 @@ import sys
 import numpy as np
 import pandas as pd
 
+from autogabi.minimiser import mimimise_lmp
+
 
 class GBStructure:
     """This is the fundamental class of a grain boundary object."""
@@ -88,6 +90,19 @@ class GBStructure:
                 self.lmp.read_restart(filename)
             else:
                 print("Please specify the type of lammps file to read.")
+
+    def minimise(self, *args, **kwargs):
+        """Minimise structure.
+
+        Returns:
+
+        """
+        if self.backend == "ovito":
+            print(f"The {self.backend} backend does not support minimisation.")
+            sys.exit(1)
+        elif self.backend == "lammps":
+            self.lmp = mimimise_lmp(self.lmp, *args, **kwargs)
+
 
     def delete_particles(self, particle_type):
         """Delete a specific type of particles from a structure.
