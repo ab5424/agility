@@ -41,7 +41,7 @@ stored in the `doc` directory.
 
 ## Run tests
 
-After innstallation, in the home directoy, use
+After installation, in the home directory, use
 
 ```bash
 % pytest

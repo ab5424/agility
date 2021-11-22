@@ -402,7 +402,9 @@ class GBStructure:
             if compute:
                 self.lmp.run()
 
-    def get_distinct_grains(self, *args, **kwargs):
+    def get_distinct_grains(
+        self, *args, algorithm: str = "GraphClusteringAuto", compute: bool = True, **kwargs
+    ):
         """Get distinct grains from the structure.
 
         Args:
@@ -420,9 +422,20 @@ class GBStructure:
         if self.backend == "ovito":
             from ovito.plugins.CrystalAnalysisPython import GrainSegmentationModifier
 
-            gsm = GrainSegmentationModifier(*args, **kwargs)
+            if algorithm == "GraphClusteringAuto":
+                gsm_mode = GrainSegmentationModifier.Algorithm.GraphClusteringAuto
+            elif algorithm == "GraphClusteringManual":
+                gms_mode = GrainSegmentationModifier.Algorithm.GraphClusteringManual
+            elif algorithm == "MinimumSpanningTree":
+                gms_mode = GrainSegmentationModifier.Algorithm.MinimumSpanningTree
+            else:
+                print("Incorrenct Grain Segmentation algorithm specified.")
+                sys.exit(1)
+
+            gsm = GrainSegmentationModifier(*args, algorithm=gms_mode, **kwargs)
             self.pipeline.modifiers.append(gsm)
-            self.data = self.pipeline.compute()
+            if compute:
+                self.data = self.pipeline.compute()
 
     def set_analysis(self):
         """Compute results.
