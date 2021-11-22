@@ -81,13 +81,13 @@ class GBStructure:
             self._init_lmp(filename=filename, **kwargs)
 
     def _init_lmp(
-        self, filename, type: str = "data", pair_style: str = "none", kspace_style: str = "none"
+        self, filename, file_type: str = "data", pair_style: str = "none", kspace_style: str = "none"
     ):
         """Initialise lammps backend.
 
         Args:
             filename: File to read.
-            type: File type (data, dump, restart)
+            file_type: File type (data, dump, restart)
             pair_style: lammps pair style
             kspace_style:
         """
@@ -96,11 +96,11 @@ class GBStructure:
         self.pylmp.pair_style(f"{pair_style}")
         if kspace_style:
             self.pylmp.kspace_style(f"{kspace_style}")
-        if type == "data":
+        if file_type == "data":
             self.pylmp.read_data(filename)
-        elif type == "dump":
+        elif file_type == "dump":
             self.pylmp.read_dump(filename)
-        elif type == "restart":
+        elif file_type == "restart":
             self.pylmp.read_restart(filename)
         else:
             print("Please specify the type of lammps file to read.")
