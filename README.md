@@ -4,7 +4,29 @@ This package is intended for **Auto**mated **G**r**a**in **B**oundary and **I**n
 
 ## Installation
 
-TBA
+There are different ways to install `autogabi`. Choose what works best with your workflow.
+
+### From source
+
+To build from source, use
+
+    pip install -r requirements.txt
+
+    python setup.py build
+
+    python setup.py install
+
+### Using `pip`
+
+    pip install àutogabi
+
+### Using `conda` 
+
+    conda skeleton pypi autogabi
+
+    conda build autogabi
+    
+    conda install --use-local autogabi
 
 ## Contributing
 
