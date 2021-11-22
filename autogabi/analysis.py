@@ -50,11 +50,11 @@ class GBStructure:
             if ipy:
                 from lammps import IPyLammps
 
-                self.lmp = IPyLammps()
+                self.pylmp = IPyLammps()
             else:
                 from lammps import PyLammps
 
-                self.lmp = PyLammps()
+                self.pylmp = PyLammps()
 
         if filename:
             self.read_file(filename, **kwargs)
@@ -91,17 +91,17 @@ class GBStructure:
             pair_style: lammps pair style
             kspace_style:
         """
-        self.lmp.units("metal")
-        self.lmp.atom_style("charge")
-        self.lmp.pair_style(f"{pair_style}")
+        self.pylmp.units("metal")
+        self.pylmp.atom_style("charge")
+        self.pylmp.pair_style(f"{pair_style}")
         if kspace_style:
-            self.lmp.kspace_style(f"{kspace_style}")
+            self.pylmp.kspace_style(f"{kspace_style}")
         if type == "data":
-            self.lmp.read_data(filename)
+            self.pylmp.read_data(filename)
         elif type == "dump":
-            self.lmp.read_dump(filename)
+            self.pylmp.read_dump(filename)
         elif type == "restart":
-            self.lmp.read_restart(filename)
+            self.pylmp.read_restart(filename)
         else:
             print("Please specify the type of lammps file to read.")
 
@@ -114,7 +114,7 @@ class GBStructure:
             print(f"The {self.backend} backend does not support minimisation.")
             sys.exit(1)
         elif self.backend == "lammps":
-            self.lmp = mimimise_lmp(self.lmp, *args, **kwargs)
+            self.pylmp = mimimise_lmp(self.pylmp, *args, **kwargs)
 
     def delete_particles(self, particle_type):
         """Delete a specific type of particles from a structure.
@@ -149,8 +149,8 @@ class GBStructure:
 
             self.pipeline.modifiers.append(DeleteSelectedModifier())
         elif self.backend == "lammps":
-            self.lmp.group(f"delete type {particle_type}")
-            self.lmp.delete_atoms("group delete compress no")
+            self.pylmp.group(f"delete type {particle_type}")
+            self.pylmp.delete_atoms("group delete compress no")
 
         elif self.backend == "pymatgen":
             self.data.structure.remove_species(particle_type)
@@ -267,10 +267,10 @@ class GBStructure:
 
         elif self.backend == "lammps":
             # https://docs.lammps.org/compute_cna_atom.html
-            n_compute = len([i["style"] for i in self.lmp.computes if i["style"] == "cna/atom"])
-            self.lmp.compute(f"cna_{n_compute} all cna/atom {cutoff}")
+            n_compute = len([i["style"] for i in self.pylmp.computes if i["style"] == "cna/atom"])
+            self.pylmp.compute(f"cna_{n_compute} all cna/atom {cutoff}")
             if compute:
-                self.lmp.run(1)
+                self.pylmp.run(1)
 
     def perfom_cnp(self, cutoff: float = 3.20):
         """Perform Common Neighborhood Parameter calculation.
@@ -279,7 +279,7 @@ class GBStructure:
             None
         """
         if self.backend == "lammps":
-            self.lmp.compute(f"compute 1 all cnp/atom {cutoff}")
+            self.pylmp.compute(f"compute 1 all cnp/atom {cutoff}")
 
     def perform_voroni_analysis(self):
         """Perform Voronoi analysis.
@@ -323,7 +323,7 @@ class GBStructure:
 
         elif self.backend == "lammps":
             # https://docs.lammps.org/compute_voronoi_atom.html
-            self.lmp.compute("1 all voronoi/atom")
+            self.pylmp.compute("1 all voronoi/atom")
 
         # https://tess.readthedocs.io/en/stable/
         # https://github.com/materialsproject/pymatgen/blob/v2022.0.14/pymatgen/analysis/structure_analyzer.py#L61-L174
@@ -391,9 +391,9 @@ class GBStructure:
         elif self.backend == "lammps":
             # https://docs.lammps.org/compute_ptm_atom.html
             n_compute = 1
-            self.lmp.compute(f"{n_compute} all ptm/atom all 0.1")
+            self.pylmp.compute(f"{n_compute} all ptm/atom all 0.1")
             if compute:
-                self.lmp.run(1)
+                self.pylmp.run(1)
         else:
             # print error
             pass
@@ -415,10 +415,10 @@ class GBStructure:
 
         elif self.backend == "lammps":
             n_compute = 1
-            self.lmp.compute(f"{n_compute} all ackland/atom")
+            self.pylmp.compute(f"{n_compute} all ackland/atom")
 
             if compute:
-                self.lmp.run()
+                self.pylmp.run()
 
     def perform_csp(self, num_neighbors: int = 12, compute: bool = True):
         """Centrosymmetric parameter.
@@ -438,10 +438,10 @@ class GBStructure:
         elif self.backend == "lammps":
             # https://docs.lammps.org/compute_centro_atom.html
             n_compute = 1
-            self.lmp.compute(f"{n_compute} all centro/atom {num_neighbors}")
+            self.pylmp.compute(f"{n_compute} all centro/atom {num_neighbors}")
 
             if compute:
-                self.lmp.run()
+                self.pylmp.run()
 
     def get_distinct_grains(
         self, *args, algorithm: str = "GraphClusteringAuto", compute: bool = True, **kwargs
@@ -489,7 +489,7 @@ class GBStructure:
             self.data = self.pipeline.compute()
 
         elif self.backend == "lammps":
-            self.lmp.run(1)
+            self.pylmp.run(1)
 
     def get_gb_atoms(self):
         """Get the atoms at the grain boundary.
