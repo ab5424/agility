@@ -1,6 +1,6 @@
 # Auto-GaBi
 
-This package is intended for **Auto**mated **G**r**a**in **B**oundary and **I**nterface Analysis. The documentation can be found at ...
+This package is intended for **Auto**mated **G**r**a**in **B**oundary and **I**nterface Analysis.
 
 ## Installation
 
