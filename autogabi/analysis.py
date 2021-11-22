@@ -466,14 +466,14 @@ class GBStructure:
             if algorithm == "GraphClusteringAuto":
                 gsm_mode = GrainSegmentationModifier.Algorithm.GraphClusteringAuto
             elif algorithm == "GraphClusteringManual":
-                gms_mode = GrainSegmentationModifier.Algorithm.GraphClusteringManual
+                gsm_mode = GrainSegmentationModifier.Algorithm.GraphClusteringManual
             elif algorithm == "MinimumSpanningTree":
-                gms_mode = GrainSegmentationModifier.Algorithm.MinimumSpanningTree
+                gsm_mode = GrainSegmentationModifier.Algorithm.MinimumSpanningTree
             else:
                 print("Incorrenct Grain Segmentation algorithm specified.")
                 sys.exit(1)
 
-            gsm = GrainSegmentationModifier(*args, algorithm=gms_mode, **kwargs)
+            gsm = GrainSegmentationModifier(*args, algorithm=gsm_mode, **kwargs)
             self.pipeline.modifiers.append(gsm)
             if compute:
                 self.data = self.pipeline.compute()

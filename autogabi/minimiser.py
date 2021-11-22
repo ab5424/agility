@@ -1,7 +1,11 @@
+"""
+Minimiser for lammps, vasp, gulp.
+"""
+
 # Copyright (c) Alexander Bonkowski.
 # Distributed under the terms of the MIT License.
 
-# Minimiser for lammps, vasp, gulp
+
 
 
 def mimimise_lmp(
@@ -29,3 +33,4 @@ def mimimise_lmp(
         for i in mod:
             lmp.min_modify(" ".join(i))
     lmp.minimize(f"{etol} {ftol} {maxiter} {maxeval}")
+    return lmp
