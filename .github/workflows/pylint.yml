@@ -29,7 +29,7 @@ jobs:
         pydocstyle --count pymatgen
     - name: pylint
       run: |
-        pylint --exit-zero -d C0415,E0611,E0401 $(find . -name "*.py" | xargs)
+        pylint --exit-zero -d W0511,C0415,E0611,E0401 $(find . -name "*.py" | xargs)
     - name: black
       run: |
         black --version
