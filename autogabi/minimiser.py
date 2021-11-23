@@ -6,8 +6,6 @@ Minimiser for lammps, vasp, gulp.
 # Distributed under the terms of the MIT License.
 
 
-
-
 def mimimise_lmp(
     lmp,
     style: str = "fire",
