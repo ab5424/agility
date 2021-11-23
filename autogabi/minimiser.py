@@ -15,7 +15,7 @@ def mimimise_lmp(
     ftol: float = 1e-8,
     maxiter: int = 1000,
     maxeval: int = 100000,
-    mod: list = None,
+    mod: tuple = None,
 ):
     """Run mimimisation in lammps.
 

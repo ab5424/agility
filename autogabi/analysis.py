@@ -81,7 +81,11 @@ class GBStructure:
             self._init_lmp(filename=filename, **kwargs)
 
     def _init_lmp(
-        self, filename, file_type: str = "data", pair_style: str = "none", kspace_style: str = "none"
+        self,
+        filename,
+        file_type: str = "data",
+        pair_style: str = "none",
+        kspace_style: str = "none",
     ):
         """Initialise lammps backend.
 
