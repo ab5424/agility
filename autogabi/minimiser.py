@@ -1,6 +1,4 @@
-"""
-Minimiser for lammps, vasp, gulp.
-"""
+"""Minimiser for lammps, vasp, gulp."""
 
 # Copyright (c) Alexander Bonkowski.
 # Distributed under the terms of the MIT License.
@@ -9,10 +7,7 @@ Minimiser for lammps, vasp, gulp.
 def mimimise_lmp(
     lmp,
     style: str = "fire",
-    etol: float = 0.0,
-    ftol: float = 1e-8,
-    maxiter: int = 1000,
-    maxeval: int = 100000,
+    min: tuple = (0.0, 1e-8, 1000, 100000),
     mod: tuple = None,
 ):
     """Run mimimisation in lammps.
@@ -26,9 +21,14 @@ def mimimise_lmp(
     Returns:
         lmp: lammps object with minimised structure.
     """
+    if len(min) != 4:
+        print(
+            "The list/tuple for minimisation must contain four arguments:"
+            "etol, ftol, maxiter, maxeval."
+        )
     lmp.min_style(f"{style}")
     if mod:
         for i in mod:
             lmp.min_modify(" ".join(i))
-    lmp.minimize(f"{etol} {ftol} {maxiter} {maxeval}")
+    lmp.minimize(f"{min[0]} {min[1]} {min[2]} {min[3]}")
     return lmp
