@@ -97,6 +97,7 @@ class GBStructure:
         """
         self.pylmp.units("metal")
         self.pylmp.atom_style("charge")
+        self.pylmp.atom_modify("map array")
         self.pylmp.pair_style(f"{pair_style}")
         if kspace_style:
             self.pylmp.kspace_style(f"{kspace_style}")
@@ -506,7 +507,7 @@ class GBStructure:
         elif self.backend == "lammps":
             self.pylmp.run(1)
 
-    def get_gb_atoms(self):
+    def get_gb_atoms(self, mode: str = "cna"):
         """Get the atoms at the grain boundary.
 
         For this to work, some sort of stuctural analysis has to be performed.
@@ -527,9 +528,31 @@ class GBStructure:
                 )
                 df_gb = df_temp[df_temp["Structure Type"] == 0]
                 return list(df_gb["Particle Identifier"])
+            else:
+                print("No Structure analysis performed.")
+                sys.exit(1)
         elif self.backend == "lammps":
-            # TODO
-            return None
+            # Supported analysis methods: cna, ptm, 
+            from lammps import LMP_STYLE_ATOM, LMP_TYPE_VECTOR
+            list_ids = []
+            for i in range(len(self.pylmp.atoms)):
+                list_ids.append(self.pylmp.atoms[i].id)
+            types = np.concatenate(self.pylmp.lmp.numpy.extract_compute("cna_0", LMP_STYLE_ATOM, LMP_TYPE_VECTOR))
+            df_temp = pd.DataFrame(
+                    list(
+                        zip(
+                            list_ids,
+                            types,
+                        )
+                    ),
+                    columns=["Particle Identifier", "Structure Type"],
+                )
+            # TDOD: This is only cna, what about others?
+            if mode == "cna":
+                df_gb = df_temp[df_temp["Structure Type"] == 5]
+            elif mode == "ptm":
+                df_gb = df_temp[df_temp["Structure Type"] == 0]
+            return list(df_gb["Particle Identifier"])
         else:
             print("Method not implemented.")
             return None
