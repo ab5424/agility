@@ -49,9 +49,11 @@ class GBStructure:
 
             if ipy:
                 from lammps import IPyLammps
+
                 self.pylmp = IPyLammps()
             else:
                 from lammps import PyLammps
+
                 self.pylmp = PyLammps()
 
         if filename:
@@ -67,10 +69,12 @@ class GBStructure:
         """
         if self.backend == "ovito":
             from ovito.io import import_file
+
             self.pipeline = import_file(str(filename))
 
         if self.backend == "pymatgen":
             from pymatgen.core import Structure
+
             self.data.structure = Structure.from_file(filename)
 
         if self.backend == "lammps":
@@ -141,9 +145,7 @@ class GBStructure:
             # Select atoms and delete them
             self.pipeline.modifiers.append(
                 SelectTypeModifier(
-                    operate_on="particles",
-                    property="Particle Type",
-                    types={particle_type},
+                    operate_on="particles", property="Particle Type", types={particle_type},
                 )
             )
 
@@ -222,6 +224,7 @@ class GBStructure:
 
         if self.backend == "ovito":
             from ovito.plugins.StdModPython import InvertSelectionModifier
+
             self.pipeline.modifiers.append(InvertSelectionModifier())
 
         if self.backend == "pymatgen":
@@ -232,6 +235,7 @@ class GBStructure:
 
         if self.backend == "ovito":
             from ovito.plugins.StdModPython import DeleteSelectedModifier
+
             self.pipeline.modifiers.append(DeleteSelectedModifier())
 
     def perform_cna(self, mode: str = "IntervalCutoff", cutoff: float = 3.2, compute: bool = True):
@@ -256,7 +260,7 @@ class GBStructure:
             elif mode == "BondBased":
                 cna_mode = CommonNeighborAnalysisModifier.Mode.BondBased
             else:
-                print(f"Selected CNA mode \"{mode}\" unknown.")
+                print(f'Selected CNA mode "{mode}" unknown.')
                 sys.exit(1)
             cna = CommonNeighborAnalysisModifier(mode=cna_mode, cutoff=cutoff)
             self.pipeline.modifiers.append(cna)
@@ -269,7 +273,7 @@ class GBStructure:
             self.pylmp.compute(f"cna_{n_compute} all cna/atom {cutoff}")
             if compute:
                 self.pylmp.run(1)
-        
+
         else:
             raise NotImplementedError(f"The backend {self.backend} doesn't support this function.")
 
@@ -330,11 +334,7 @@ class GBStructure:
         # https://github.com/materialsproject/pymatgen/blob/v2022.0.14/pymatgen/analysis/structure_analyzer.py#L61-L174
 
     def perform_ptm(
-        self,
-        *args,
-        enabled: list = ["fcc", "hpc", "bcc"],
-        compute: bool = True,
-        **kwargs,
+        self, *args, enabled: list = ["fcc", "hpc", "bcc"], compute: bool = True, **kwargs,
     ):
         """Perform Polyhedral template matching.
 
@@ -391,8 +391,8 @@ class GBStructure:
 
         elif self.backend == "lammps":
             # https://docs.lammps.org/compute_ptm_atom.html
-            n_compute = 1
-            self.pylmp.compute(f"{n_compute} all ptm/atom all 0.1")
+            n_compute = len([i["style"] for i in self.pylmp.computes if i["style"] == "ptm/atom"])
+            self.pylmp.compute(f"ptm_{n_compute} all ptm/atom all 0.1")
             if compute:
                 self.pylmp.run(1)
         else:
@@ -415,9 +415,10 @@ class GBStructure:
                 self.data = self.pipeline.compute()
 
         elif self.backend == "lammps":
-            n_compute = 1
-            self.pylmp.compute(f"{n_compute} all ackland/atom")
-
+            n_compute = len(
+                [i["style"] for i in self.pylmp.computes if i["style"] == "ackland/atom"]
+            )
+            self.pylmp.compute(f"ackland_{n_compute} all ackland/atom")
             if compute:
                 self.pylmp.run(1)
 
@@ -438,11 +439,13 @@ class GBStructure:
 
         elif self.backend == "lammps":
             # https://docs.lammps.org/compute_centro_atom.html
-            n_compute = 1
-            self.pylmp.compute(f"{n_compute} all centro/atom {num_neighbors}")
+            n_compute = len(
+                [i["style"] for i in self.pylmp.computes if i["style"] == "centro/atom"]
+            )
+            self.pylmp.compute(f"centro_{n_compute} all centro/atom {num_neighbors}")
 
             if compute:
-                self.pylmp.run()
+                self.pylmp.run(1)
 
     def get_distinct_grains(
         self, *args, algorithm: str = "GraphClusteringAuto", compute: bool = True, **kwargs
