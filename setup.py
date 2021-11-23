@@ -16,7 +16,7 @@ __email__ = "alexander.bonkowski@rwth-aachen.de"
 __date__ = "29/09/2021"
 
 module_dir = os.path.dirname(os.path.abspath(__file__))
-with open(os.path.join(module_dir, "README.md")) as readme:
+with open(os.path.join(module_dir, "README.md"), encoding="utf-8") as readme:
     long_description = readme.read()
 
 if __name__ == "__main__":
