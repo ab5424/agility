@@ -145,7 +145,9 @@ class GBStructure:
             # Select atoms and delete them
             self.pipeline.modifiers.append(
                 SelectTypeModifier(
-                    operate_on="particles", property="Particle Type", types={particle_type},
+                    operate_on="particles",
+                    property="Particle Type",
+                    types={particle_type},
                 )
             )
 
@@ -339,7 +341,11 @@ class GBStructure:
         # https://github.com/materialsproject/pymatgen/blob/v2022.0.14/pymatgen/analysis/structure_analyzer.py#L61-L174
 
     def perform_ptm(
-        self, *args, enabled: list = ["fcc", "hpc", "bcc"], compute: bool = True, **kwargs,
+        self,
+        *args,
+        enabled: list = ["fcc", "hpc", "bcc"],
+        compute: bool = True,
+        **kwargs,
     ):
         """Perform Polyhedral template matching.
 
@@ -489,7 +495,7 @@ class GBStructure:
     def set_analysis(self):
         """Compute results.
 
-        Important function for the ovito backend. The lammps backend can access compute results 
+        Important function for the ovito backend. The lammps backend can access compute results
         without evaluation of this function.
         Returns:
             None
