@@ -145,9 +145,7 @@ class GBStructure:
             # Select atoms and delete them
             self.pipeline.modifiers.append(
                 SelectTypeModifier(
-                    operate_on="particles",
-                    property="Particle Type",
-                    types={particle_type},
+                    operate_on="particles", property="Particle Type", types={particle_type},
                 )
             )
 
@@ -262,21 +260,23 @@ class GBStructure:
             elif mode == "BondBased":
                 cna_mode = CommonNeighborAnalysisModifier.Mode.BondBased
             else:
-                print("Selected CNA Mode unknown.")
+                print(f'Selected CNA mode "{mode}" unknown.')
                 sys.exit(1)
             cna = CommonNeighborAnalysisModifier(mode=cna_mode, cutoff=cutoff)
             self.pipeline.modifiers.append(cna)
-            if compute:
-                self.data = self.pipeline.compute()
 
         elif self.backend == "lammps":
             # https://docs.lammps.org/compute_cna_atom.html
             n_compute = len([i["style"] for i in self.pylmp.computes if i["style"] == "cna/atom"])
             self.pylmp.compute(f"cna_{n_compute} all cna/atom {cutoff}")
-            if compute:
-                self.pylmp.run(1)
 
-    def perfom_cnp(self, cutoff: float = 3.20):
+        else:
+            raise NotImplementedError(f"The backend {self.backend} doesn't support this function.")
+
+        if compute:
+            self.set_analysis()
+
+    def perfom_cnp(self, cutoff: float = 3.20, compute: bool = False):
         """Perform Common Neighborhood Parameter calculation.
 
         Returns:
@@ -285,7 +285,10 @@ class GBStructure:
         if self.backend == "lammps":
             self.pylmp.compute(f"compute 1 all cnp/atom {cutoff}")
 
-    def perform_voroni_analysis(self):
+        if compute:
+            self.set_analysis()
+
+    def perform_voroni_analysis(self, compute: bool = False):
         """Perform Voronoi analysis.
 
         Args:
@@ -329,15 +332,14 @@ class GBStructure:
             # https://docs.lammps.org/compute_voronoi_atom.html
             self.pylmp.compute("1 all voronoi/atom")
 
+        if compute:
+            self.set_analysis()
+
         # https://tess.readthedocs.io/en/stable/
         # https://github.com/materialsproject/pymatgen/blob/v2022.0.14/pymatgen/analysis/structure_analyzer.py#L61-L174
 
     def perform_ptm(
-        self,
-        *args,
-        enabled: list = ["fcc", "hpc", "bcc"],
-        compute: bool = True,
-        **kwargs,
+        self, *args, enabled: list = ["fcc", "hpc", "bcc"], compute: bool = True, **kwargs,
     ):
         """Perform Polyhedral template matching.
 
@@ -389,18 +391,16 @@ class GBStructure:
 
             self.pipeline.modifiers.append(ptm)
 
-            if compute:
-                self.data = self.pipeline.compute()
-
         elif self.backend == "lammps":
             # https://docs.lammps.org/compute_ptm_atom.html
-            n_compute = 1
-            self.pylmp.compute(f"{n_compute} all ptm/atom all 0.1")
-            if compute:
-                self.pylmp.run(1)
+            n_compute = len([i["style"] for i in self.pylmp.computes if i["style"] == "ptm/atom"])
+            self.pylmp.compute(f"ptm_{n_compute} all ptm/atom all 0.1")
         else:
             # print error
             pass
+
+        if compute:
+            self.set_analysis()
 
     def perform_ajm(self, compute: bool = True):
         """Ackland-Jones analysis.
@@ -418,11 +418,16 @@ class GBStructure:
                 self.data = self.pipeline.compute()
 
         elif self.backend == "lammps":
-            n_compute = 1
-            self.pylmp.compute(f"{n_compute} all ackland/atom")
+            n_compute = len(
+                [i["style"] for i in self.pylmp.computes if i["style"] == "ackland/atom"]
+            )
+            self.pylmp.compute(f"ackland_{n_compute} all ackland/atom")
 
-            if compute:
-                self.pylmp.run()
+        else:
+            pass
+
+        if compute:
+            self.set_analysis()
 
     def perform_csp(self, num_neighbors: int = 12, compute: bool = True):
         """Centrosymmetric parameter.
@@ -436,16 +441,15 @@ class GBStructure:
             csp = CentroSymmetryModifier()
             self.pipeline.modifiers.append(csp)
 
-            if compute:
-                self.data = self.pipeline.compute()
-
         elif self.backend == "lammps":
             # https://docs.lammps.org/compute_centro_atom.html
-            n_compute = 1
-            self.pylmp.compute(f"{n_compute} all centro/atom {num_neighbors}")
+            n_compute = len(
+                [i["style"] for i in self.pylmp.computes if i["style"] == "centro/atom"]
+            )
+            self.pylmp.compute(f"centro_{n_compute} all centro/atom {num_neighbors}")
 
-            if compute:
-                self.pylmp.run()
+        if compute:
+            self.set_analysis()
 
     def get_distinct_grains(
         self, *args, algorithm: str = "GraphClusteringAuto", compute: bool = True, **kwargs
@@ -485,7 +489,8 @@ class GBStructure:
     def set_analysis(self):
         """Compute results.
 
-        Important function for the ovito backend.
+        Important function for the ovito backend. The lammps backend can access compute results 
+        without evaluation of this function.
         Returns:
             None
         """
