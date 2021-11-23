@@ -49,11 +49,9 @@ class GBStructure:
 
             if ipy:
                 from lammps import IPyLammps
-
                 self.pylmp = IPyLammps()
             else:
                 from lammps import PyLammps
-
                 self.pylmp = PyLammps()
 
         if filename:
@@ -69,12 +67,10 @@ class GBStructure:
         """
         if self.backend == "ovito":
             from ovito.io import import_file
-
             self.pipeline = import_file(str(filename))
 
         if self.backend == "pymatgen":
             from pymatgen.core import Structure
-
             self.data.structure = Structure.from_file(filename)
 
         if self.backend == "lammps":
@@ -226,7 +222,6 @@ class GBStructure:
 
         if self.backend == "ovito":
             from ovito.plugins.StdModPython import InvertSelectionModifier
-
             self.pipeline.modifiers.append(InvertSelectionModifier())
 
         if self.backend == "pymatgen":
@@ -237,7 +232,6 @@ class GBStructure:
 
         if self.backend == "ovito":
             from ovito.plugins.StdModPython import DeleteSelectedModifier
-
             self.pipeline.modifiers.append(DeleteSelectedModifier())
 
     def perform_cna(self, mode: str = "IntervalCutoff", cutoff: float = 3.2, compute: bool = True):
@@ -262,7 +256,7 @@ class GBStructure:
             elif mode == "BondBased":
                 cna_mode = CommonNeighborAnalysisModifier.Mode.BondBased
             else:
-                print("Selected CNA Mode unknown.")
+                print(f"Selected CNA mode \"{mode}\" unknown.")
                 sys.exit(1)
             cna = CommonNeighborAnalysisModifier(mode=cna_mode, cutoff=cutoff)
             self.pipeline.modifiers.append(cna)
@@ -275,6 +269,9 @@ class GBStructure:
             self.pylmp.compute(f"cna_{n_compute} all cna/atom {cutoff}")
             if compute:
                 self.pylmp.run(1)
+        
+        else:
+            raise NotImplementedError(f"The backend {self.backend} doesn't support this function.")
 
     def perfom_cnp(self, cutoff: float = 3.20):
         """Perform Common Neighborhood Parameter calculation.
@@ -422,7 +419,7 @@ class GBStructure:
             self.pylmp.compute(f"{n_compute} all ackland/atom")
 
             if compute:
-                self.pylmp.run()
+                self.pylmp.run(1)
 
     def perform_csp(self, num_neighbors: int = 12, compute: bool = True):
         """Centrosymmetric parameter.
