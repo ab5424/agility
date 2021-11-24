@@ -556,7 +556,7 @@ class GBStructure:
                 df_gb = df_temp[df_temp["Structure Type"] == 0]
             elif mode == "voronoi":
                 print("Method not implemented.")
-                df_gb = None
+                sys.exit(1)
             return list(df_gb["Particle Identifier"])
         else:
             print("Method not implemented.")
