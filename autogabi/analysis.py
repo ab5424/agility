@@ -545,17 +545,19 @@ class GBStructure:
             # ids = []
             # for i in range(len(self.pylmp.atoms)):
             #     ids.append(self.pylmp.atoms[i].id)
-            types = np.concatenate(self.pylmp.lmp.numpy.extract_compute("cna_0", LMP_STYLE_ATOM, LMP_TYPE_VECTOR))
+            types = np.concatenate(
+                self.pylmp.lmp.numpy.extract_compute("cna_0", LMP_STYLE_ATOM, LMP_TYPE_VECTOR)
+            )
             ids = np.concatenate(self.pylmp.lmp.numpy.extract_atom("id"))
             df_temp = pd.DataFrame(
-                    list(
-                        zip(
-                            ids,
-                            types,
-                        )
-                    ),
-                    columns=["Particle Identifier", "Structure Type"],
-                )
+                list(
+                    zip(
+                        ids,
+                        types,
+                    )
+                ),
+                columns=["Particle Identifier", "Structure Type"],
+            )
             # TDOD: This is only cna, what about others?
             if mode == "cna":
                 df_gb = df_temp[df_temp["Structure Type"] == 5]
