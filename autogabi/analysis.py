@@ -252,6 +252,7 @@ class GBStructure:
             None
         """
         if self.backend == "ovito":
+            # TODO: Enable/diable structure types
             from ovito.plugins.ParticlesPython import CommonNeighborAnalysisModifier
 
             if mode == "IntervalCutoff":
@@ -345,6 +346,7 @@ class GBStructure:
         self,
         *args,
         enabled: list = ["fcc", "hpc", "bcc"],
+        rmsd_threshold: float = 0.1,
         compute: bool = True,
         **kwargs,
     ):
@@ -372,11 +374,14 @@ class GBStructure:
         Returns:
             None
         """
+        for i in enabled:
+            if i not in ["fcc", "hcp", "bcc", "ico", "sc", "dcub", "dhex", "graphene"]:
+                print(f"Enabled structure type {i} unknown")
         if self.backend == "ovito":
 
             from ovito.plugins.ParticlesPython import PolyhedralTemplateMatchingModifier
 
-            ptm = PolyhedralTemplateMatchingModifier(*args, **kwargs)
+            ptm = PolyhedralTemplateMatchingModifier(*args, rmsd_cutoff = rmsd_threshold, **kwargs)
 
             # Enabled by default: FCC, HCP, BCC
             if "fcc" not in enabled:
@@ -401,7 +406,8 @@ class GBStructure:
         elif self.backend == "lammps":
             # https://docs.lammps.org/compute_ptm_atom.html
             n_compute = len([i["style"] for i in self.pylmp.computes if i["style"] == "ptm/atom"])
-            self.pylmp.compute(f"ptm_{n_compute} all ptm/atom all 0.1")
+            enabled_structures = " ".join(enabled)
+            self.pylmp.compute(f"ptm_{n_compute} all ptm/atom {enabled_structures} {rmsd_threshold}")
         else:
             # print error
             pass
@@ -536,14 +542,15 @@ class GBStructure:
         elif self.backend == "lammps":
             # Supported analysis methods: cna, ptm, 
             from lammps import LMP_STYLE_ATOM, LMP_TYPE_VECTOR
-            list_ids = []
-            for i in range(len(self.pylmp.atoms)):
-                list_ids.append(self.pylmp.atoms[i].id)
+            # ids = []
+            # for i in range(len(self.pylmp.atoms)):
+            #     ids.append(self.pylmp.atoms[i].id)
             types = np.concatenate(self.pylmp.lmp.numpy.extract_compute("cna_0", LMP_STYLE_ATOM, LMP_TYPE_VECTOR))
+            ids = np.concatenate(self.pylmp.lmp.numpy.extract_atom("id"))
             df_temp = pd.DataFrame(
                     list(
                         zip(
-                            list_ids,
+                            ids,
                             types,
                         )
                     ),
@@ -554,7 +561,7 @@ class GBStructure:
                 df_gb = df_temp[df_temp["Structure Type"] == 5]
             elif mode == "ptm" or mode == "ackland":
                 df_gb = df_temp[df_temp["Structure Type"] == 0]
-            elif mode == "voronoi":
+            elif mode == "voronoi" or mode == "centro":
                 print("Method not implemented.")
                 sys.exit(1)
             return list(df_gb["Particle Identifier"])
