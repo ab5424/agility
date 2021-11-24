@@ -512,6 +512,8 @@ class GBStructure:
 
         For this to work, some sort of stuctural analysis has to be performed.
 
+        Args:
+            mode: Mode for selection of grain boundary atoms.
         Returns:
             None
         """
@@ -550,8 +552,11 @@ class GBStructure:
             # TDOD: This is only cna, what about others?
             if mode == "cna":
                 df_gb = df_temp[df_temp["Structure Type"] == 5]
-            elif mode == "ptm":
+            elif mode == "ptm" or mode == "ackland":
                 df_gb = df_temp[df_temp["Structure Type"] == 0]
+            elif mode == "voronoi":
+                print("Method not implemented.")
+                df_gb = None
             return list(df_gb["Particle Identifier"])
         else:
             print("Method not implemented.")
