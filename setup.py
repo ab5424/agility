@@ -10,7 +10,7 @@ from setuptools import setup
 
 __author__ = "Alexander Bonkowski"
 __copyright__ = "Copyright Alexander Bonkowski (2021)"
-__version__ = "0.0.2"
+__version__ = "0.0.3"
 __maintainer__ = "Alexander Bonkowski"
 __email__ = "alexander.bonkowski@rwth-aachen.de"
 __date__ = "29/09/2021"

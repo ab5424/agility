@@ -110,6 +110,27 @@ class GBStructure:
         else:
             print("Please specify the type of lammps file to read.")
 
+    def save_structure(self, filename: str = None, file_type: str = None, **kwargs):
+        """Save structure to disc.
+
+        Args:
+            filename:
+            file_type:
+
+        """
+        if self.backend == "ovito":
+            from ovito.io import export_file
+
+            export_file(pipeline, filename, file_type, **kwargs)
+
+        if self.backend == "lammps":
+            if file_type == "data":
+                self.pylmp.write_data(filename)
+            elif file_type == "dump":
+                self.pylmp.write_dump(filename)
+            elif file_type == "restart":
+                self.pylmp.write_restart(filename)
+
     def minimise(self, *args, **kwargs):
         """Minimise structure.
 
@@ -656,6 +677,41 @@ class GBStructure:
         else:
             print("Method not implemented.")
             return None
+
+    def save_image(self, filename: str = "image.png"):
+        """Save image file.
+
+        Args:
+            filename: file to be saved.
+
+        """
+        if self.backend == "ovito":
+            # TODO: use render function
+            pass
+        if self.backend == "lammps":
+            # Only works with IPython integration
+            self.pylmp.image(filename=filename)
+
+    def convert_backend(convert_to: str = None):
+        """Convert the current backend.
+
+        Args:
+            convert_to: Backend to convert to.
+        """
+        if self.backend == "lammps":
+            from datetime import datetime
+
+            filename = datetime.now().strftime("%d%m%Y_%H%M%S") + ".lmp"
+            self.save_structure("filename", file_type="data")
+            if convert_to == "ovito":
+                import pathlib
+                from ovito.io import import_file
+
+                self.backend == convert_to
+                self.pipeline = import_file(str(filename))
+                del self.pylm
+                tempfile = pathlib.Path(filename)
+                tempfile.unlink()
 
 
 class GBStructureTimeseries(GBStructure):
