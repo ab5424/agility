@@ -381,7 +381,7 @@ class GBStructure:
 
             from ovito.plugins.ParticlesPython import PolyhedralTemplateMatchingModifier
 
-            ptm = PolyhedralTemplateMatchingModifier(*args, rmsd_cutoff = rmsd_threshold, **kwargs)
+            ptm = PolyhedralTemplateMatchingModifier(*args, rmsd_cutoff=rmsd_threshold, **kwargs)
 
             # Enabled by default: FCC, HCP, BCC
             if "fcc" not in enabled:
@@ -407,7 +407,9 @@ class GBStructure:
             # https://docs.lammps.org/compute_ptm_atom.html
             n_compute = len([i["style"] for i in self.pylmp.computes if i["style"] == "ptm/atom"])
             enabled_structures = " ".join(enabled)
-            self.pylmp.compute(f"ptm_{n_compute} all ptm/atom {enabled_structures} {rmsd_threshold}")
+            self.pylmp.compute(
+                f"ptm_{n_compute} all ptm/atom {enabled_structures} {rmsd_threshold}"
+            )
         else:
             # print error
             pass
@@ -540,8 +542,9 @@ class GBStructure:
                 print("No Structure analysis performed.")
                 sys.exit(1)
         elif self.backend == "lammps":
-            # Supported analysis methods: cna, ptm, 
+            # Supported analysis methods: cna, ptm,
             from lammps import LMP_STYLE_ATOM, LMP_TYPE_VECTOR
+
             # ids = []
             # for i in range(len(self.pylmp.atoms)):
             #     ids.append(self.pylmp.atoms[i].id)
