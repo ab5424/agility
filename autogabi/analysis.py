@@ -121,7 +121,7 @@ class GBStructure:
         if self.backend == "ovito":
             from ovito.io import export_file
 
-            export_file(pipeline, filename, file_type, **kwargs)
+            export_file(self.pipeline, filename, file_type, **kwargs)
 
         if self.backend == "lammps":
             if file_type == "data":
@@ -692,7 +692,7 @@ class GBStructure:
             # Only works with IPython integration
             self.pylmp.image(filename=filename)
 
-    def convert_backend(convert_to: str = None):
+    def convert_backend(self, convert_to: str = None):
         """Convert the current backend.
 
         Args:
