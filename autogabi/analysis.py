@@ -709,7 +709,7 @@ class GBStructure:
 
                 self.backend == convert_to
                 self.pipeline = import_file(str(filename))
-                del self.pylm
+                del self.pylmp
                 tempfile = pathlib.Path(filename)
                 tempfile.unlink()
 
