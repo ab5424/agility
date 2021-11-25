@@ -536,6 +536,9 @@ class GBStructure:
         elif self.backend == "lammps":
             self.pylmp.run(1)
 
+        elif self.backend == "pymatgen":
+            print("The pymatgen backend does not require setting the analysis.")
+
     def get_gb_atoms(self, mode: str = "cna"):
         """Get the atoms at the grain boundary.
 

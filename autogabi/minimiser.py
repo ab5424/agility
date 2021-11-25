@@ -9,6 +9,7 @@ def mimimise_lmp(
     style: str = "fire",
     min: tuple = (0.0, 1e-8, 1000, 100000),
     mod: tuple = None,
+    mpi: bool = True,
 ):
     """Run mimimisation in lammps.
 
@@ -26,6 +27,10 @@ def mimimise_lmp(
             "The list/tuple for minimisation must contain four arguments:"
             "etol, ftol, maxiter, maxeval."
         )
+    if mpi:
+        from mpi4py import MPI
+        me = MPI.COMM_WORLD.Get_rank()
+        nprocs = MPI.COMM_WORLD.Get_size()
     lmp.min_style(f"{style}")
     if mod:
         for i in mod:
