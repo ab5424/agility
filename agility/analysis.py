@@ -10,7 +10,7 @@ import sys
 import numpy as np
 import pandas as pd
 
-from autogabi.minimiser import mimimise_lmp
+from agility.minimiser import mimimise_lmp
 
 
 class GBStructure:
@@ -27,6 +27,7 @@ class GBStructure:
             "pymatgen",
             "babel",
             "pyiron",
+            # https://github.com/pyiron/pylammpsmpi
             "ase",
             "lammps",
         ]:

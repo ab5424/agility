@@ -1,10 +1,10 @@
-# Auto-GaBi
+# Agility
 
-This package is intended for **Auto**mated **G**r**a**in **B**oundary and **I**nterface Analysis.
+**A**tomistic **G**rain Boundary and **I**nterface Uti**lity**.
 
 ## Installation
 
-There are different ways to install `autogabi`. Choose what works best with your workflow.
+There are different ways to install `agility`. Choose what works best with your workflow.
 
 ### From source
 
@@ -18,15 +18,15 @@ To build from source, use
 
 ### Using `pip`
 
-    pip install àutogabi
+    pip install agility
 
 ### Using `conda` 
 
-    conda skeleton pypi autogabi
+    conda skeleton pypi agility
 
-    conda build autogabi
+    conda build agility
     
-    conda install --use-local autogabi
+    conda install --use-local agility
 
 ## Contributing
 
