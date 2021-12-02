@@ -29,6 +29,7 @@ def mimimise_lmp(
         )
     if mpi:
         from mpi4py import MPI
+
         me = MPI.COMM_WORLD.Get_rank()
         nprocs = MPI.COMM_WORLD.Get_size()
     lmp.min_style(f"{style}")
