@@ -521,6 +521,7 @@ class GBStructure:
             self.pipeline.modifiers.append(gsm)
             if compute:
                 self.data = self.pipeline.compute()
+            # TODO: Get misorientation plot
 
     def set_analysis(self):
         """Compute results.
@@ -575,6 +576,7 @@ class GBStructure:
             types = np.concatenate(
                 self.pylmp.lmp.numpy.extract_compute("cna_0", LMP_STYLE_ATOM, LMP_TYPE_VECTOR)
             )
+            # https://docs.lammps.org/Classes_atom.html#_CPPv4N9LAMMPS_NS4Atom7extractEPKc
             ids = np.concatenate(self.pylmp.lmp.numpy.extract_atom("id"))
             df_temp = pd.DataFrame(
                 list(
