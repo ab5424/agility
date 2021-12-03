@@ -30,7 +30,7 @@ To build from source, use
 
 ## Contributing
 
-Any contributions or even questions about the code are welcome - please use the [Issue Tracker](https://github.com/ab5424/Auto-GaBi/issues) or [Pull Requests](https://github.com/ab5424/Auto-GaBi/pulls).
+Any contributions or even questions about the code are welcome - please use the [Issue Tracker](https://github.com/ab5424/agility/issues) or [Pull Requests](https://github.com/ab5424/agility/pulls).
 
 ### Development
 
