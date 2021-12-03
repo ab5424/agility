@@ -5,6 +5,7 @@
 """Analysis functions."""
 
 
+import pathlib
 import sys
 
 import numpy as np
@@ -591,9 +592,9 @@ class GBStructure:
             # TDOD: This is only cna, what about others?
             if mode == "cna":
                 df_gb = df_temp[df_temp["Structure Type"] == 5]
-            elif mode == "ptm" or mode == "ackland":
+            elif mode in ("ptm", "ackland"):
                 df_gb = df_temp[df_temp["Structure Type"] == 0]
-            elif mode == "voronoi" or mode == "centro":
+            elif mode in ("voronoi", "centro"):
                 print("Method not implemented.")
                 sys.exit(1)
             return list(df_gb["Particle Identifier"])
@@ -620,6 +621,9 @@ class GBStructure:
                 )
                 df_gb = df_temp[df_temp["Structure Type"] != 0]
                 return list(df_gb["Particle Identifier"])
+            else:
+                print("No structure type information found.")
+                return None
         elif self.backend == "lammps":
             # TODO
             return None
@@ -678,11 +682,10 @@ class GBStructure:
         if self.backend == "ovito":
             num = sum([len(self.get_type(i)) for i in numerator])
             den = sum([len(self.get_type(i)) for i in denominator])
-            return num / den
-
         else:
             print("Method not implemented.")
-            return None
+
+        return num / den
 
     def save_image(self, filename: str = "image.png"):
         """Save image file.
@@ -710,19 +713,21 @@ class GBStructure:
             filename = datetime.now().strftime("%d%m%Y_%H%M%S") + ".lmp"
             self.save_structure("filename", file_type="data")
             if convert_to == "ovito":
-                import pathlib
-                from ovito.io import import_file
-
-                self.backend == convert_to
-                self.pipeline = import_file(str(filename))
-                del self.pylmp
-                tempfile = pathlib.Path(filename)
-                tempfile.unlink()
+                try:
+                    return GBStructure(backend=convert_to, filename=filename)
+                finally:
+                    tempfile = pathlib.Path(filename)
+                    tempfile.unlink()
+            else:
+                return None
+        else:
+            return None
 
 
 class GBStructureTimeseries(GBStructure):
     """This is a class containing multiple snapshots from a time series."""
 
+    # Todo: enable inheritance
     # Todo: get diffusion data
     # Todo: differentiate between along/across GB
 
@@ -735,7 +740,6 @@ class GBStructureTimeseries(GBStructure):
             new_trajectory (:py:class:`polypy.read.Trajectory`):
             Trajectory object.
         """
-        pass
 
     # Todo: Add differentiation between diffusion along a grain boundary, transverse to the GB,
     # and between grains
