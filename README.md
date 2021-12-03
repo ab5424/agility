@@ -1,3 +1,5 @@
+[![Coverage Status](https://coveralls.io/repos/github/ab5424/agility/badge.svg?branch=main)](https://coveralls.io/github/ab5424/agility?branch=main)
+
 # Agility
 
 **A**tomistic **G**rain Boundary and **I**nterface Uti**lity**.
