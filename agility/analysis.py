@@ -554,17 +554,15 @@ class GBStructure:
         """
         if self.backend == "ovito":
             if "Structure Type" in self.data.particles.keys():
-                df_temp = pd.DataFrame(
-                    list(
-                        zip(
-                            self.data.particles["Particle Identifier"],
-                            self.data.particles["Structure Type"],
-                        )
-                    ),
-                    columns=["Particle Identifier", "Structure Type"],
-                )
-                df_gb = df_temp[df_temp["Structure Type"] == 0]
-                return list(df_gb["Particle Identifier"])
+                gb_list = [
+                    i[0]
+                    for i in zip(
+                        self.data.particles["Particle Identifier"],
+                        self.data.particles["Structure Type"],
+                    )
+                    if i[1] == 0
+                ]
+                return gb_list
             else:
                 print("No Structure analysis performed.")
                 sys.exit(1)
@@ -610,17 +608,26 @@ class GBStructure:
         """
         if self.backend == "ovito":
             if "Structure Type" in self.data.particles.keys():
-                df_temp = pd.DataFrame(
-                    list(
-                        zip(
-                            self.data.particles["Particle Identifier"],
-                            self.data.particles["Structure Type"],
-                        )
-                    ),
-                    columns=["Particle Identifier", "Structure Type"],
-                )
-                df_gb = df_temp[df_temp["Structure Type"] != 0]
-                return list(df_gb["Particle Identifier"])
+                gb_list = [
+                    i[0]
+                    for i in zip(
+                        self.data.particles["Particle Identifier"],
+                        self.data.particles["Particle Type"],
+                    )
+                    if i[1] != 0
+                ]
+                return gb_list
+                # df_temp = pd.DataFrame(
+                #     list(
+                #         zip(
+                #             self.data.particles["Particle Identifier"],
+                #             self.data.particles["Structure Type"],
+                #         )
+                #     ),
+                #     columns=["Particle Identifier", "Structure Type"],
+                # )
+                # df_gb = df_temp[df_temp["Structure Type"] != 0]
+                # return list(df_gb["Particle Identifier"])
             else:
                 print("No structure type information found.")
                 return None
@@ -647,17 +654,26 @@ class GBStructure:
             #
             # self.pipeline.modifiers.append(assign_particle_types)
             # self.set_analysis()
-            df_temp = pd.DataFrame(
-                list(
-                    zip(
-                        self.data.particles["Particle Identifier"],
-                        self.data.particles["Particle Type"],
-                    )
-                ),
-                columns=["Particle Identifier", "Particle Type"],
-            )
-            df_atom = df_temp[df_temp["Particle Type"].eq(atom_type)]
-            return list(df_atom["Particle Identifier"])
+            atom_list = [
+                i[0]
+                for i in zip(
+                    self.data.particles["Particle Identifier"],
+                    self.data.particles["Particle Type"],
+                )
+                if i[1] == atom_type
+            ]
+            return atom_list
+            # df_temp = pd.DataFrame(
+            #     list(
+            #         zip(
+            #             self.data.particles["Particle Identifier"],
+            #             self.data.particles["Particle Type"],
+            #         )
+            #     ),
+            #     columns=["Particle Identifier", "Particle Type"],
+            # )
+            # df_atom = df_temp[df_temp["Particle Type"].eq(atom_type)]
+            # return list(df_atom["Particle Identifier"])
 
         elif self.backend == "lammps":
             # TODO
