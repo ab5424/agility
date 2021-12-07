@@ -216,9 +216,9 @@ class GBStructure:
                 # Specify the IDs of all atoms that are to remain here
                 ids = data.particles["Particle Identifier"]
                 l_ids = np.in1d(ids, list_ids, assume_unique=True, invert=False)
-                selection = data.particles_.create_property(
+                selection = data.particles_.create_property(  # pylint: disable=W0612
                     "Selection", data=l_ids
-                )  # pylint: disable=W0612
+                )
 
             self.pipeline.modifiers.append(modify)
 
@@ -264,7 +264,13 @@ class GBStructure:
 
             self.pipeline.modifiers.append(DeleteSelectedModifier())
 
-    def perform_cna(self, mode: str = "IntervalCutoff", cutoff: float = 3.2, compute: bool = True):
+    def perform_cna(
+        self,
+        mode: str = "IntervalCutoff",
+        enabled: list = ["fcc", "hpc", "bcc"],
+        cutoff: float = 3.2,
+        compute: bool = True,
+    ):
         """Perform Common neighbor analysis.
 
         Args:
@@ -290,6 +296,15 @@ class GBStructure:
                 print(f'Selected CNA mode "{mode}" unknown.')
                 sys.exit(1)
             cna = CommonNeighborAnalysisModifier(mode=cna_mode, cutoff=cutoff)
+            # Enabled by default: FCC, HCP, BCC
+            if "fcc" not in enabled:
+                cna.structures[CommonNeighborAnalysisModifier.Type.FCC].enabled = False
+            if "hcp" not in enabled:
+                cna.structures[CommonNeighborAnalysisModifier.Type.HCP].enabled = False
+            if "bcc" not in enabled:
+                cna.structures[CommonNeighborAnalysisModifier.Type.BCC].enabled = False
+            if "ico" not in enabled:
+                cna.structures[CommonNeighborAnalysisModifier.Type.ICO].enabled = False
             self.pipeline.modifiers.append(cna)
 
         elif self.backend == "lammps":
