@@ -1,3 +1,6 @@
+[![Documentation Status](https://readthedocs.org/projects/agility1/badge/?version=latest)](https://agility1.readthedocs.io/en/latest/?badge=latest)
+[![Coverage Status](https://coveralls.io/repos/github/ab5424/agility/badge.svg?branch=main)](https://coveralls.io/github/ab5424/agility?branch=main)
+
 # Agility
 
 **A**tomistic **G**rain Boundary and **I**nterface Uti**lity**.
