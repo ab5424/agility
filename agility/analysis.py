@@ -321,6 +321,8 @@ class GBStructure:
     def perfom_cnp(self, cutoff: float = 3.20, compute: bool = False):
         """Perform Common Neighborhood Parameter calculation.
 
+        Please cite https://doi.org/10.1016/j.cpc.2007.05.018
+
         Returns:
             None
         """
@@ -627,7 +629,7 @@ class GBStructure:
                     i[0]
                     for i in zip(
                         self.data.particles["Particle Identifier"],
-                        self.data.particles["Particle Type"],
+                        self.data.particles["Structure Type"],
                     )
                     if i[1] != 0
                 ]
