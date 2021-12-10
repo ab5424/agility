@@ -118,7 +118,6 @@ class GBStructure:
         Args:
             filename:
             file_type:
-
         """
         if self.backend == "ovito":
             from ovito.io import export_file
@@ -191,19 +190,17 @@ class GBStructure:
         list_ids,
         invert=True,
         delete=True,
-        expand=False,
-        expand_cutoff=3.2,
-        nearest_neighbors=None,
+        expand_cutoff=None,
+        expand_nearest_neighbors=None,
         iterations=1,
     ):
         """Select particles by ID.
 
         Args:
-            nearest_neighbors:
+            expand_nearest_neighbors (int): Number of nearest neighbors. Default 1.
             delete:
             iterations:
-            expand_cutoff:
-            expand:
+            expand_cutoff (float): Expansion cutoff. Default 3.2.
             invert:
             list_ids:
 
@@ -222,14 +219,14 @@ class GBStructure:
 
             self.pipeline.modifiers.append(modify)
 
-            if expand:
+            if expand_nearest_neighbors or expand_cutoff:
                 from ovito.plugins.ParticlesPython import ExpandSelectionModifier
 
-                if nearest_neighbors:
+                if expand_nearest_neighbors:
                     self.pipeline.modifiers.append(
                         ExpandSelectionModifier(
                             mode=ExpandSelectionModifier.ExpansionMode.Nearest,
-                            num_neighbors=nearest_neighbors,
+                            num_neighbors=expand_nearest_neighbors,
                             iterations=iterations,
                         )
                     )
@@ -655,6 +652,16 @@ class GBStructure:
             print("Method not implemented.")
             return None
 
+    def get_gb_fraction(self, mode: str = "cna"):
+        """Get fraction of grain boundary ions.
+
+        Args:
+            mode:
+
+        Returns:
+        """
+        return self.get_gb_atoms(mode) / (self.get_gb_atoms(mode) + self.get_bulk_atoms())
+
     def get_type(self, atom_type):
         """Get all atoms by type.
 
@@ -725,7 +732,6 @@ class GBStructure:
 
         Args:
             filename: file to be saved.
-
         """
         if self.backend == "ovito":
             # TODO: use render function
