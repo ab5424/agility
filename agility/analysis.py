@@ -264,7 +264,7 @@ class GBStructure:
     def perform_cna(
         self,
         mode: str = "IntervalCutoff",
-        enabled: list = ["fcc", "hpc", "bcc"],
+        enabled: tuple = ("fcc", "hpc", "bcc"),
         cutoff: float = 3.2,
         compute: bool = True,
     ):
@@ -310,7 +310,7 @@ class GBStructure:
             self.pylmp.compute(f"cna_{n_compute} all cna/atom {cutoff}")
 
         else:
-            raise NotImplementedError(f"The backend {self.backend} doesn't support this function.")
+            raise not_implemented(self.backend)
 
         if compute:
             self.set_analysis()
@@ -382,7 +382,7 @@ class GBStructure:
     def perform_ptm(
         self,
         *args,
-        enabled: list = ["fcc", "hpc", "bcc"],
+        enabled: tuple = ("fcc", "hpc", "bcc"),
         rmsd_threshold: float = 0.1,
         compute: bool = True,
         **kwargs,
@@ -393,7 +393,7 @@ class GBStructure:
         https://github.com/pmla/polyhedral-template-matching.
 
         Args:
-            enabled (list): List of strings for enabled structure types. Possible values:
+            enabled (tuple): List of strings for enabled structure types. Possible values:
                 fcc-hcp-bcc-ico-sc-dcub-dhex-graphene
             for ovito:
                 output_deformation_gradient = False
@@ -576,10 +576,11 @@ class GBStructure:
                     )
                     if i[1] == 0
                 ]
-                return gb_list
+            elif "Centrosymmetry" in self.data.particles.keys():
+                print("Implementation in progress.")
+                gb_list = None
             else:
-                print("No Structure analysis performed.")
-                sys.exit(1)
+                raise not_implemented(self.backend)
         elif self.backend == "lammps":
             # Supported analysis methods: cna, ptm,
             from lammps import LMP_STYLE_ATOM, LMP_TYPE_VECTOR
@@ -609,10 +610,10 @@ class GBStructure:
             elif mode in ("voronoi", "centro"):
                 print("Method not implemented.")
                 sys.exit(1)
-            return list(df_gb["Particle Identifier"])
+            gb_list = list(df_gb["Particle Identifier"])
         else:
-            print("Method not implemented.")
-            return None
+            raise not_implemented(self.backend)
+        return gb_list
 
     def get_bulk_atoms(self):
         """Get the atoms in the bulk, as determined by structural analysis.
@@ -630,7 +631,6 @@ class GBStructure:
                     )
                     if i[1] != 0
                 ]
-                return gb_list
                 # df_temp = pd.DataFrame(
                 #     list(
                 #         zip(
@@ -644,13 +644,14 @@ class GBStructure:
                 # return list(df_gb["Particle Identifier"])
             else:
                 print("No structure type information found.")
-                return None
+                gb_list = None
         elif self.backend == "lammps":
             # TODO
-            return None
+            gb_list = None
         else:
             print("Method not implemented.")
-            return None
+            gb_list = None
+        return gb_list
 
     def get_gb_fraction(self, mode: str = "cna"):
         """Get fraction of grain boundary ions.
@@ -686,7 +687,6 @@ class GBStructure:
                 )
                 if i[1] == atom_type
             ]
-            return atom_list
             # df_temp = pd.DataFrame(
             #     list(
             #         zip(
@@ -701,10 +701,10 @@ class GBStructure:
 
         elif self.backend == "lammps":
             # TODO
-            return None
+            atom_list = None
         else:
-            print("Method not implemented.")
-            return None
+            raise not_implemented(self.backend)
+        return atom_list
 
     # Todo: Verkippungswinkel
     # Todo: Grain Index
@@ -782,3 +782,15 @@ class GBStructureTimeseries(GBStructure):
 
     # Todo: Add differentiation between diffusion along a grain boundary, transverse to the GB,
     # and between grains
+
+
+def not_implemented(backend):
+    """Raise not implemeted error.
+
+    Args:
+        backend: Backend currently in use.
+
+    Returns:
+
+    """
+    return NotImplementedError(f"The backend {backend} doesn't support this function.")
