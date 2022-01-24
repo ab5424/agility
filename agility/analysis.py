@@ -272,6 +272,7 @@ class GBStructure:
 
         Args:
             mode: Mode of common neighbor analysis. The lammps backend uses "FixedCutoff".
+            enabled: Enabled structures for identifier.
             cutoff: Cutoff for the FixedCutoff mode.
             compute: Compute results.
         Returns:
@@ -536,7 +537,7 @@ class GBStructure:
             gsm = GrainSegmentationModifier(*args, algorithm=gsm_mode, **kwargs)
             self.pipeline.modifiers.append(gsm)
             if compute:
-                self.data = self.pipeline.compute()
+                self.set_analysis()
             # TODO: Get misorientation plot
 
     def set_analysis(self):
@@ -652,6 +653,41 @@ class GBStructure:
             print("Method not implemented.")
             gb_list = None
         return gb_list
+
+    def get_grain_edge_ions(self, nearest_n: int = 12, cutoff=None):
+        """Get the atoms at the grain edge, as determined by structural analysis.
+
+        Returns a list of IDs, which were identified as crystalline/bulk atoms, but border at
+        least one non-cristalline/grain boundary atom.
+
+        Args:
+            nearest_n (int): Number of nearest neighbors to consider. Examples: fcc=12, bcc=8
+            cutoff (float):
+
+        """
+
+        if cutoff:
+            from ovito.data import CutoffNeighborFinder
+
+            finder = CutoffNeighborFinder(cutoff, self.data)
+        else:
+            from ovito.data import NearestNeighborFinder
+
+            finder = NearestNeighborFinder(nearest_n, self.data)
+        # ptypes = self.data.particles.particle_types
+
+        gb_edge_ions = []
+        gb_ions_set = set(self.get_gb_atoms())
+        for index in self.get_bulk_atoms():
+            # print("Nearest neighbors of particle %i:" % index)
+            # for neigh in finder.find(index):
+            #    print(neigh.index, neigh.distance, neigh.delta)
+            #    # The index can be used to access properties of the current neighbor, e.g.
+            #    type_of_neighbor = ptypes[neigh.index]
+            neighbors = [neigh.index for neigh in finder.find(index)]
+            if any(x in gb_ions_set for x in neighbors):
+                gb_edge_ions.append(index)
+        return gb_edge_ions
 
     def get_gb_fraction(self, mode: str = "cna"):
         """Get fraction of grain boundary ions.
