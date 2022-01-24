@@ -449,8 +449,7 @@ class GBStructure:
                 f"ptm_{n_compute} all ptm/atom {enabled_structures} {rmsd_threshold}"
             )
         else:
-            # print error
-            pass
+            raise not_implemented(self.backend)
 
         if compute:
             self.set_analysis()
@@ -609,7 +608,9 @@ class GBStructure:
             elif mode in ("ptm", "ackland"):
                 df_gb = df_temp[df_temp["Structure Type"] == 0]
             elif mode in ("voronoi", "centro"):
-                print("Method not implemented.")
+                raise NotImplementedError(f"Mode {mode} currently not implemented")
+            else:
+                print(f"Incorrect mode {mode} specified")
                 sys.exit(1)
             gb_list = list(df_gb["Particle Identifier"])
         else:
@@ -650,8 +651,7 @@ class GBStructure:
             # TODO
             gb_list = None
         else:
-            print("Method not implemented.")
-            gb_list = None
+            raise not_implemented(self.backend)
         return gb_list
 
     def get_grain_edge_ions(self, nearest_n: int = 12, cutoff=None):
@@ -666,28 +666,39 @@ class GBStructure:
 
         """
 
-        if cutoff:
-            from ovito.data import CutoffNeighborFinder
+        if self.backend == "ovito":
+            if cutoff:
+                from ovito.data import CutoffNeighborFinder
 
-            finder = CutoffNeighborFinder(cutoff, self.data)
+                finder = CutoffNeighborFinder(cutoff, self.data)
+            else:
+                from ovito.data import NearestNeighborFinder
+
+                finder = NearestNeighborFinder(nearest_n, self.data)
+            # ptypes = self.data.particles.particle_types
+
+            gb_edge_ions = []
+            gb_ions_set = set(self.get_gb_atoms())
+            for index in self.get_bulk_atoms():
+                # print("Nearest neighbors of particle %i:" % index)
+                # for neigh in finder.find(index):
+                #    print(neigh.index, neigh.distance, neigh.delta)
+                #    # The index can be used to access properties of the current neighbor, e.g.
+                #    type_of_neighbor = ptypes[neigh.index]
+                neighbors = [neigh.index for neigh in finder.find(index)]
+                if any(x in gb_ions_set for x in neighbors):
+                    gb_edge_ions.append(index)
+        elif self.backend == "lammps":
+            # TODO
+            gb_edge_ions = None
         else:
-            from ovito.data import NearestNeighborFinder
-
-            finder = NearestNeighborFinder(nearest_n, self.data)
-        # ptypes = self.data.particles.particle_types
-
-        gb_edge_ions = []
-        gb_ions_set = set(self.get_gb_atoms())
-        for index in self.get_bulk_atoms():
-            # print("Nearest neighbors of particle %i:" % index)
-            # for neigh in finder.find(index):
-            #    print(neigh.index, neigh.distance, neigh.delta)
-            #    # The index can be used to access properties of the current neighbor, e.g.
-            #    type_of_neighbor = ptypes[neigh.index]
-            neighbors = [neigh.index for neigh in finder.find(index)]
-            if any(x in gb_ions_set for x in neighbors):
-                gb_edge_ions.append(index)
+            raise not_implemented(self.backend)
         return gb_edge_ions
+
+    def set_gb_type(self):
+        """Set a property for grain boundary/bulk/grain edge atoms.
+
+        """
 
     def get_gb_fraction(self, mode: str = "cna"):
         """Get fraction of grain boundary ions.
@@ -759,7 +770,7 @@ class GBStructure:
             num = sum([len(self.get_type(i)) for i in numerator])
             den = sum([len(self.get_type(i)) for i in denominator])
         else:
-            print("Method not implemented.")
+            raise not_implemented(self.backend)
 
         return num / den
 
