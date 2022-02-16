@@ -4,9 +4,9 @@
 
 """Analysis functions."""
 
-
 import pathlib
 import sys
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -154,11 +154,36 @@ class GBStructure:
         Returns:
         """
         if self.backend == "ovito":
+            from ovito.modifiers import DeleteSelectedModifier
+
+            self.select_particles_by_type(particle_type)
+            self.pipeline.modifiers.append(DeleteSelectedModifier())
+
+        elif self.backend == "lammps":
+            self.pylmp.group(f"delete type {particle_type}")
+            self.pylmp.delete_atoms("group delete compress no")
+
+        elif self.backend == "pymatgen":
+            self.data.structure.remove_species(particle_type)
+
+        elif self.backend == "babel":
+            pass
+
+    def select_particles_by_type(self, particle_type: set):
+        """Select a specific type of particles from a strcture.
+
+        Text.
+        Args:
+            particle_type:
+        Returns:
+        """
+
+        if self.backend == "ovito":
             # from ovito.plugins.StdModPython import (
             #     SelectTypeModifier,
             #     DeleteSelectedModifier,
             # )
-            from ovito.modifiers import DeleteSelectedModifier, SelectTypeModifier
+            from ovito.modifiers import SelectTypeModifier
 
             def assign_particle_types(frame, data):  # pylint: disable=W0613
                 atom_types = data.particles_.particle_types_  # pylint: disable=W0612
@@ -170,20 +195,9 @@ class GBStructure:
                 SelectTypeModifier(
                     operate_on="particles",
                     property="Particle Type",
-                    types={particle_type},
+                    types=particle_type,
                 )
             )
-
-            self.pipeline.modifiers.append(DeleteSelectedModifier())
-        elif self.backend == "lammps":
-            self.pylmp.group(f"delete type {particle_type}")
-            self.pylmp.delete_atoms("group delete compress no")
-
-        elif self.backend == "pymatgen":
-            self.data.structure.remove_species(particle_type)
-
-        elif self.backend == "babel":
-            pass
 
     def select_particles(
         self,
@@ -266,6 +280,7 @@ class GBStructure:
         mode: str = "IntervalCutoff",
         enabled: tuple = ("fcc", "hpc", "bcc"),
         cutoff: float = 3.2,
+        only_selected: bool = False,
         compute: bool = True,
     ):
         """Perform Common neighbor analysis.
@@ -293,7 +308,10 @@ class GBStructure:
             else:
                 print(f'Selected CNA mode "{mode}" unknown.')
                 sys.exit(1)
-            cna = CommonNeighborAnalysisModifier(mode=cna_mode, cutoff=cutoff)
+
+            cna = CommonNeighborAnalysisModifier(
+                mode=cna_mode, cutoff=cutoff, only_selected=only_selected
+            )
             # Enabled by default: FCC, HCP, BCC
             if "fcc" not in enabled:
                 cna.structures[CommonNeighborAnalysisModifier.Type.FCC].enabled = False
@@ -303,6 +321,7 @@ class GBStructure:
                 cna.structures[CommonNeighborAnalysisModifier.Type.BCC].enabled = False
             if "ico" not in enabled:
                 cna.structures[CommonNeighborAnalysisModifier.Type.ICO].enabled = False
+
             self.pipeline.modifiers.append(cna)
 
         elif self.backend == "lammps":
@@ -313,6 +332,11 @@ class GBStructure:
         else:
             raise not_implemented(self.backend)
 
+        if only_selected:
+            warnings.warn(
+                "Evaluating only the selected atoms. Be aware that non-selected atoms may be"
+                "assigned to the wrong category."
+            )
         if compute:
             self.set_analysis()
 
@@ -556,26 +580,71 @@ class GBStructure:
         elif self.backend == "pymatgen":
             print("The pymatgen backend does not require setting the analysis.")
 
-    def get_gb_atoms(self, mode: str = "cna"):
+    def expand_to_non_selected(self, cutoff=4.5, return_type: str = "Identifier"):
+        """Useful method if only_selected was chosen for structural analysis."""
+        if self.backend == "ovito":
+            if return_type not in ["Identifier", "Indices"]:
+                raise NameError("Only Indices and Identifier are possible as return types.")
+
+            self._invert_selection()
+            self.set_analysis()
+
+            from ovito.data import CutoffNeighborFinder
+
+            finder = CutoffNeighborFinder(cutoff, self.data)
+
+            gb_non_selected = []
+            # Obtain a set of bulk (=crystalline) cations
+            bulk_atoms_set = set(self.get_bulk_atoms(return_type="Indices"))
+            # These are the atoms that haven't been analysed in the structure analysis, i.e. anions
+            non_selected = np.where(self.data.particles.selection == 1)[0]
+            for index in non_selected:
+                neighbors = [
+                    neigh.index for neigh in finder.find(index)
+                ]
+                # The following is the neighbors w/o the atoms excluded from strucural analysis
+                neighbors_no_selected = set(neighbors) - set(non_selected)
+                if len(neighbors_no_selected) < 3:
+                    warnings.warn("At least one atoms has only two other atoms to assign.")
+                bulk_neighbors = bulk_atoms_set.intersection(neighbors_no_selected)
+                bulk_fraction = len(bulk_neighbors) / len(neighbors_no_selected)
+                if bulk_fraction < 0.5:
+                    gb_non_selected.append(index)
+            if return_type == "Identifier":
+                gb_non_selected = [
+                    self.data.particles["Particle Identifier"][i] for i in gb_non_selected
+                ]
+        else:
+            raise not_implemented(self.backend)
+
+        return gb_non_selected
+
+    def get_gb_atoms(self, mode: str = "cna", return_type: str = "Identifier"):
         """Get the atoms at the grain boundary.
 
-        For this to work, some sort of stuctural analysis has to be performed.
+        For this to work, some sort of structural analysis has to be performed.
 
         Args:
             mode: Mode for selection of grain boundary atoms.
+            return_type:
         Returns:
             None
         """
         if self.backend == "ovito":
             if "Structure Type" in self.data.particles.keys():
-                gb_list = [
-                    i[0]
-                    for i in zip(
-                        self.data.particles["Particle Identifier"],
-                        self.data.particles["Structure Type"],
-                    )
-                    if i[1] == 0
-                ]
+                if return_type == "Identifier":
+                    gb_list = [
+                        i[0]
+                        for i in zip(
+                            self.data.particles["Particle Identifier"],
+                            self.data.particles["Structure Type"],
+                        )
+                        if i[1] == 0
+                    ]
+                elif return_type == "Indices":
+                    gb_list = list(np.where(self.data.particles["Structure Type"] == 0)[0])
+                else:
+                    raise NameError("Only Indices and Identifier are possible as return types.")
             elif "Centrosymmetry" in self.data.particles.keys():
                 print("Implementation in progress.")
                 gb_list = []
@@ -617,7 +686,7 @@ class GBStructure:
             raise not_implemented(self.backend)
         return gb_list
 
-    def get_bulk_atoms(self):
+    def get_bulk_atoms(self, return_type: str = "Identifier"):
         """Get the atoms in the bulk, as determined by structural analysis.
 
         Returns:
@@ -625,14 +694,21 @@ class GBStructure:
         """
         if self.backend == "ovito":
             if "Structure Type" in self.data.particles.keys():
-                gb_list = [
-                    i[0]
-                    for i in zip(
-                        self.data.particles["Particle Identifier"],
-                        self.data.particles["Structure Type"],
+                if return_type == "Identifier":
+                    gb_list = [
+                        i[0]
+                        for i in zip(
+                            self.data.particles["Particle Identifier"],
+                            self.data.particles["Structure Type"],
+                        )
+                        if i[1] != 0
+                    ]
+                elif return_type == "Indices":
+                    gb_list = list(np.where(self.data.particles["Structure Type"] != 0)[0])
+                else:
+                    raise NotImplementedError(
+                        f"Only Indices and Identifier are possible as return types."
                     )
-                    if i[1] != 0
-                ]
                 # df_temp = pd.DataFrame(
                 #     list(
                 #         zip(
@@ -679,7 +755,7 @@ class GBStructure:
 
             gb_edge_ions = []
             gb_ions_set = set(self.get_gb_atoms())
-            for index in self.get_bulk_atoms():
+            for index in self.get_bulk_atoms(return_type="Indices"):
                 # print("Nearest neighbors of particle %i:" % index)
                 # for neigh in finder.find(index):
                 #    print(neigh.index, neigh.distance, neigh.delta)
@@ -696,9 +772,7 @@ class GBStructure:
         return gb_edge_ions
 
     def set_gb_type(self):
-        """Set a property for grain boundary/bulk/grain edge atoms.
-
-        """
+        """Set a property for grain boundary/bulk/grain edge atoms."""
 
     def get_gb_fraction(self, mode: str = "cna"):
         """Get fraction of grain boundary ions.
@@ -708,7 +782,17 @@ class GBStructure:
 
         Returns:
         """
-        return self.get_gb_atoms(mode) / (self.get_gb_atoms(mode) + self.get_bulk_atoms())
+        if self.backend == "ovito":
+            fraction = len(self.get_gb_atoms(mode)) / len(
+                self.data.particles["Particle Identifier"]
+            )
+            warnings.warn("Using all particles with a particle identifier as the base.")
+        elif self.backend == "lammps":
+            # TODO
+            fraction = None
+        else:
+            raise not_implemented(self.backend)
+        return fraction
 
     def get_type(self, atom_type):
         """Get all atoms by type.
