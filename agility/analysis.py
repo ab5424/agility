@@ -705,7 +705,7 @@ class GBStructure:
                     gb_list = list(np.where(self.data.particles["Structure Type"] != 0)[0])
                 else:
                     raise NotImplementedError(
-                        f"Only Indices and Identifier are possible as return types."
+                        "Indices and Identifier are possible as return types."
                     )
                 # df_temp = pd.DataFrame(
                 #     list(
