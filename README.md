@@ -3,7 +3,13 @@
 
 # Agility
 
-**A**tomistic **G**rain Boundary and **I**nterface Uti**lity**.
+**A**tomistic **G**rain Boundary and **I**nterface Uti**lity**. This is a library for pre- and postprocessing polycrystalline and grain-boundary structures to use with atomistic codes, e.g. LAMMPS and VASP. It allows top-level processing of those structures by utilizing established methods to differentiate between bulk and interface regions. This allows to extract static as well as dynamic properties of these structures.
+
+## Implementations
+
+While it is intendend that `agility` can be used with different "backends" such as ase, babel, pyiron, and others, the main functionality is (currently) implemented with ovito and LAMMPS.
+
+
 
 ## Installation
 
