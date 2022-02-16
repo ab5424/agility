@@ -599,9 +599,7 @@ class GBStructure:
             # These are the atoms that haven't been analysed in the structure analysis, i.e. anions
             non_selected = np.where(self.data.particles.selection == 1)[0]
             for index in non_selected:
-                neighbors = [
-                    neigh.index for neigh in finder.find(index)
-                ]
+                neighbors = [neigh.index for neigh in finder.find(index)]
                 # The following is the neighbors w/o the atoms excluded from strucural analysis
                 neighbors_no_selected = set(neighbors) - set(non_selected)
                 if len(neighbors_no_selected) < 3:
