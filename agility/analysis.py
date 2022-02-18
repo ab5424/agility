@@ -580,9 +580,15 @@ class GBStructure:
         elif self.backend == "pymatgen":
             print("The pymatgen backend does not require setting the analysis.")
 
-    def expand_to_non_selected(self, cutoff=4.5, return_type: str = "Identifier"):
-        """Useful method if only_selected was chosen for structural analysis."""
+    def expand_to_non_selected(self, cutoff=4.5, return_type: str = "Identifier", invert: bool = False):
+        """Useful method if only_selected was chosen for structural analysis.
+
+        Args:
+        Returns:
+            gb_non_selected: list of GB atoms that were not in the previously selected group."""
+
         if self.backend == "ovito":
+
             if return_type not in ["Identifier", "Indices"]:
                 raise NameError("Only Indices and Identifier are possible as return types.")
 
@@ -594,20 +600,27 @@ class GBStructure:
             finder = CutoffNeighborFinder(cutoff, self.data)
 
             gb_non_selected = []
+            edge = []
             # Obtain a set of bulk (=crystalline) cations
-            bulk_atoms_set = set(self.get_bulk_atoms(return_type="Indices"))
+            bulk_atoms_set = set(self.get_crystalline_atoms(return_type="Indices"))
             # These are the atoms that haven't been analysed in the structure analysis, i.e. anions
-            non_selected = np.where(self.data.particles.selection == 1)[0]
+            non_selected = set(np.where(self.data.particles.selection == 1)[0])
+
             for index in non_selected:
-                neighbors = [neigh.index for neigh in finder.find(index)]
+                neighbors = {neigh.index for neigh in finder.find(index)}
                 # The following is the neighbors w/o the atoms excluded from strucural analysis
-                neighbors_no_selected = set(neighbors) - set(non_selected)
+                neighbors_no_selected = neighbors - non_selected
                 if len(neighbors_no_selected) < 3:
                     warnings.warn("At least one atoms has only two other atoms to assign.")
                 bulk_neighbors = bulk_atoms_set.intersection(neighbors_no_selected)
                 bulk_fraction = len(bulk_neighbors) / len(neighbors_no_selected)
                 if bulk_fraction < 0.5:
                     gb_non_selected.append(index)
+                # if bulk_fraction == 0.5 and np.random.random_sample() < 0.5:
+                #     gb_non_selected.append(index)
+
+            if invert:
+                gb_non_selected = list(set(non_selected)-set(gb_non_selected))
             if return_type == "Identifier":
                 gb_non_selected = [
                     self.data.particles["Particle Identifier"][i] for i in gb_non_selected
@@ -617,7 +630,7 @@ class GBStructure:
 
         return gb_non_selected
 
-    def get_gb_atoms(self, mode: str = "cna", return_type: str = "Identifier"):
+    def get_non_crystalline_atoms(self, mode: str = "cna", return_type: str = "Identifier"):
         """Get the atoms at the grain boundary.
 
         For this to work, some sort of structural analysis has to be performed.
@@ -684,7 +697,7 @@ class GBStructure:
             raise not_implemented(self.backend)
         return gb_list
 
-    def get_bulk_atoms(self, return_type: str = "Identifier"):
+    def get_crystalline_atoms(self, return_type: str = "Identifier"):
         """Get the atoms in the bulk, as determined by structural analysis.
 
         Returns:
@@ -752,8 +765,8 @@ class GBStructure:
             # ptypes = self.data.particles.particle_types
 
             gb_edge_ions = []
-            gb_ions_set = set(self.get_gb_atoms())
-            for index in self.get_bulk_atoms(return_type="Indices"):
+            gb_ions_set = set(self.get_non_crystalline_atoms())
+            for index in self.get_crystalline_atoms(return_type="Indices"):
                 # print("Nearest neighbors of particle %i:" % index)
                 # for neigh in finder.find(index):
                 #    print(neigh.index, neigh.distance, neigh.delta)
@@ -781,7 +794,7 @@ class GBStructure:
         Returns:
         """
         if self.backend == "ovito":
-            fraction = len(self.get_gb_atoms(mode)) / len(
+            fraction = len(self.get_non_crystalline_atoms(mode)) / len(
                 self.data.particles["Particle Identifier"]
             )
             warnings.warn("Using all particles with a particle identifier as the base.")
