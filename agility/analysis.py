@@ -580,7 +580,9 @@ class GBStructure:
         elif self.backend == "pymatgen":
             print("The pymatgen backend does not require setting the analysis.")
 
-    def expand_to_non_selected(self, cutoff=4.5, return_type: str = "Identifier", invert: bool = False):
+    def expand_to_non_selected(
+        self, cutoff=4.5, return_type: str = "Identifier", invert: bool = False
+    ):
         """Useful method if only_selected was chosen for structural analysis.
 
         Args:
@@ -620,7 +622,7 @@ class GBStructure:
                 #     gb_non_selected.append(index)
 
             if invert:
-                gb_non_selected = list(set(non_selected)-set(gb_non_selected))
+                gb_non_selected = list(set(non_selected) - set(gb_non_selected))
             if return_type == "Identifier":
                 gb_non_selected = [
                     self.data.particles["Particle Identifier"][i] for i in gb_non_selected
