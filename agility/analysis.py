@@ -112,7 +112,7 @@ class GBStructure:
         else:
             print("Please specify the type of lammps file to read.")
 
-    def save_structure(self, filename: str = None, file_type: str = None, **kwargs):
+    def save_structure(self, filename: str, file_type: str, **kwargs):
         """Save structure to disc.
 
         Args:
@@ -183,7 +183,7 @@ class GBStructure:
             #     SelectTypeModifier,
             #     DeleteSelectedModifier,
             # )
-            from ovito.modifiers import SelectTypeModifier
+            from ovito.plugins.StdModPython import SelectTypeModifier
 
             def assign_particle_types(frame, data):  # pylint: disable=W0613
                 atom_types = data.particles_.particle_types_  # pylint: disable=W0612
@@ -743,7 +743,7 @@ class GBStructure:
             raise not_implemented(self.backend)
         return gb_list
 
-    def get_grain_edge_ions(self, nearest_n: int = 12, cutoff=None):
+    def get_grain_edge_ions(self, nearest_n: int = 12, cutoff: int = None):
         """Get the atoms at the grain edge, as determined by structural analysis.
 
         Returns a list of IDs, which were identified as crystalline/bulk atoms, but border at
@@ -756,13 +756,14 @@ class GBStructure:
         """
 
         if self.backend == "ovito":
-            if cutoff:
-                from ovito.data import CutoffNeighborFinder
+            from ovito.data import CutoffNeighborFinder, NearestNeighborFinder
 
+            # finder: CutoffNeighborFinder | NearestNeighborFinder
+            from typing import Union
+            finder: Union[CutoffNeighborFinder, NearestNeighborFinder]
+            if cutoff:
                 finder = CutoffNeighborFinder(cutoff, self.data)
             else:
-                from ovito.data import NearestNeighborFinder
-
                 finder = NearestNeighborFinder(nearest_n, self.data)
             # ptypes = self.data.particles.particle_types
 
