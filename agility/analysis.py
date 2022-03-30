@@ -760,6 +760,7 @@ class GBStructure:
 
             # finder: CutoffNeighborFinder | NearestNeighborFinder
             from typing import Union
+
             finder: Union[CutoffNeighborFinder, NearestNeighborFinder]
             if cutoff:
                 finder = CutoffNeighborFinder(cutoff, self.data)
