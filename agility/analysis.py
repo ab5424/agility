@@ -602,7 +602,7 @@ class GBStructure:
             finder = CutoffNeighborFinder(cutoff, self.data)
 
             gb_non_selected = []
-            edge = []
+            # edge = []
             # Obtain a set of bulk (=crystalline) cations
             bulk_atoms_set = set(self.get_crystalline_atoms(return_type="Indices"))
             # These are the atoms that haven't been analysed in the structure analysis, i.e. anions
