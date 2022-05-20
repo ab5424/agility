@@ -743,7 +743,7 @@ class GBStructure:
             raise not_implemented(self.backend)
         return gb_list
 
-    def get_grain_edge_ions(self, nearest_n: int = 12, cutoff: int = None):
+    def get_grain_edge_ions(self, nearest_n: int = 12, cutoff: float = None):
         """Get the atoms at the grain edge, as determined by structural analysis.
 
         Returns a list of IDs, which were identified as crystalline/bulk atoms, but border at
