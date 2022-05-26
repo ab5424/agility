@@ -202,6 +202,7 @@ class GBStructure:
     def select_particles(
         self,
         list_ids,
+        list_ids_type: str = "Identifier",
         invert=True,
         delete=True,
         expand_cutoff=None,
@@ -225,7 +226,12 @@ class GBStructure:
 
             def modify(frame, data):  # pylint: disable=W0613
                 # Specify the IDs of all atoms that are to remain here
-                ids = data.particles["Particle Identifier"]
+                if list_ids_type == "Identifier":
+                    ids = data.particles["Particle Identifier"]
+                elif list_ids_type == "Indices":
+                    ids = list(np.where(self.data.particles["Structure Type"] != 10000)[0])
+                else:
+                    raise NameError("Only Indices and Identifier are possible as list id types.")
                 l_ids = np.in1d(ids, list_ids, assume_unique=True, invert=False)
                 selection = data.particles_.create_property(  # pylint: disable=W0612
                     "Selection", data=l_ids
@@ -743,7 +749,13 @@ class GBStructure:
             raise not_implemented(self.backend)
         return gb_list
 
-    def get_grain_edge_ions(self, nearest_n: int = 12, cutoff: float = None):
+    def get_grain_edge_ions(
+        self,
+        nearest_n: int = 12,
+        cutoff: float = None,
+        gb_ions: set = None,
+        return_type: str = "Identifier",
+    ):
         """Get the atoms at the grain edge, as determined by structural analysis.
 
         Returns a list of IDs, which were identified as crystalline/bulk atoms, but border at
@@ -752,6 +764,8 @@ class GBStructure:
         Args:
             nearest_n (int): Number of nearest neighbors to consider. Examples: fcc=12, bcc=8
             cutoff (float):
+            gb_ions (set): Indices of grain boundary ions. Default: non-crystalline ions.
+            return_type (str):
 
         """
 
@@ -769,7 +783,8 @@ class GBStructure:
             # ptypes = self.data.particles.particle_types
 
             gb_edge_ions = []
-            gb_ions_set = set(self.get_non_crystalline_atoms())
+            gb_ions_set = gb_ions or self.get_non_crystalline_atoms(return_type="Indices")
+            gb_ions_set = set(gb_ions_set)
             for index in self.get_crystalline_atoms(return_type="Indices"):
                 # print("Nearest neighbors of particle %i:" % index)
                 # for neigh in finder.find(index):
@@ -779,6 +794,8 @@ class GBStructure:
                 neighbors = [neigh.index for neigh in finder.find(index)]
                 if any(x in gb_ions_set for x in neighbors):
                     gb_edge_ions.append(index)
+            if return_type == "Identifier":
+                gb_edge_ions = [self.data.particles["Particle Identifier"][i] for i in gb_edge_ions]
         elif self.backend == "lammps":
             # TODO
             gb_edge_ions = None
@@ -809,11 +826,12 @@ class GBStructure:
             raise not_implemented(self.backend)
         return fraction
 
-    def get_type(self, atom_type):
+    def get_type(self, atom_type, return_type: str = "Identifier"):
         """Get all atoms by type.
 
         Args:
             atom_type:
+            return_type (str):
 
         Returns:
             None
@@ -825,14 +843,19 @@ class GBStructure:
             #
             # self.pipeline.modifiers.append(assign_particle_types)
             # self.set_analysis()
-            atom_list = [
-                i[0]
-                for i in zip(
-                    self.data.particles["Particle Identifier"],
-                    self.data.particles["Particle Type"],
-                )
-                if i[1] == atom_type
-            ]
+            if return_type == "Identifier":
+                atom_list = [
+                    i[0]
+                    for i in zip(
+                        self.data.particles["Particle Identifier"],
+                        self.data.particles["Particle Type"],
+                    )
+                    if i[1] == atom_type
+                ]
+            elif return_type == "Indices":
+                atom_list = list(np.where(self.data.particles["Particle Type"] == atom_type)[0])
+            else:
+                raise NameError("Only Indices and Identifier are possible as return types.")
             # df_temp = pd.DataFrame(
             #     list(
             #         zip(
