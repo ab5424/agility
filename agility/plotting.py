@@ -21,10 +21,10 @@ def render_ovito(pipeline=None, res_factor: int = 1):
         image: Image object. Can be saved via image.save("figure.png")
 
     """
-    from ovito.vis import Viewport
-    from ovito.vis import TachyonRenderer
+    from ovito.vis import Viewport, TachyonRenderer
 
     pipeline.add_to_scene()
+
     viewport = Viewport(type=Viewport.Type.Ortho)
     viewport.type = Viewport.Type.Perspective
     viewport.camera_dir = (-1, 2, -1)
@@ -48,6 +48,7 @@ def plot_face_order(data=None, plot_property="Max Face Order"):
     Plot the histogram of max. face order from ovito data.
     Args:
         data:
+        plot_property:
 
     Returns:
 
