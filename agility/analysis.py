@@ -5,6 +5,7 @@
 """Analysis functions."""
 
 import pathlib
+import random
 import sys
 import warnings
 
@@ -169,6 +170,18 @@ class GBStructure:
         elif self.backend == "babel":
             pass
 
+    #    def assign_particles_types(self, particle_types: list):
+    #        """Assign
+    #
+    #        """
+    #        if self.backend == "ovito":
+    #            def setup_atom_types(frame, data):
+    #                types = self.data.particles_.particle_types_
+    #                for i, particle_type in enumerate(particle_types):
+    #                    types.type_by_id_(i+1).name = particle_type
+    #            self.pipeline.modifiers.append(setup_atom_types)
+    #            self.set_analysis()
+
     def select_particles_by_type(self, particle_type: set):
         """Select a specific type of particles from a strcture.
 
@@ -183,7 +196,7 @@ class GBStructure:
             #     SelectTypeModifier,
             #     DeleteSelectedModifier,
             # )
-            from ovito.plugins.StdModPython import SelectTypeModifier
+            from ovito.modifiers import SelectTypeModifier
 
             def assign_particle_types(frame, data):  # pylint: disable=W0613
                 atom_types = data.particles_.particle_types_  # pylint: disable=W0612
@@ -266,7 +279,7 @@ class GBStructure:
     def _invert_selection(self):
 
         if self.backend == "ovito":
-            from ovito.plugins.StdModPython import InvertSelectionModifier
+            from ovito.modifiers import InvertSelectionModifier
 
             self.pipeline.modifiers.append(InvertSelectionModifier())
 
@@ -301,7 +314,7 @@ class GBStructure:
         """
         if self.backend == "ovito":
             # TODO: Enable/diable structure types
-            from ovito.plugins.ParticlesPython import CommonNeighborAnalysisModifier
+            from ovito.modifiers import CommonNeighborAnalysisModifier
 
             if mode == "IntervalCutoff":
                 cna_mode = CommonNeighborAnalysisModifier.Mode.IntervalCutoff
@@ -627,6 +640,8 @@ class GBStructure:
                 # if bulk_fraction == 0.5 and np.random.random_sample() < 0.5:
                 #     gb_non_selected.append(index)
 
+            self._invert_selection()
+
             if invert:
                 gb_non_selected = list(set(non_selected) - set(gb_non_selected))
             if return_type == "Identifier":
@@ -637,6 +652,68 @@ class GBStructure:
             raise not_implemented(self.backend)
 
         return gb_non_selected
+
+    def expand_to_non_selected_groups(
+        self,
+        groups: list,
+        cutoff: float = 4.5,
+        return_type: str = "Identifier",
+        return_random: bool = False,
+    ):
+        """Useful method if only_selected was chosen for structural analysis.
+
+        Args:
+            groups: list of lists countaining the groups (as indices).
+            cutoff (float): Cutoff (in Angstrom) for the neighbour finder.
+            return_type (str): return either identifiers or indices.
+            return_random (bool): Some particles will have the same (maximum) neighbours in multiple groups.
+            If true, returns a random group from that pool.
+        Returns:
+            gb_non_selected: list of GB atoms that were not in the previously selected group."""
+
+        if self.backend == "ovito":
+
+            if return_type not in ["Identifier", "Indices"]:
+                raise NameError("Only Indices and Identifier are possible as return types.")
+
+            self._invert_selection()
+            self.set_analysis()
+
+            from ovito.data import CutoffNeighborFinder
+
+            finder = CutoffNeighborFinder(cutoff, self.data)
+
+            groups_non_selected = [[] for _ in range(len(groups))]
+            # Obtain sets of bulk (=crystalline) cations
+            group_sets = [set(i) for i in groups]
+            # These are the atoms that haven't been analysed in the structure analysis, most likely anions
+            non_selected = set(np.where(self.data.particles.selection == 1)[0])
+
+            for index in non_selected:
+                neighbors = {neigh.index for neigh in finder.find(index)}
+                # The following is the neighbors w/o the atoms excluded from strucural analysis
+                neighbors_no_selected = neighbors - non_selected
+                if len(neighbors_no_selected) < 3:
+                    warnings.warn("At least one atoms has only two other atoms to assign.")
+                group_neighbors = [len(i.intersection(neighbors_no_selected)) for i in group_sets]
+                indices_max = np.where(group_neighbors == np.amax(group_neighbors))[0]
+                if len(indices_max) > 1 and return_random:
+                    groups_non_selected[random.choice(indices_max)].append(index)
+                else:
+                    group_maximum_interception = np.argmax(group_neighbors)
+                    groups_non_selected[group_maximum_interception].append(index)
+
+            self._invert_selection()
+
+            if return_type == "Identifier":
+                groups_non_selected = [
+                    self.data.particles["Particle Identifier"][i] for i in groups_non_selected
+                ]
+
+        else:
+            raise not_implemented(self.backend)
+
+        return groups_non_selected
 
     def get_non_crystalline_atoms(self, mode: str = "cna", return_type: str = "Identifier"):
         """Get the atoms at the grain boundary.
