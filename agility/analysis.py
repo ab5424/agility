@@ -669,7 +669,7 @@ class GBStructure:
             return_random (bool): Some particles will have the same (maximum) neighbours in multiple groups.
             If true, returns a random group from that pool.
         Returns:
-            gb_non_selected: list of GB atoms that were not in the previously selected group."""
+            groups_non_selected (list): atoms that were not in the previously selected group."""
 
         if self.backend == "ovito":
 
@@ -683,7 +683,7 @@ class GBStructure:
 
             finder = CutoffNeighborFinder(cutoff, self.data)
 
-            groups_non_selected = [[] for _ in range(len(groups))]
+            groups_non_selected = [[] for _ in range(len(groups))]  # type: list[list]
             # Obtain sets of bulk (=crystalline) cations
             group_sets = [set(i) for i in groups]
             # These are the atoms that haven't been analysed in the structure analysis, most likely anions
