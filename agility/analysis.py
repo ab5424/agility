@@ -290,7 +290,7 @@ class GBStructure:
     def _delete_selection(self):
 
         if self.backend == "ovito":
-            from ovito.plugins.StdModPython import DeleteSelectedModifier
+            from ovito.modifiers import DeleteSelectedModifier
 
             self.pipeline.modifiers.append(DeleteSelectedModifier())
 
@@ -353,7 +353,7 @@ class GBStructure:
 
         if only_selected:
             warnings.warn(
-                "Evaluating only the selected atoms. Be aware that non-selected atoms may be"
+                "Evaluating only the selected atoms. Be aware that non-selected atoms may be "
                 "assigned to the wrong category."
             )
         if compute:
@@ -428,6 +428,7 @@ class GBStructure:
         *args,
         enabled: tuple = ("fcc", "hpc", "bcc"),
         rmsd_threshold: float = 0.1,
+        only_selected: bool = False,
         compute: bool = True,
         **kwargs,
     ):
@@ -460,9 +461,9 @@ class GBStructure:
                 print(f"Enabled structure type {i} unknown")
         if self.backend == "ovito":
 
-            from ovito.plugins.ParticlesPython import PolyhedralTemplateMatchingModifier
+            from ovito.modifiers import PolyhedralTemplateMatchingModifier
 
-            ptm = PolyhedralTemplateMatchingModifier(*args, rmsd_cutoff=rmsd_threshold, **kwargs)
+            ptm = PolyhedralTemplateMatchingModifier(*args, rmsd_cutoff=rmsd_threshold, only_selected=only_selected, **kwargs)
 
             # Enabled by default: FCC, HCP, BCC
             if "fcc" not in enabled:
@@ -600,7 +601,7 @@ class GBStructure:
             print("The pymatgen backend does not require setting the analysis.")
 
     def expand_to_non_selected(
-        self, cutoff=4.5, return_type: str = "Identifier", invert: bool = False
+        self, cutoff=4.5, return_type: str = "Identifier", return_random: bool = False, invert: bool = False
     ):
         """Useful method if only_selected was chosen for structural analysis.
 
@@ -629,16 +630,19 @@ class GBStructure:
 
             for index in non_selected:
                 neighbors = {neigh.index for neigh in finder.find(index)}
-                # The following is the neighbors w/o the atoms excluded from strucural analysis
+                # The following is the neighbors w/o the atoms excluded from structural analysis
                 neighbors_no_selected = neighbors - non_selected
-                if len(neighbors_no_selected) < 3:
+                if len(neighbors_no_selected) < 1:
+                    raise ValueError("Cutoff radius too small.")
+                elif len(neighbors_no_selected) < 3:
                     warnings.warn("At least one atoms has only two other atoms to assign.")
                 bulk_neighbors = bulk_atoms_set.intersection(neighbors_no_selected)
                 bulk_fraction = len(bulk_neighbors) / len(neighbors_no_selected)
                 if bulk_fraction < 0.5:
                     gb_non_selected.append(index)
-                # if bulk_fraction == 0.5 and np.random.random_sample() < 0.5:
-                #     gb_non_selected.append(index)
+                if return_random:
+                    if bulk_fraction == 0.5 and np.random.random_sample() < 0.5:
+                        gb_non_selected.append(index)
 
             self._invert_selection()
 
@@ -686,7 +690,8 @@ class GBStructure:
             groups_non_selected = [[] for _ in range(len(groups))]  # type: list[list]
             # Obtain sets of bulk (=crystalline) cations
             group_sets = [set(i) for i in groups]
-            # These are the atoms that haven't been analysed in the structure analysis, most likely anions
+            # These are the atoms that haven't been analysed in the structure analysis, most likely
+            # anions
             non_selected = set(np.where(self.data.particles.selection == 1)[0])
 
             for index in non_selected:
