@@ -183,7 +183,7 @@ class GBStructure:
     #            self.set_analysis()
 
     def select_particles_by_type(self, particle_type: set):
-        """Select a specific type of particles from a strcture.
+        """Select a specific type of particles from a structure.
 
         Text.
         Args:
@@ -216,8 +216,8 @@ class GBStructure:
         self,
         list_ids,
         list_ids_type: str = "Identifier",
-        invert=True,
-        delete=True,
+        invert: bool = True,
+        delete: bool = True,
         expand_cutoff=None,
         expand_nearest_neighbors=None,
         iterations=1,
@@ -225,12 +225,13 @@ class GBStructure:
         """Select particles by ID.
 
         Args:
+            list_ids:
+            list_ids_type (str): "Indices" or "Identifier"
             expand_nearest_neighbors (int): Number of nearest neighbors. Default 1.
-            delete:
+            invert (bool): Invert selection.
+            delete (bool): Delete selection.
             iterations:
             expand_cutoff (float): Expansion cutoff. Default 3.2.
-            invert:
-            list_ids:
 
         Returns:
             None
@@ -359,7 +360,7 @@ class GBStructure:
         if compute:
             self.set_analysis()
 
-    def perfom_cnp(self, cutoff: float = 3.20, compute: bool = False):
+    def perform_cnp(self, cutoff: float = 3.20, compute: bool = False):
         """Perform Common Neighborhood Parameter calculation.
 
         Please cite https://doi.org/10.1016/j.cpc.2007.05.018
@@ -373,7 +374,7 @@ class GBStructure:
         if compute:
             self.set_analysis()
 
-    def perform_voroni_analysis(self, compute: bool = False):
+    def perform_voronoi_analysis(self, compute: bool = False):
         """Perform Voronoi analysis.
 
         Args:
@@ -1029,7 +1030,7 @@ class GBStructureTimeseries(GBStructure):
     # Todo: differentiate between along/across GB
 
     def remove_timesteps(self, timesteps_to_exclude):
-        """Remove timesteps from the beggining of a simulation.
+        """Remove timesteps from the beginning of a simulation.
 
         Args:
             timesteps_to_exclude (:py:class:`int`): Number of timesteps to exclude
