@@ -463,7 +463,9 @@ class GBStructure:
 
             from ovito.modifiers import PolyhedralTemplateMatchingModifier
 
-            ptm = PolyhedralTemplateMatchingModifier(*args, rmsd_cutoff=rmsd_threshold, only_selected=only_selected, **kwargs)
+            ptm = PolyhedralTemplateMatchingModifier(
+                *args, rmsd_cutoff=rmsd_threshold, only_selected=only_selected, **kwargs
+            )
 
             # Enabled by default: FCC, HCP, BCC
             if "fcc" not in enabled:
@@ -601,7 +603,11 @@ class GBStructure:
             print("The pymatgen backend does not require setting the analysis.")
 
     def expand_to_non_selected(
-        self, cutoff=4.5, return_type: str = "Identifier", return_random: bool = False, invert: bool = False
+        self,
+        cutoff=4.5,
+        return_type: str = "Identifier",
+        return_random: bool = False,
+        invert: bool = False,
     ):
         """Useful method if only_selected was chosen for structural analysis.
 
@@ -852,10 +858,10 @@ class GBStructure:
         """
 
         if self.backend == "ovito":
-            from ovito.data import CutoffNeighborFinder, NearestNeighborFinder
-
             # finder: CutoffNeighborFinder | NearestNeighborFinder
             from typing import Union
+
+            from ovito.data import CutoffNeighborFinder, NearestNeighborFinder
 
             finder: Union[CutoffNeighborFinder, NearestNeighborFinder]
             if cutoff:

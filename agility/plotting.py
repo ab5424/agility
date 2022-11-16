@@ -21,7 +21,7 @@ def render_ovito(pipeline=None, res_factor: int = 1):
         image: Image object. Can be saved via image.save("figure.png")
 
     """
-    from ovito.vis import Viewport, TachyonRenderer
+    from ovito.vis import TachyonRenderer, Viewport
 
     pipeline.add_to_scene()
 

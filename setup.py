@@ -6,6 +6,7 @@ Setup.py for agility.
 """
 
 import os
+
 from setuptools import setup
 
 __author__ = "Alexander Bonkowski"

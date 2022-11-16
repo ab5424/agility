@@ -30,12 +30,12 @@ To build from source, use
 
     pip install agility
 
-### Using `conda` 
+### Using `conda`
 
     conda skeleton pypi agility
 
     conda build agility
-    
+
     conda install --use-local agility
 
 ## Contributing
@@ -78,5 +78,3 @@ After installation, in the home directory, use
 ```bash
 % pytest
 ```
-
-
