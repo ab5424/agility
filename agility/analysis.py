@@ -313,7 +313,7 @@ class GBStructure:
             None
         """
         if self.backend == "ovito":
-            # TODO: Enable/diable structure types
+            # TODO: Enable/disable structure types
             from ovito.modifiers import CommonNeighborAnalysisModifier
 
             if mode == "IntervalCutoff":
@@ -576,7 +576,7 @@ class GBStructure:
             elif algorithm == "MinimumSpanningTree":
                 gsm_mode = GrainSegmentationModifier.Algorithm.MinimumSpanningTree
             else:
-                print("Incorrenct Grain Segmentation algorithm specified.")
+                print("Incorrect Grain Segmentation algorithm specified.")
                 sys.exit(1)
 
             gsm = GrainSegmentationModifier(*args, algorithm=gsm_mode, **kwargs)
@@ -673,10 +673,11 @@ class GBStructure:
         """Useful method if only_selected was chosen for structural analysis.
 
         Args:
-            groups: list of lists countaining the groups (as indices).
+            groups: list of lists containing the groups (as indices).
             cutoff (float): Cutoff (in Angstrom) for the neighbour finder.
             return_type (str): return either identifiers or indices.
-            return_random (bool): Some particles will have the same (maximum) neighbours in multiple groups.
+            return_random (bool): Some particles will have the same (maximum) neighbours in
+                multiple groups.
             If true, returns a random group from that pool.
         Returns:
             groups_non_selected (list): atoms that were not in the previously selected group."""
@@ -847,7 +848,7 @@ class GBStructure:
         """Get the atoms at the grain edge, as determined by structural analysis.
 
         Returns a list of IDs, which were identified as crystalline/bulk atoms, but border at
-        least one non-cristalline/grain boundary atom.
+        least one non-crystalline/grain boundary atom.
 
         Args:
             nearest_n (int): Number of nearest neighbors to consider. Examples: fcc=12, bcc=8
@@ -1042,7 +1043,7 @@ class GBStructureTimeseries(GBStructure):
 
 
 def not_implemented(backend):
-    """Raise not implemeted error.
+    """Raise not implemented error.
 
     Args:
         backend: Backend currently in use.
