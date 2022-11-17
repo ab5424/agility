@@ -842,8 +842,8 @@ class GBStructure:
     def get_grain_edge_ions(
         self,
         nearest_n: int = 12,
-        cutoff: float = None,
-        gb_ions: set = None,
+        cutoff: Optional[float] = None,
+        gb_ions: Optional[set] = None,
         return_type: str = "Identifier",
     ):
         """Get the atoms at the grain edge, as determined by structural analysis.
@@ -861,7 +861,7 @@ class GBStructure:
 
         if self.backend == "ovito":
             # finder: CutoffNeighborFinder | NearestNeighborFinder
-            from typing import Union
+            from typing import Optional, Union
 
             from ovito.data import CutoffNeighborFinder, NearestNeighborFinder
 
@@ -999,7 +999,7 @@ class GBStructure:
             # Only works with IPython integration
             self.pylmp.image(filename=filename)
 
-    def convert_backend(self, convert_to: str = None):
+    def convert_backend(self, convert_to: Optional[str] = None):
         """Convert the current backend.
 
         Args:
