@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 
 from agility.minimiser import mimimise_lmp
+from typing import Union
 
 
 class GBStructure:
@@ -861,7 +862,7 @@ class GBStructure:
 
         if self.backend == "ovito":
             # finder: CutoffNeighborFinder | NearestNeighborFinder
-            from typing import Optional, Union
+            from typing import Union
 
             from ovito.data import CutoffNeighborFinder, NearestNeighborFinder
 
