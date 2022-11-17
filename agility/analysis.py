@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 
 from agility.minimiser import mimimise_lmp
-from typing import Union
+from typing import Optional
 
 
 class GBStructure:
