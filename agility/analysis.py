@@ -8,12 +8,12 @@ import pathlib
 import random
 import sys
 import warnings
+from typing import Optional
 
 import numpy as np
 import pandas as pd
 
 from agility.minimiser import mimimise_lmp
-from typing import Optional
 
 
 class GBStructure:
