@@ -1,0 +1,19 @@
+{
+  "image": "mcr.microsoft.com/devcontainers/universal:2",
+  "hostRequirements": {
+    "cpus": 4
+  },
+  "waitFor": "onCreateCommand",
+  "updateContentCommand": "python -m pip install -r requirements.txt && python -m pip install -e .",
+  "customizations": {
+    "codespaces": {
+      "openFiles": ["examples/00_Introduction.ipynb"]
+    },
+    "vscode": {
+      "extensions": [
+        "ms-toolsai.jupyter",
+        "ms-python.python"
+      ]
+    }
+  }
+}
