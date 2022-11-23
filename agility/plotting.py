@@ -25,12 +25,12 @@ def render_ovito(pipeline=None, res_factor: int = 1):
 
     pipeline.add_to_scene()
 
-    viewport = Viewport(type=Viewport.Type.Ortho)
-    viewport.type = Viewport.Type.Perspective
-    viewport.camera_dir = (-1, 2, -1)
+    viewport = Viewport()
+    viewport.type = Viewport.Type.Perspective  # type: ignore[misc]
+    viewport.camera_dir = (-1, 2, -1)  # type: ignore[misc]
     viewport.zoom_all(size=(640, 480))
 
-    tachyon = TachyonRenderer(shadows=False, direct_light_intensity=1.1)
+    tachyon = TachyonRenderer(shadows=False, direct_light_intensity=1.1)  # type: ignore[call-arg]
     image = viewport.render_image(
         size=(res_factor * 640, res_factor * 480),
         # filename="figure.png",
