@@ -206,7 +206,7 @@ class GBStructure:
 
             # Select atoms and delete them
             self.pipeline.modifiers.append(
-                SelectTypeModifier(
+                SelectTypeModifier(  # type: ignore[call-arg]
                     operate_on="particles",
                     property="Particle Type",
                     types=particle_type,
@@ -316,32 +316,40 @@ class GBStructure:
         """
         if self.backend == "ovito":
             # TODO: Enable/disable structure types
-            from ovito.modifiers import CommonNeighborAnalysisModifier
+            from ovito.modifiers import CommonNeighborAnalysisModifier as CNA
 
             if mode == "IntervalCutoff":
-                cna_mode = CommonNeighborAnalysisModifier.Mode.IntervalCutoff
+                cna_mode = CNA.Mode.IntervalCutoff
             elif mode == "AdaptiveCutoff":
-                cna_mode = CommonNeighborAnalysisModifier.Mode.AdaptiveCutoff
+                cna_mode = CNA.Mode.AdaptiveCutoff
             elif mode == "FixedCutoff":
-                cna_mode = CommonNeighborAnalysisModifier.Mode.FixedCutoff
+                cna_mode = CNA.Mode.FixedCutoff
             elif mode == "BondBased":
-                cna_mode = CommonNeighborAnalysisModifier.Mode.BondBased
+                cna_mode = CNA.Mode.BondBased
             else:
                 print(f'Selected CNA mode "{mode}" unknown.')
                 sys.exit(1)
 
-            cna = CommonNeighborAnalysisModifier(
+            cna = CNA(  # type: ignore[call-arg]
                 mode=cna_mode, cutoff=cutoff, only_selected=only_selected
             )
             # Enabled by default: FCC, HCP, BCC
             if "fcc" not in enabled:
-                cna.structures[CommonNeighborAnalysisModifier.Type.FCC].enabled = False
+                cna.structures[
+                    CNA.Type.FCC  # type: ignore[attr-defined]
+                ].enabled = False  # type: ignore[misc]
             if "hcp" not in enabled:
-                cna.structures[CommonNeighborAnalysisModifier.Type.HCP].enabled = False
+                cna.structures[
+                    CNA.Type.HCP  # type: ignore[attr-defined]
+                ].enabled = False  # type: ignore[misc]
             if "bcc" not in enabled:
-                cna.structures[CommonNeighborAnalysisModifier.Type.BCC].enabled = False
+                cna.structures[
+                    CNA.Type.BCC  # type: ignore[attr-defined]
+                ].enabled = False  # type: ignore[misc]
             if "ico" not in enabled:
-                cna.structures[CommonNeighborAnalysisModifier.Type.ICO].enabled = False
+                cna.structures[
+                    CNA.Type.ICO  # type: ignore[attr-defined]
+                ].enabled = False  # type: ignore[misc]
 
             self.pipeline.modifiers.append(cna)
 
@@ -463,29 +471,45 @@ class GBStructure:
                 print(f"Enabled structure type {i} unknown")
         if self.backend == "ovito":
 
-            from ovito.modifiers import PolyhedralTemplateMatchingModifier
+            from ovito.modifiers import PolyhedralTemplateMatchingModifier as PTM
 
-            ptm = PolyhedralTemplateMatchingModifier(
+            ptm = PTM(  # type: ignore[call-arg]
                 *args, rmsd_cutoff=rmsd_threshold, only_selected=only_selected, **kwargs
             )
 
             # Enabled by default: FCC, HCP, BCC
             if "fcc" not in enabled:
-                ptm.structures[PolyhedralTemplateMatchingModifier.Type.FCC].enabled = False
+                ptm.structures[
+                    PTM.Type.FCC  # type: ignore[attr-defined]
+                ].enabled = False  # type: ignore[misc]
             if "hcp" not in enabled:
-                ptm.structures[PolyhedralTemplateMatchingModifier.Type.HCP].enabled = False
+                ptm.structures[
+                    PTM.Type.HCP  # type: ignore[attr-defined]
+                ].enabled = False  # type: ignore[misc]
             if "bcc" not in enabled:
-                ptm.structures[PolyhedralTemplateMatchingModifier.Type.BCC].enabled = False
+                ptm.structures[
+                    PTM.Type.BCC  # type: ignore[attr-defined]
+                ].enabled = False  # type: ignore[misc]
             if "ico" in enabled:
-                ptm.structures[PolyhedralTemplateMatchingModifier.Type.ICO].enabled = True
+                ptm.structures[
+                    PTM.Type.ICO  # type: ignore[attr-defined]
+                ].enabled = True  # type: ignore[misc]
             if "sc" in enabled:
-                ptm.structures[PolyhedralTemplateMatchingModifier.Type.SC].enabled = True
+                ptm.structures[
+                    PTM.Type.SC  # type: ignore[attr-defined]
+                ].enabled = True  # type: ignore[misc]
             if "dcub" in enabled:
-                ptm.structures[PolyhedralTemplateMatchingModifier.Type.CUBIC_DIAMOND].enabled = True
+                ptm.structures[
+                    PTM.Type.CUBIC_DIAMOND  # type: ignore[attr-defined]
+                ].enabled = True  # type: ignore[misc]
             if "dhex" in enabled:
-                ptm.structures[PolyhedralTemplateMatchingModifier.Type.HEX_DIAMOND].enabled = True
+                ptm.structures[
+                    PTM.Type.HEX_DIAMOND  # type: ignore[attr-defined]
+                ].enabled = True  # type: ignore[misc]
             if "graphene" in enabled:
-                ptm.structures[PolyhedralTemplateMatchingModifier.Type.GRAPHENE].enabled = True
+                ptm.structures[
+                    PTM.Type.GRAPHENE  # type: ignore[attr-defined]
+                ].enabled = True  # type: ignore[misc]
 
             self.pipeline.modifiers.append(ptm)
 
