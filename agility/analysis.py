@@ -673,7 +673,7 @@ class GBStructure:
                 if bulk_fraction < 0.5:
                     gb_non_selected.append(index)
                 if return_random:
-                    if bulk_fraction == 0.5 and np.random.random_sample() < 0.5:
+                    if bulk_fraction == 0.5 and random.random() < 0.5:
                         gb_non_selected.append(index)
 
             self._invert_selection()
