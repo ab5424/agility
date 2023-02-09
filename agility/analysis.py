@@ -630,7 +630,8 @@ class GBStructure:
 
     def expand_to_non_selected(
         self,
-        cutoff=4.5,
+        nearest_n: int = 12,
+        cutoff: Optional[float] = None,
         return_type: str = "Identifier",
         return_random: bool = False,
         invert: bool = False,
@@ -649,9 +650,16 @@ class GBStructure:
             self._invert_selection()
             self.set_analysis()
 
-            from ovito.data import CutoffNeighborFinder
+            from ovito.data import CutoffNeighborFinder, NearestNeighborFinder
 
-            finder = CutoffNeighborFinder(cutoff, self.data)
+            if cutoff:
+                finder = CutoffNeighborFinder(cutoff, self.data)
+            elif nearest_n:
+                finder = NearestNeighborFinder(nearest_n, self.data)
+            elif cutoff and nearest_n:
+                raise NameError("Only cutoff or nearest_n can be specified.")
+            else:
+                raise NameError("Either cutoff or nearest_n must be specified.")
 
             gb_non_selected = []
             # edge = []
@@ -664,6 +672,14 @@ class GBStructure:
                 neighbors = {neigh.index for neigh in finder.find(index)}
                 # The following is the neighbors w/o the atoms excluded from structural analysis
                 neighbors_no_selected = neighbors - non_selected
+                if nearest_n:
+                    nearest_n_added = nearest_n
+                    while len(neighbors_no_selected) < nearest_n:
+                        finder = NearestNeighborFinder(nearest_n_added, self.data)
+                        neighbors = {neigh.index for neigh in finder.find(index)}
+                        # The following is the neighbors w/o the atoms excluded from structural analysis
+                        neighbors_no_selected = neighbors - non_selected
+                        nearest_n_added += 1
                 if len(neighbors_no_selected) < 1:
                     raise ValueError("Cutoff radius too small.")
                 elif len(neighbors_no_selected) < 3:
