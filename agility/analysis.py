@@ -279,7 +279,6 @@ class GBStructure:
                 self._delete_selection()
 
     def _invert_selection(self):
-
         if self.backend == "ovito":
             from ovito.modifiers import InvertSelectionModifier
 
@@ -290,7 +289,6 @@ class GBStructure:
             pass
 
     def _delete_selection(self):
-
         if self.backend == "ovito":
             from ovito.modifiers import DeleteSelectedModifier
 
@@ -470,7 +468,6 @@ class GBStructure:
             if i not in ["fcc", "hcp", "bcc", "ico", "sc", "dcub", "dhex", "graphene"]:
                 print(f"Enabled structure type {i} unknown")
         if self.backend == "ovito":
-
             from ovito.modifiers import PolyhedralTemplateMatchingModifier as PTM
 
             ptm = PTM(  # type: ignore[call-arg]
@@ -643,7 +640,6 @@ class GBStructure:
             gb_non_selected: list of GB atoms that were not in the previously selected group."""
 
         if self.backend == "ovito":
-
             if return_type not in ["Identifier", "Indices"]:
                 raise NameError("Only Indices and Identifier are possible as return types.")
 
@@ -724,7 +720,6 @@ class GBStructure:
             groups_non_selected (list): atoms that were not in the previously selected group."""
 
         if self.backend == "ovito":
-
             if return_type not in ["Identifier", "Indices"]:
                 raise NameError("Only Indices and Identifier are possible as return types.")
 
