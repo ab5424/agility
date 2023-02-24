@@ -20,26 +20,17 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements-dev.txt
-        pip install pylint
+        pip install ruff
+    - name: black
+      run: |
+        black --version
+        black --check --diff --color $(find . -name "*.py" | xargs)
     - name: mypy
       continue-on-error: true
       run: |
         mypy --version
         rm -rf .mypy_cache
         mypy $(find . -name "*.py" | xargs)
-    - name: pydocstyle
+    - name: ruff
       run: |
-        pydocstyle --count pymatgen
-    - name: pylint
-      run: |
-        pylint --exit-zero -d W0511,C0415,E0611,E0401 $(find . -name "*.py" | xargs)
-    - name: black
-      run: |
-        black --version
-        black --check --diff --color $(find . -name "*.py" | xargs)
-    - name: flake8
-      run: |
-        flake8 --version
-        flake8 --max-line-length 100 --ignore=F841 --count --show-source --statistics $(find . -name "*.py" | xargs)
-        # exit-zero treats all errors as warnings.
-        flake8 --count --exit-zero --max-complexity=20 --statistics $(find . -name "*.py" | xargs)
+        pylint check . --line-length=100 --ignore=F841
