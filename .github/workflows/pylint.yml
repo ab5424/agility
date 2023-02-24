@@ -33,4 +33,4 @@ jobs:
         mypy $(find . -name "*.py" | xargs)
     - name: ruff
       run: |
-        pylint check . --line-length=100 --ignore=F841
+        ruff check . --line-length=100 --ignore=F841
