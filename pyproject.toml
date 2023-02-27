@@ -1,12 +1,11 @@
 [build-system]
 requires = ["setuptools", "wheel", "numpy", "pandas", "scipy"]
 
-[tool.flake8]
-max-line-length = 100
-extend-ignore = "F841"
-
 [tool.black]
 line-length = 100
 
-[tool.isort]
-profile = "black"
+[tool.codespell]
+ignore-words-list = """
+cna
+"""
+check-filenames = true

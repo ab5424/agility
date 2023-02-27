@@ -8,7 +8,7 @@ import pathlib
 import random
 import sys
 import warnings
-from typing import Optional
+from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -647,6 +647,8 @@ class GBStructure:
             self.set_analysis()
 
             from ovito.data import CutoffNeighborFinder, NearestNeighborFinder
+
+            finder: Union[CutoffNeighborFinder, NearestNeighborFinder]
 
             if cutoff:
                 finder = CutoffNeighborFinder(cutoff, self.data)
