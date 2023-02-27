@@ -17,7 +17,7 @@ from agility.minimiser import mimimise_lmp
 
 
 class GBStructure:
-    """This is the fundamental class of a grain boundary object."""
+    """Fundamental class of a grain boundary object."""
 
     def __init__(self, backend, filename, **kwargs):
         """Initialize."""
@@ -68,6 +68,7 @@ class GBStructure:
 
         Args:
             filename: File to read.
+
         Returns:
             None
         """
@@ -95,9 +96,9 @@ class GBStructure:
 
         Args:
             filename: File to read.
-            file_type: File type (data, dump, restart)
-            pair_style: lammps pair style
-            kspace_style:
+            file_type (str): File type (data, dump, restart)
+            pair_style (str): lammps pair style
+            kspace_style (str): lammps kspace style
         """
         self.pylmp.units("metal")
         self.pylmp.atom_style("charge")
@@ -135,10 +136,7 @@ class GBStructure:
                 self.pylmp.write_restart(filename)
 
     def minimise(self, *args, **kwargs):
-        """Minimise structure.
-
-        Returns:
-        """
+        """Minimise structure."""
         if self.backend == "ovito":
             print(f"The {self.backend} backend does not support minimisation.")
             sys.exit(1)
@@ -151,9 +149,10 @@ class GBStructure:
         This can be particularly useful if
         there is a mobile type in the structure. Note that for ovito structures you need to make
         sure that type information is included.
+
         Args:
-            particle_type:
-        Returns:
+            particle_type: Particle type to delete.
+
         """
         if self.backend == "ovito":
             from ovito.modifiers import DeleteSelectedModifier
@@ -187,11 +186,11 @@ class GBStructure:
         """Select a specific type of particles from a structure.
 
         Text.
+
         Args:
             particle_type:
         Returns:
         """
-
         if self.backend == "ovito":
             # from ovito.plugins.StdModPython import (
             #     SelectTypeModifier,
@@ -309,6 +308,7 @@ class GBStructure:
             enabled: Enabled structures for identifier.
             cutoff: Cutoff for the FixedCutoff mode.
             compute: Compute results.
+
         Returns:
             None
         """
@@ -613,6 +613,7 @@ class GBStructure:
 
         Important function for the ovito backend. The lammps backend can access compute results
         without evaluation of this function.
+
         Returns:
             None
         """
@@ -636,9 +637,15 @@ class GBStructure:
         """Useful method if only_selected was chosen for structural analysis.
 
         Args:
-        Returns:
-            gb_non_selected: list of GB atoms that were not in the previously selected group."""
+            nearest_n: Number of nearest neighbors to consider.
+            cutoff: Cutoff distance to consider.
+            return_type: Either Identifier or Indices.
+            return_random: If True, return a random selection of the non-selected atoms.
+            invert: If True, invert the selection.
 
+        Returns:
+        gb_non_selected: list of GB atoms that were not in the previously selected group.
+        """
         if self.backend == "ovito":
             if return_type not in ["Identifier", "Indices"]:
                 raise NameError("Only Indices and Identifier are possible as return types.")
@@ -685,9 +692,8 @@ class GBStructure:
                 bulk_fraction = len(bulk_neighbors) / len(neighbors_no_selected)
                 if bulk_fraction < 0.5:
                     gb_non_selected.append(index)
-                if return_random:
-                    if bulk_fraction == 0.5 and random.random() < 0.5:
-                        gb_non_selected.append(index)
+                if return_random and bulk_fraction == 0.5 and random.random() < 0.5:
+                    gb_non_selected.append(index)
 
             self._invert_selection()
 
@@ -718,9 +724,10 @@ class GBStructure:
             return_random (bool): Some particles will have the same (maximum) neighbours in
                 multiple groups.
             If true, returns a random group from that pool.
-        Returns:
-            groups_non_selected (list): atoms that were not in the previously selected group."""
 
+        Returns:
+        groups_non_selected (list): atoms that were not in the previously selected group.
+        """
         if self.backend == "ovito":
             if return_type not in ["Identifier", "Indices"]:
                 raise NameError("Only Indices and Identifier are possible as return types.")
@@ -895,7 +902,6 @@ class GBStructure:
             return_type (str):
 
         """
-
         if self.backend == "ovito":
             # finder: CutoffNeighborFinder | NearestNeighborFinder
             from typing import Union
@@ -940,6 +946,7 @@ class GBStructure:
             mode:
 
         Returns:
+            fraction (float): Fraction of grain boundary ions.
         """
         if self.backend == "ovito":
             fraction = len(self.get_non_crystalline_atoms(mode)) / len(
@@ -1071,6 +1078,7 @@ class GBStructureTimeseries(GBStructure):
 
         Args:
             timesteps_to_exclude (:py:class:`int`): Number of timesteps to exclude
+
         Returns:
             new_trajectory (:py:class:`polypy.read.Trajectory`):
             Trajectory object.
@@ -1087,6 +1095,7 @@ def not_implemented(backend):
         backend: Backend currently in use.
 
     Returns:
+        NotImplementedError
 
     """
     return NotImplementedError(f"The backend {backend} doesn't support this function.")

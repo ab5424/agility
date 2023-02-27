@@ -1,6 +1,4 @@
-"""
-Plotting and rendering functions.
-"""
+"""Plotting and rendering functions."""
 
 # Copyright (c) Alexander Bonkowski
 # Distributed under the terms of the MIT License
@@ -11,13 +9,14 @@ import seaborn as sns
 
 
 def render_ovito(pipeline=None, res_factor: int = 1):
-    """
-    Render an ovito pipeline object.
+    """Render an ovito pipeline object.
+
     Args:
         pipeline: The ovito pipeline to be rendered.
-        res_factor: Factor to scale the resolution of the rendering. 2=Full HD, 4=4K
+        res_factor: Factor to scale the resolution of the rendering. 2=Full HD, 4=4K.
 
     Returns:
+    -------
         image: Image object. Can be saved via image.save("figure.png")
 
     """
@@ -44,13 +43,14 @@ def render_ovito(pipeline=None, res_factor: int = 1):
 
 
 def plot_face_order(data=None, plot_property="Max Face Order"):
-    """
-    Plot the histogram of max. face order from ovito data.
+    """Plot the histogram of max. face order from ovito data.
+
     Args:
         data:
         plot_property:
 
     Returns:
+        Histogram plot.
 
     """
     df_temp = pd.DataFrame(

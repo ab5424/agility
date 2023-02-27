@@ -1,9 +1,7 @@
 # Copyright (c) Alexander Bonkowski.
 # Distributed under the terms of the MIT License.
 
-"""
-Setup.py for agility.
-"""
+"""Setup.py for agility."""
 
 import os
 
