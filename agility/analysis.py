@@ -653,18 +653,9 @@ class GBStructure:
             self._invert_selection()
             self.set_analysis()
 
-            from ovito.data import CutoffNeighborFinder, NearestNeighborFinder
-
-            finder: Union[CutoffNeighborFinder, NearestNeighborFinder]
-
-            if cutoff:
-                finder = CutoffNeighborFinder(cutoff, self.data)
-            elif nearest_n:
-                finder = NearestNeighborFinder(nearest_n, self.data)
-            elif cutoff and nearest_n:
-                raise NameError("Only cutoff or nearest_n can be specified.")
-            else:
-                raise NameError("Either cutoff or nearest_n must be specified.")
+            finder = get_finder(self.data, cutoff=cutoff, nearest_n=nearest_n)
+            if nearest_n:
+                from ovito.data import NearestNeighborFinder
 
             gb_non_selected = []
             # edge = []
@@ -734,9 +725,7 @@ class GBStructure:
             self._invert_selection()
             self.set_analysis()
 
-            from ovito.data import CutoffNeighborFinder
-
-            finder = CutoffNeighborFinder(cutoff, self.data)
+            finder = get_finder(self.data, cutoff=cutoff)
 
             groups_non_selected = [[] for _ in range(len(groups))]  # type: list[list]
             # Obtain sets of bulk (=crystalline) cations
@@ -1085,6 +1074,33 @@ class GBStructureTimeseries(GBStructure):
 
     # Todo: Add differentiation between diffusion along a grain boundary, transverse to the GB,
     # and between grains
+
+
+def get_finder(data, cutoff: Optional[float] = None, nearest_n: Optional[int] = None):
+    """Get neighbor finder.
+
+    Args:
+        data: Data object.
+        cutoff: Cutoff distance.
+        nearest_n: Number of nearest neighbors.
+
+    Returns:
+        finder: Neighbor finder.
+
+    """
+    from ovito.data import CutoffNeighborFinder, NearestNeighborFinder
+
+    finder: Union[CutoffNeighborFinder, NearestNeighborFinder]
+
+    if cutoff:
+        finder = CutoffNeighborFinder(cutoff, data)
+    elif nearest_n:
+        finder = NearestNeighborFinder(nearest_n, data)
+    elif cutoff and nearest_n:
+        raise NameError("Only cutoff or nearest_n can be specified.")
+    else:
+        raise NameError("Either cutoff or nearest_n must be specified.")
+    return finder
 
 
 def not_implemented(backend):
