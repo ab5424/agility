@@ -362,7 +362,8 @@ class GBStructure:
         if only_selected:
             warnings.warn(
                 "Evaluating only the selected atoms. Be aware that non-selected atoms may be "
-                "assigned to the wrong category."
+                "assigned to the wrong category.",
+                stacklevel=2,
             )
         if compute:
             self.set_analysis()
@@ -678,7 +679,9 @@ class GBStructure:
                 if len(neighbors_no_selected) < 1:
                     raise ValueError("Cutoff radius too small.")
                 elif len(neighbors_no_selected) < 3:
-                    warnings.warn("At least one atoms has only two other atoms to assign.")
+                    warnings.warn(
+                        "At least one atoms has only two other atoms to assign.", stacklevel=2
+                    )
                 bulk_neighbors = bulk_atoms_set.intersection(neighbors_no_selected)
                 bulk_fraction = len(bulk_neighbors) / len(neighbors_no_selected)
                 if bulk_fraction < 0.5:
@@ -739,7 +742,9 @@ class GBStructure:
                 # The following is the neighbors w/o the atoms excluded from structural analysis
                 neighbors_no_selected = neighbors - non_selected
                 if len(neighbors_no_selected) < 3:
-                    warnings.warn("At least one atoms has only two other atoms to assign.")
+                    warnings.warn(
+                        "At least one atoms has only two other atoms to assign.", stacklevel=2
+                    )
                 group_neighbors = [len(i.intersection(neighbors_no_selected)) for i in group_sets]
                 indices_max = np.where(group_neighbors == np.amax(group_neighbors))[0]
                 if len(indices_max) > 1 and return_random:
@@ -940,7 +945,9 @@ class GBStructure:
             fraction = len(self.get_non_crystalline_atoms(mode)) / len(
                 self.data.particles["Particle Identifier"]
             )
-            warnings.warn("Using all particles with a particle identifier as the base.")
+            warnings.warn(
+                "Using all particles with a particle identifier as the base.", stacklevel=2
+            )
         elif self.backend == "lammps":
             # TODO
             fraction = None
