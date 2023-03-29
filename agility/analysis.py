@@ -246,7 +246,7 @@ class GBStructure:
                     ids = list(np.where(self.data.particles["Structure Type"] != 10000)[0])
                 else:
                     raise NameError("Only Indices and Identifier are possible as list id types.")
-                l_ids = np.in1d(ids, list_ids, assume_unique=True, invert=False)
+                l_ids = np.in1d(ids, list_ids, assume_unique=True, inverse=False)
                 selection = data.particles_.create_property(  # pylint: disable=W0612
                     "Selection", data=l_ids
                 )
@@ -722,8 +722,7 @@ class GBStructure:
             cutoff (float): Cutoff (in Angstrom) for the neighbour finder.
             return_type (str): return either identifiers or indices.
             return_random (bool): Some particles will have the same (maximum) neighbours in
-                multiple groups.
-            If true, returns a random group from that pool.
+                multiple groups. If true, returns a random group from that pool.
 
         Returns:
         groups_non_selected (list): atoms that were not in the previously selected group.
@@ -748,7 +747,7 @@ class GBStructure:
 
             for index in non_selected:
                 neighbors = {neigh.index for neigh in finder.find(index)}
-                # The following is the neighbors w/o the atoms excluded from strucural analysis
+                # The following is the neighbors w/o the atoms excluded from structural analysis
                 neighbors_no_selected = neighbors - non_selected
                 if len(neighbors_no_selected) < 3:
                     warnings.warn("At least one atoms has only two other atoms to assign.")
