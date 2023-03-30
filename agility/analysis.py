@@ -246,7 +246,7 @@ class GBStructure:
                     ids = list(np.where(self.data.particles["Structure Type"] != 10000)[0])
                 else:
                     raise NameError("Only Indices and Identifier are possible as list id types.")
-                l_ids = np.in1d(ids, list_ids, assume_unique=True, inverse=False)
+                l_ids = np.in1d(ids, list_ids, assume_unique=True, invert=False)
                 selection = data.particles_.create_property(  # pylint: disable=W0612
                     "Selection", data=l_ids
                 )
@@ -669,6 +669,7 @@ class GBStructure:
                 neighbors = {neigh.index for neigh in finder.find(index)}
                 # The following is the neighbors w/o the atoms excluded from structural analysis
                 neighbors_no_selected = neighbors - non_selected
+                # If NN, correct for non-selected atoms
                 if nearest_n:
                     nearest_n_added = nearest_n
                     while len(neighbors_no_selected) < nearest_n:
@@ -680,7 +681,9 @@ class GBStructure:
                     raise ValueError("Cutoff radius too small.")
                 elif len(neighbors_no_selected) < 3:
                     warnings.warn(
-                        "At least one atoms has only two other atoms to assign.", stacklevel=2
+                        "At least one atoms has only two other atoms to assign. "
+                        "Consider increasing the cutoff value.",
+                        stacklevel=2,
                     )
                 bulk_neighbors = bulk_atoms_set.intersection(neighbors_no_selected)
                 bulk_fraction = len(bulk_neighbors) / len(neighbors_no_selected)
