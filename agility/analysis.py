@@ -298,6 +298,7 @@ class GBStructure:
         mode: str = "IntervalCutoff",
         enabled: tuple = ("fcc", "hpc", "bcc"),
         cutoff: float = 3.2,
+        color_by_type: bool = True,
         only_selected: bool = False,
         compute: bool = True,
     ):
@@ -307,6 +308,8 @@ class GBStructure:
             mode: Mode of common neighbor analysis. The lammps backend uses "FixedCutoff".
             enabled: Enabled structures for identifier.
             cutoff: Cutoff for the FixedCutoff mode.
+            color_by_type: Color by structure type.
+            only_selected: Only selected particles.
             compute: Compute results.
 
         Returns:
@@ -329,7 +332,10 @@ class GBStructure:
                 sys.exit(1)
 
             cna = CNA(  # type: ignore[call-arg]
-                mode=cna_mode, cutoff=cutoff, only_selected=only_selected
+                mode=cna_mode,
+                cutoff=cutoff,
+                color_by_type=color_by_type,
+                only_selected=only_selected,
             )
             # Enabled by default: FCC, HCP, BCC
             if "fcc" not in enabled:
