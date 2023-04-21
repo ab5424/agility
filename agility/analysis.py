@@ -890,6 +890,7 @@ class GBStructure:
         nearest_n: int = 12,
         cutoff: Optional[float] = None,
         gb_ions: Optional[set] = None,
+        bulk_ions: Optional[list] = None,
         return_type: str = "Identifier",
     ):
         """Get the atoms at the grain edge, as determined by structural analysis.
@@ -901,6 +902,7 @@ class GBStructure:
             nearest_n (int): Number of nearest neighbors to consider. Examples: fcc=12, bcc=8
             cutoff (float):
             gb_ions (set): Indices of grain boundary ions. Default: non-crystalline ions.
+            bulk_ions (list): Indices of bulk ions. Default: crystalline ions.
             return_type (str):
 
         """
@@ -919,8 +921,9 @@ class GBStructure:
 
             gb_edge_ions = []
             gb_ions_set = gb_ions or self.get_non_crystalline_atoms(return_type="Indices")
+            bulk_ions_list = bulk_ions or self.get_crystalline_atoms(return_type="Indices")
             gb_ions_set = set(gb_ions_set)
-            for index in self.get_crystalline_atoms(return_type="Indices"):
+            for index in bulk_ions_list:
                 # print("Nearest neighbors of particle %i:" % index)
                 # for neigh in finder.find(index):
                 #    print(neigh.index, neigh.distance, neigh.delta)
