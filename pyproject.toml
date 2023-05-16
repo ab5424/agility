@@ -19,7 +19,12 @@ select = [
   "D",   # pydocstyle
   "E",   # pycodestyle
   "F",   # pyflakes
+  "FLY", # flynt
   "I",   # isort
+  "ICN", # flake8-import-conventions
+  "ISC", # flake8-implicit-str-concat
+  "PD",  # pandas-vet
+  "PIE", # flake8-pie
   "PLE", # pylint error
   "PLW", # pylint warning
   "Q",   # flake8-quotes
