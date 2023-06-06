@@ -25,8 +25,7 @@ select = [
   "ISC", # flake8-implicit-str-concat
   "PD",  # pandas-vet
   "PIE", # flake8-pie
-  "PLE", # pylint error
-  "PLW", # pylint warning
+  "PL",  # pylint
   "PT",  # flake8-pytest-style
   "Q",   # flake8-quotes
   "RUF", # Ruff-specific rules
@@ -39,6 +38,9 @@ select = [
 ignore = [
   "D417",    # Missing argument description in the docstring
   "F841",    # Local variable name is assigned to but never used
+  "PLR0912", # too-many-branches
+  "PLR0913", # too-many-arguments
+  "PLR2004", # magic-value-comparison
   "SIM118",
 ]
 pydocstyle.convention = "google"

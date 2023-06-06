@@ -685,7 +685,7 @@ class GBStructure:
                         nearest_n_added += 1
                 if len(neighbors_no_selected) < 1:
                     raise ValueError("Cutoff radius too small.")
-                elif len(neighbors_no_selected) < 3:
+                elif len(neighbors_no_selected) <= 2:
                     warnings.warn(
                         "At least one atoms has only two other atoms to assign. "
                         "Consider increasing the cutoff value.",
