@@ -27,6 +27,7 @@ select = [
   "PIE", # flake8-pie
   "PLE", # pylint error
   "PLW", # pylint warning
+  "PT",  # flake8-pytest-style
   "Q",   # flake8-quotes
   "RUF", # Ruff-specific rules
   "SIM", # flake8-simplify
