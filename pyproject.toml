@@ -27,7 +27,9 @@ select = [
   "PIE", # flake8-pie
   "PL",  # pylint
   "PT",  # flake8-pytest-style
+  "PYI", # flake8-pyi
   "Q",   # flake8-quotes
+  "RET", # flake8-return
   "RUF", # Ruff-specific rules
   "SIM", # flake8-simplify
   "TID", # tidy imports

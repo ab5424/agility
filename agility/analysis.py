@@ -683,9 +683,9 @@ class GBStructure:
                         neighbors = {neigh.index for neigh in finder.find(index)}
                         neighbors_no_selected = neighbors - non_selected
                         nearest_n_added += 1
-                if len(neighbors_no_selected) < 1:
+                if len(neighbors_no_selected) == 0:
                     raise ValueError("Cutoff radius too small.")
-                elif len(neighbors_no_selected) <= 2:
+                if len(neighbors_no_selected) <= 2:
                     warnings.warn(
                         "At least one atoms has only two other atoms to assign. "
                         "Consider increasing the cutoff value.",

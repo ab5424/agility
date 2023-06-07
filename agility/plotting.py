@@ -30,7 +30,7 @@ def render_ovito(pipeline=None, res_factor: int = 1):
     viewport.zoom_all(size=(640, 480))
 
     tachyon = TachyonRenderer(shadows=False, direct_light_intensity=1.1)  # type: ignore[call-arg]
-    image = viewport.render_image(
+    return viewport.render_image(
         size=(res_factor * 640, res_factor * 480),
         # filename="figure.png",
         background=(1, 1, 1),
@@ -38,8 +38,6 @@ def render_ovito(pipeline=None, res_factor: int = 1):
         renderer=tachyon,
         crop=True,
     )
-
-    return image
 
 
 def plot_face_order(data=None, plot_property="Max Face Order"):
