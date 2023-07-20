@@ -8,7 +8,7 @@ import pathlib
 import random
 import sys
 import warnings
-from typing import Optional, Union
+from typing import List, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -640,7 +640,7 @@ class GBStructure:
         return_type: str = "Identifier",
         return_random: bool = False,
         invert: bool = False,
-    ):
+    ) -> List[int]:
         """Useful method if only_selected was chosen for structural analysis.
 
         Args:

@@ -1,5 +1,5 @@
 """Minimiser for lammps, vasp, gulp."""
-from typing import Optional
+from typing import Optional, Sequence, Union
 
 # Copyright (c) Alexander Bonkowski.
 # Distributed under the terms of the MIT License.
@@ -8,7 +8,7 @@ from typing import Optional
 def mimimise_lmp(
     lmp,
     style: str = "fire",
-    min_opt: tuple = (0.0, 1e-8, 1000, 100000),
+    min_opt: Sequence[Union[int, float]] = (0, 1e-8, 1000, 100000),
     mod: Optional[tuple] = None,
 ):
     """Run minimisation in lammps.
