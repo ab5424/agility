@@ -646,6 +646,7 @@ class GBStructure:
         self,
         nearest_n: Optional[int] = None,
         cutoff: Optional[float] = None,
+        expansion_base: Optional[list] = None,
         return_type: str = "Identifier",
         return_random: bool = False,
         invert: bool = False,
@@ -655,6 +656,7 @@ class GBStructure:
         Args:
             nearest_n: Number of nearest neighbors to consider.
             cutoff: Cutoff distance to consider.
+            expansion_base: List of atoms to expand from. Must be Indices.
             return_type: Either Identifier or Indices.
             return_random: If True, return a random selection of the non-selected atoms.
             invert: If True, invert the selection.
@@ -678,7 +680,8 @@ class GBStructure:
             gb_non_selected = []
             # edge = []
             # Obtain a set of bulk (=crystalline) cations
-            bulk_atoms_set = set(self.get_crystalline_atoms(return_type="Indices"))
+            bulk_atoms = expansion_base or self.get_crystalline_atoms(return_type="Indices")
+            bulk_atoms_set = set(bulk_atoms)
             # These are the atoms that haven't been analysed in the structure analysis, i.e. anions
             non_selected = set(np.where(self.data.particles.selection == 1)[0])
 
