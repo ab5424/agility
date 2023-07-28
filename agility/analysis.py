@@ -635,7 +635,7 @@ class GBStructure:
 
     def expand_to_non_selected(
         self,
-        nearest_n: int = 12,
+        nearest_n: Optional[int] = None,
         cutoff: Optional[float] = None,
         return_type: str = "Identifier",
         return_random: bool = False,
@@ -653,6 +653,8 @@ class GBStructure:
         Returns:
         gb_non_selected: list of GB atoms that were not in the previously selected group.
         """
+        if nearest_n and cutoff:
+            raise ValueError("Only one of nearest_n and cutoff can be specified.")
         if self.backend == "ovito":
             if return_type not in ["Identifier", "Indices"]:
                 raise NameError("Only Indices and Identifier are possible as return types.")
