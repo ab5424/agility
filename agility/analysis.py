@@ -237,6 +237,9 @@ class GBStructure:
             None
         """
         if self.backend == "ovito":
+            if np.where(self.data.particles.selection != 0)[0].size > 0:
+                self._clear_selection()
+                warnings.warn("Selection currently not empty. Clearing selection.", stacklevel=2)
 
             def modify(frame, data):  # pylint: disable=W0613
                 # Specify the IDs of all atoms that are to remain here
@@ -292,6 +295,12 @@ class GBStructure:
             from ovito.modifiers import DeleteSelectedModifier
 
             self.pipeline.modifiers.append(DeleteSelectedModifier())
+
+    def _clear_selection(self):
+        if self.backend == "ovito":
+            from ovito.modifiers import ClearSelectionModifier
+
+            self.pipeline.modifiers.append(ClearSelectionModifier())
 
     def perform_cna(
         self,
