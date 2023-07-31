@@ -4,11 +4,18 @@
 # Distributed under the terms of the MIT License
 # author: Alexander Bonkowski
 
+from typing import TYPE_CHECKING
+
 import pandas as pd
 import seaborn as sns
 
+if TYPE_CHECKING:
+    from ovito.data import DataCollection
+    from ovito.pipeline import Pipeline
+    from PySide6.QtGui import QImage
 
-def render_ovito(pipeline=None, res_factor: int = 1):
+
+def render_ovito(pipeline: Pipeline, res_factor: int = 1) -> QImage:
     """Render an ovito pipeline object.
 
     Args:
@@ -40,7 +47,7 @@ def render_ovito(pipeline=None, res_factor: int = 1):
     )
 
 
-def plot_face_order(data=None, plot_property="Max Face Order"):
+def plot_face_order(data: DataCollection, plot_property: str = "Max Face Order") -> sns.FacetGrid:
     """Plot the histogram of max. face order from ovito data.
 
     Args:

@@ -15,6 +15,7 @@ target-version = "py38"
 line-length = 100
 select = [
   "A",   # flake8-bultins
+  "ANN", # flake8-annotations
   "B",   # flake8-bugbear
   "C4",  # flake8-comprehensions
   "D",   # pydocstyle
@@ -42,6 +43,9 @@ select = [
   "YTT", # flake8-2020
 ]
 ignore = [
+  "ANN002",  # Missing type annotation for `*args`
+  "ANN003",  # Missing type annotation for `**kwargs`
+  "ANN101",  # Missing type annotation for self in method
   "D417",    # Missing argument description in the docstring
   "F841",    # Local variable name is assigned to but never used
   "PLR0912", # too-many-branches

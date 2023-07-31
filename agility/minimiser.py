@@ -1,16 +1,19 @@
-"""Minimiser for lammps, vasp, gulp."""
-from typing import Optional, Sequence, Union
-
 # Copyright (c) Alexander Bonkowski.
 # Distributed under the terms of the MIT License.
 
+"""Minimiser for lammps, vasp, gulp."""
+from typing import TYPE_CHECKING, Optional, Sequence, Union
+
+if TYPE_CHECKING:
+    from lammps import lammps
+
 
 def mimimise_lmp(
-    lmp,
+    lmp: lammps,
     style: str = "fire",
     min_opt: Sequence[Union[int, float]] = (0, 1e-8, 1000, 100000),
     mod: Optional[tuple] = None,
-):
+) -> lammps:
     """Run minimisation in lammps.
 
     Args:
