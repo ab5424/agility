@@ -14,15 +14,18 @@ check-filenames = true
 target-version = "py38"
 line-length = 100
 select = [
+  "A",   # flake8-bultins
   "B",   # flake8-bugbear
   "C4",  # flake8-comprehensions
   "D",   # pydocstyle
   "E",   # pycodestyle
   "F",   # pyflakes
+  "G",   # flake8-logging-format
   "FLY", # flynt
   "I",   # isort
   "ICN", # flake8-import-conventions
   "ISC", # flake8-implicit-str-concat
+  "NPY", # NumPy-specific rules
   "PD",  # pandas-vet
   "PIE", # flake8-pie
   "PL",  # pylint

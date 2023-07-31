@@ -18,7 +18,7 @@
 # -- Project information -----------------------------------------------------
 
 project = "agility"
-copyright = "2022, Alexander Bonkowski"
+project_copyright = "2022, Alexander Bonkowski"
 author = "Alexander Bonkowski"
 
 # The full version, including alpha/beta/rc tags
