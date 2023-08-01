@@ -1,5 +1,6 @@
 [![Documentation Status](https://readthedocs.org/projects/agility1/badge/?version=latest)](https://agility1.readthedocs.io/en/latest/?badge=latest)
 [![Coverage Status](https://coveralls.io/repos/github/ab5424/agility/badge.svg?branch=main)](https://coveralls.io/github/ab5424/agility?branch=main)
+[![pre-commit.ci status](https://results.pre-commit.ci/badge/github/ab5424/agility/main.svg)](https://results.pre-commit.ci/latest/github/ab5424/agility/main)
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/ab5424/agility/HEAD)
 
 # Agility
