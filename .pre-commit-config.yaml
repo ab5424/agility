@@ -1,8 +1,8 @@
 exclude: ^(examples)
 
 repos:
-  - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: v0.0.281
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.0.282
     hooks:
       - id: ruff
         args: [--fix, --line-length, "100", --ignore=F841]
