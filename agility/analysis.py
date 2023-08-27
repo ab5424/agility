@@ -8,10 +8,11 @@ import pathlib
 import random
 import sys
 import warnings
-from typing import TYPE_CHECKING, List, Literal, Optional, Self, Union
+from typing import TYPE_CHECKING, List, Literal, Optional, Union
 
 import numpy as np
 import pandas as pd
+from typing_extensions import Self
 
 from agility.minimiser import mimimise_lmp
 
