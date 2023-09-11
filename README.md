@@ -47,26 +47,6 @@ Any contributions or even questions about the code are welcome - please use the 
 
 The development takes place on the `development` branch. Python 3.9 is the minimum requirement. Some backends (like ovito) currently do not support Python 3.10.
 
-If you use VSCode, you might edit `settings.json` as follows:
-
-  ```json
-  "python.linting.flake8Enabled": true,
-  "python.linting.flake8Args": ["--max-line-length=100", "--ignore=F841"],
-  "python.linting.enabled": true,
-  "python.linting.pylintEnabled": false,
-  "python.linting.mypyEnabled": true,
-  "python.linting.pycodestyleEnabled": false,
-  "python.linting.pydocstyleEnabled": true,
-  "python.formatting.provider": "black",
-  "python.formatting.blackArgs": ["--line-length=100"],
-  "python.sortImports.args": ["--profile", "black"],
-  "[python]": {
-      "editor.codeActionsOnSave": {
-      "source.organizeImports": true
-    },
-  }
-  ```
-
 ## Documentation
 
 The user documentation will be written in python sphinx. The source files should be
