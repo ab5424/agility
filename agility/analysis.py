@@ -1085,7 +1085,7 @@ class GBStructure:
             self.save_structure("filename", file_type="data")
             if convert_to == "ovito":
                 try:
-                    return GBStructure(backend=convert_to, filename=filename)  # type: ignore[return-value] # noqa: E501
+                    return GBStructure(backend=convert_to, filename=filename)  # type: ignore[return-value]
                 finally:
                     tempfile = pathlib.Path(filename)
                     tempfile.unlink()
