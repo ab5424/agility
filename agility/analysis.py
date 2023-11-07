@@ -199,7 +199,8 @@ class GBStructure:
             from ovito.modifiers import SelectTypeModifier
 
             def assign_particle_types(  # noqa: ANN202
-                frame, data  # noqa: ANN001
+                frame,  # noqa: ANN001
+                data,  # noqa: ANN001
             ):  # pylint: disable=W0613
                 atom_types = data.particles_.particle_types_  # pylint: disable=W0612
 

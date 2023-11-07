@@ -20,16 +20,13 @@ jobs:
       run: |
         pip install -r requirements-dev.txt
         pip install ruff
-    - name: black
+    - name: ruff
       run: |
-        black --version
-        black --check --diff --color $(find . -name "*.py" | xargs)
+        ruff check .
+        ruff format --check .
     - name: mypy
       continue-on-error: true
       run: |
         mypy --version
         rm -rf .mypy_cache
         mypy $(find . -name "*.py" | xargs)
-    - name: ruff
-      run: |
-        ruff check . --line-length=100 --ignore=F841
