@@ -8,7 +8,7 @@ import pathlib
 import random
 import sys
 import warnings
-from typing import TYPE_CHECKING, List, Literal, Optional, Union
+from typing import TYPE_CHECKING, Any, List, Literal, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -35,7 +35,7 @@ class GBStructure:
         """Initialize."""
         self.backend = backend
         self.filename = filename
-        # self.data = None
+        self.data: Any = None
 
         if self.backend == "lammps":
             # Determine if a jupyter notebook is used
@@ -452,7 +452,6 @@ class GBStructure:
 
     def perform_ptm(
         self,
-        *args,
         enabled: tuple = ("fcc", "hpc", "bcc"),
         rmsd_threshold: float = 0.1,
         only_selected: bool = False,
@@ -490,7 +489,7 @@ class GBStructure:
             from ovito.modifiers import PolyhedralTemplateMatchingModifier as PTM
 
             ptm = PTM(  # type: ignore[call-arg]
-                *args, rmsd_cutoff=rmsd_threshold, only_selected=only_selected, **kwargs
+                rmsd_cutoff=rmsd_threshold, only_selected=only_selected, **kwargs
             )
 
             # Enabled by default: FCC, HCP, BCC

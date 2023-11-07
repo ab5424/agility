@@ -1,4 +1,4 @@
-name: Pylint
+name: Lint
 
 on: [push]
 
@@ -25,7 +25,6 @@ jobs:
         ruff check .
         ruff format --check .
     - name: mypy
-      continue-on-error: true
       run: |
         mypy --version
         rm -rf .mypy_cache
