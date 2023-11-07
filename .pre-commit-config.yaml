@@ -5,7 +5,8 @@ repos:
     rev: v0.1.4
     hooks:
       - id: ruff
-        args: [--fix, --line-length, "100", --ignore=F841]
+        args: [--fix]
+      - id: ruff-format
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0
@@ -18,11 +19,6 @@ repos:
     rev: v1.6.1
     hooks:
       - id: mypy
-
-  - repo: https://github.com/psf/black
-    rev: 23.10.1
-    hooks:
-      - id: black
 
   - repo: https://github.com/codespell-project/codespell
     rev: v2.2.6
