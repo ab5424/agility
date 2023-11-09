@@ -36,6 +36,9 @@ jobs:
           python -m pip install --upgrade pip wheel
           python -m pip install numpy packaging
           python -m pip install -e '.[dev,ovito]'
+          # Fix ImportError: libEGL.so.1: ...
+          if [ "$RUNNER_OS" == "Linux" ]; then
+              sudo apt update && sudo apt install -y libegl1-mesa-dev
       - name: pytest
         run: |
           pytest tests
