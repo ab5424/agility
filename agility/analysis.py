@@ -8,7 +8,7 @@ import pathlib
 import random
 import sys
 import warnings
-from typing import TYPE_CHECKING, Any, List, Literal, Optional, Union
+from typing import TYPE_CHECKING, Any, List, Literal, Optional, Sequence, Union
 
 import numpy as np
 import pandas as pd
@@ -17,7 +17,7 @@ from typing_extensions import Self
 from agility.minimiser import mimimise_lmp
 
 if TYPE_CHECKING:
-    from ovito.data import CutoffNeighborFinder, DataCollection, NearestNeighborFinder
+    pass
 
 available_backends = Literal["ovito", "pymatgen", "babel", "pyiron", "ase", "lammps"]
 # https://github.com/pyiron/pylammpsmpi
@@ -308,7 +308,7 @@ class GBStructure:
     def perform_cna(
         self,
         mode: str = "IntervalCutoff",
-        enabled: tuple = ("fcc", "hpc", "bcc"),
+        enabled: Sequence[str] = ("fcc", "hpc", "bcc"),
         cutoff: float = 3.2,
         color_by_type: bool = True,
         only_selected: bool = False,
@@ -1117,9 +1117,7 @@ class GBStructureTimeseries(GBStructure):
     # and between grains
 
 
-def get_finder(
-    data: DataCollection, cutoff: Optional[float] = None, nearest_n: Optional[int] = None
-) -> Union[CutoffNeighborFinder, NearestNeighborFinder]:
+def get_finder(data, cutoff: Optional[float] = None, nearest_n: Optional[int] = None):  # noqa: ANN001,ANN201
     """Get neighbor finder.
 
     Args:

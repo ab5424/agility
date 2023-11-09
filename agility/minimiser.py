@@ -5,15 +5,15 @@
 from typing import TYPE_CHECKING, Optional, Sequence, Union
 
 if TYPE_CHECKING:
-    from lammps import lammps
+    pass
 
 
-def mimimise_lmp(
-    lmp: lammps,
+def mimimise_lmp(  # noqa: ANN201
+    lmp,  # noqa: ANN001
     style: str = "fire",
     min_opt: Sequence[Union[int, float]] = (0, 1e-8, 1000, 100000),
     mod: Optional[tuple] = None,
-) -> lammps:
+):
     """Run minimisation in lammps.
 
     Args:
