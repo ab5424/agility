@@ -44,4 +44,4 @@ class TestGBStructure(TestCase):
         """Test the GB fraction method."""
         self.data.perform_cna(enabled=("fcc"))
         gb_fraction = self.data.get_gb_fraction()
-        assert_allclose(gb_fraction, 3361 / 7681)
+        assert_allclose(gb_fraction, 3361 / 7681)  # type: ignore[arg-type]
