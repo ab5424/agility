@@ -452,7 +452,7 @@ class GBStructure:
 
     def perform_ptm(
         self,
-        enabled: tuple = ("fcc", "hpc", "bcc"),
+        enabled: Sequence[str] = ("fcc", "hpc", "bcc"),
         rmsd_threshold: float = 0.1,
         only_selected: bool = False,
         compute: bool = True,
