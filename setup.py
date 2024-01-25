@@ -36,6 +36,17 @@ if __name__ == "__main__":
         packages=["agility"],
         zip_safe=False,
         install_requires=["scipy", "numpy", "pandas"],
+        extras_require={
+            "dev": [
+                "mypy",
+                "pre-commit",
+                "pytest-cov",
+                "pytest-split",
+                "pytest",
+                "ruff",
+            ],
+            "ovito": ["ovito"],
+        },
         classifiers=[
             "Programming Language :: Python :: 3",
             "Development Status :: 1 - Planning",
