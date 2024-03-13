@@ -2,6 +2,7 @@
 # Distributed under the terms of the MIT License.
 
 """Minimiser for lammps, vasp, gulp."""
+
 from typing import TYPE_CHECKING, Optional, Sequence, Union
 
 if TYPE_CHECKING:
