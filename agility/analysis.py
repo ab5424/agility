@@ -492,6 +492,8 @@ class GBStructure:
         Returns:
             None
         """
+        if isinstance(enabled, str):
+            enabled = [enabled]
         for i in enabled:
             if i not in ["fcc", "hcp", "bcc", "ico", "sc", "dcub", "dhex", "graphene"]:
                 msg = f"Enabled structure type {i} unknown"
