@@ -9,9 +9,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pandas as pd
-import seaborn as sns
 
 if TYPE_CHECKING:
+    import seaborn as sns
     from ovito.data import DataCollection
     from ovito.pipeline import Pipeline
     from PySide6.QtGui import QImage
@@ -60,6 +60,8 @@ def plot_face_order(data: DataCollection, plot_property: str = "Max Face Order")
         Histogram plot.
 
     """
+    import seaborn as sns
+
     df_temp = pd.DataFrame(
         list(
             zip(
@@ -71,7 +73,7 @@ def plot_face_order(data: DataCollection, plot_property: str = "Max Face Order")
     )
 
     hist_plot = sns.displot(df_temp, x=plot_property, discrete=True)
-    return hist_plot.fig
+    return hist_plot.figure
 
 
 # TODO: Visualize Misorientation distribution function
