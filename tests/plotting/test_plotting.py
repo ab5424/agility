@@ -5,7 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 from unittest import TestCase
 
-from numpy.testing import assert_allclose
 try:
     from PySide6.QtGui import QImage
 except ImportError:
