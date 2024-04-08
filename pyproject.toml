@@ -14,16 +14,25 @@ check-filenames = true
 target-version = "py38"
 line-length = 100
 lint.select = ["ALL"]
-ignore = [
+lint.ignore = [
   "ANN002",  # Missing type annotation for `*args`
   "ANN003",  # Missing type annotation for `**kwargs`
   "ANN101",  # Missing type annotation for self in method
-  "D417",    # Missing argument description in the docstring
+  "C901",    # Function is too complex
+  "ERA001",  # Found commented-out code
   "F841",    # Local variable name is assigned to but never used
+  "FIX002",  # Line contains TODO, consider resolving the issue
+  "FBT001",  # Boolean-typed positional argument in function definition
+  "FBT002",  # Boolean default positional argument in function definition
   "PLR0912", # too-many-branches
   "PLR0913", # too-many-arguments
   "PLR2004", # magic-value-comparison
+  "S101",    # Use of assert detected
   "SIM118",
+  "TD002",   # TD002 Missing author in TODO; try: `# TODO(<author_name>): ...` or `# TODO @<author_name>: ...`
+  "TD003",   # Missing issue link on the line following this TODO
+  "TD004",   # Missing colon in TODO
+  "TD005",   # Missing issue description after `TODO`
 ]
-pydocstyle.convention = "google"
+lint.pydocstyle.convention = "google"
 #isort.required-imports = ["from __future__ import annotations"]

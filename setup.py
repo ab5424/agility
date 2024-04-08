@@ -14,8 +14,8 @@ __maintainer__ = "Alexander Bonkowski"
 __email__ = "alexander.bonkowski@rwth-aachen.de"
 __date__ = "29/09/2021"
 
-module_dir = os.path.dirname(os.path.abspath(__file__))
-with open(os.path.join(module_dir, "README.md"), encoding="utf-8") as readme:
+module_dir = os.path.dirname(os.path.abspath(__file__))  # noqa: PTH120, PTH100
+with open(os.path.join(module_dir, "README.md"), encoding="utf-8") as readme:  # noqa: PTH118, PTH123
     long_description = readme.read()
 
 if __name__ == "__main__":

@@ -3,21 +3,23 @@
 
 """Minimiser for lammps, vasp, gulp."""
 
-from typing import Optional, Sequence, Union
+from __future__ import annotations
+
+from typing import Sequence
 
 
 def mimimise_lmp(  # noqa: ANN201
     lmp,  # noqa: ANN001
     style: str = "fire",
-    min_opt: Sequence[Union[int, float]] = (0, 1e-8, 1000, 100000),
-    mod: Optional[tuple] = None,
+    min_opt: Sequence[int | float] = (0, 1e-8, 1000, 100000),
+    mod: tuple | None = None,
 ):
     """Run minimisation in lammps.
 
     Args:
         lmp: lammps instance for minimisation
         style: Minimisation style. Possible options: cg or hftn or sd or quickmin or fire or
-        min_opt:
+        min_opt (Sequence[int | float]): List of min. options (etol, ftol, maxiter, maxeval).
         fire/old or spin or spin/cg or spin/lbfgs.
         mod: list of modifications for
 
@@ -25,10 +27,11 @@ def mimimise_lmp(  # noqa: ANN201
         lmp: lammps object with minimised structure.
     """
     if len(min_opt) != 4:
-        print(
+        msg = (
             "The list/tuple for minimisation must contain four arguments:"
-            "etol, ftol, maxiter, maxeval.",
+            "etol, ftol, maxiter, maxeval."
         )
+        raise ValueError(msg)
     lmp.min_style(f"{style}")
     if mod:
         for i in mod:

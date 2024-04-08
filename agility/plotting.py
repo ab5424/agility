@@ -4,6 +4,8 @@
 # Distributed under the terms of the MIT License
 # author: Alexander Bonkowski
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 import pandas as pd
@@ -51,8 +53,8 @@ def plot_face_order(data: DataCollection, plot_property: str = "Max Face Order")
     """Plot the histogram of max. face order from ovito data.
 
     Args:
-        data:
-        plot_property:
+        data (DataCollection): Ovito data collection.
+        plot_property (str): Property to be plotted.
 
     Returns:
         Histogram plot.
