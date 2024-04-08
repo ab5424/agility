@@ -3,10 +3,7 @@
 
 """Minimiser for lammps, vasp, gulp."""
 
-from typing import TYPE_CHECKING, Optional, Sequence, Union
-
-if TYPE_CHECKING:
-    pass
+from typing import Optional, Sequence, Union
 
 
 def mimimise_lmp(  # noqa: ANN201
@@ -30,7 +27,7 @@ def mimimise_lmp(  # noqa: ANN201
     if len(min_opt) != 4:
         print(
             "The list/tuple for minimisation must contain four arguments:"
-            "etol, ftol, maxiter, maxeval."
+            "etol, ftol, maxiter, maxeval.",
         )
     lmp.min_style(f"{style}")
     if mod:

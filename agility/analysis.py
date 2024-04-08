@@ -8,16 +8,13 @@ import pathlib
 import random
 import sys
 import warnings
-from typing import TYPE_CHECKING, Any, List, Literal, Optional, Sequence, Union
+from typing import Any, List, Literal, Optional, Sequence, Union
 
 import numpy as np
 import pandas as pd
 from typing_extensions import Self
 
 from agility.minimiser import mimimise_lmp
-
-if TYPE_CHECKING:
-    pass
 
 available_backends = Literal["ovito", "pymatgen", "babel", "pyiron", "ase", "lammps"]
 # https://github.com/pyiron/pylammpsmpi
@@ -212,7 +209,7 @@ class GBStructure:
                     operate_on="particles",
                     property="Particle Type",
                     types=particle_type,
-                )
+                ),
             )
 
     def select_particles(
@@ -254,7 +251,7 @@ class GBStructure:
                     raise NameError("Only Indices and Identifier are possible as list id types.")
                 l_ids = np.in1d(ids, list_ids, assume_unique=True, invert=False)
                 selection = data.particles_.create_property(  # pylint: disable=W0612
-                    "Selection", data=l_ids
+                    "Selection", data=l_ids,
                 )
 
             self.pipeline.modifiers.append(modify)
@@ -268,7 +265,7 @@ class GBStructure:
                             mode=ExpandSelectionModifier.ExpansionMode.Nearest,
                             num_neighbors=expand_nearest_neighbors,
                             iterations=iterations,
-                        )
+                        ),
                     )
                 else:
                     self.pipeline.modifiers.append(
@@ -276,7 +273,7 @@ class GBStructure:
                             cutoff=expand_cutoff,
                             mode=ExpandSelectionModifier.ExpansionMode.Cutoff,
                             iterations=iterations,
-                        )
+                        ),
                     )
             if invert:
                 self._invert_selection()  # for bulk ions
@@ -290,7 +287,7 @@ class GBStructure:
             self.pipeline.modifiers.append(InvertSelectionModifier())
 
         if self.backend == "pymatgen":
-            # Todo: Look which ids are in the list and invert by self.structure
+            # TODO: Look which ids are in the list and invert by self.structure
             pass
 
     def _delete_selection(self) -> None:
@@ -436,7 +433,7 @@ class GBStructure:
             from ovito.plugins.ParticlesPython import VoronoiAnalysisModifier
 
             voro = VoronoiAnalysisModifier(
-                compute_indices=True, use_radii=False, edge_threshold=0.0
+                compute_indices=True, use_radii=False, edge_threshold=0.0,
             )
             self.pipeline.modifiers.append(voro)
 
@@ -489,7 +486,7 @@ class GBStructure:
             from ovito.modifiers import PolyhedralTemplateMatchingModifier as PTM
 
             ptm = PTM(  # type: ignore[call-arg]
-                rmsd_cutoff=rmsd_threshold, only_selected=only_selected, **kwargs
+                rmsd_cutoff=rmsd_threshold, only_selected=only_selected, **kwargs,
             )
 
             # Enabled by default: FCC, HCP, BCC
@@ -533,7 +530,7 @@ class GBStructure:
             n_compute = len([i["style"] for i in self.pylmp.computes if i["style"] == "ptm/atom"])
             enabled_structures = " ".join(enabled)
             self.pylmp.compute(
-                f"ptm_{n_compute} all ptm/atom {enabled_structures} {rmsd_threshold}"
+                f"ptm_{n_compute} all ptm/atom {enabled_structures} {rmsd_threshold}",
             )
         else:
             raise not_implemented(self.backend)
@@ -558,7 +555,7 @@ class GBStructure:
 
         elif self.backend == "lammps":
             n_compute = len(
-                [i["style"] for i in self.pylmp.computes if i["style"] == "ackland/atom"]
+                [i["style"] for i in self.pylmp.computes if i["style"] == "ackland/atom"],
             )
             self.pylmp.compute(f"ackland_{n_compute} all ackland/atom")
 
@@ -583,7 +580,7 @@ class GBStructure:
         elif self.backend == "lammps":
             # https://docs.lammps.org/compute_centro_atom.html
             n_compute = len(
-                [i["style"] for i in self.pylmp.computes if i["style"] == "centro/atom"]
+                [i["style"] for i in self.pylmp.computes if i["style"] == "centro/atom"],
             )
             self.pylmp.compute(f"centro_{n_compute} all centro/atom {num_neighbors}")
 
@@ -591,7 +588,7 @@ class GBStructure:
             self.set_analysis()
 
     def get_distinct_grains(
-        self, *args, algorithm: str = "GraphClusteringAuto", compute: bool = True, **kwargs
+        self, *args, algorithm: str = "GraphClusteringAuto", compute: bool = True, **kwargs,
     ) -> None:
         """Get distinct grains from the structure.
 
@@ -768,7 +765,7 @@ class GBStructure:
                 neighbors_no_selected = neighbors - non_selected
                 if len(neighbors_no_selected) < 3:
                     warnings.warn(
-                        "At least one atoms has only two other atoms to assign.", stacklevel=2
+                        "At least one atoms has only two other atoms to assign.", stacklevel=2,
                     )
                 group_neighbors = [len(i.intersection(neighbors_no_selected)) for i in group_sets]
                 indices_max = np.where(group_neighbors == np.amax(group_neighbors))[0]
@@ -830,7 +827,7 @@ class GBStructure:
             # for i in range(len(self.pylmp.atoms)):
             #     ids.append(self.pylmp.atoms[i].id)
             types = np.concatenate(
-                self.pylmp.lmp.numpy.extract_compute("cna_0", LMP_STYLE_ATOM, LMP_TYPE_VECTOR)
+                self.pylmp.lmp.numpy.extract_compute("cna_0", LMP_STYLE_ATOM, LMP_TYPE_VECTOR),
             )
             # https://docs.lammps.org/Classes_atom.html#_CPPv4N9LAMMPS_NS4Atom7extractEPKc
             ids = np.concatenate(self.pylmp.lmp.numpy.extract_atom("id"))
@@ -839,7 +836,7 @@ class GBStructure:
                     zip(
                         ids,
                         types,
-                    )
+                    ),
                 ),
                 columns=["Particle Identifier", "Structure Type"],
             )
@@ -880,7 +877,7 @@ class GBStructure:
                     gb_list = list(np.where(self.data.particles["Structure Type"] != 0)[0])
                 else:
                     raise NotImplementedError(
-                        "Indices and Identifier are possible as return types."
+                        "Indices and Identifier are possible as return types.",
                     )
                 # df_temp = pd.DataFrame(
                 #     list(
@@ -895,7 +892,7 @@ class GBStructure:
                 # return list(df_gb["Particle Identifier"])
             else:
                 warnings.warn(
-                    "No structure type information found. Returning empty list.", stacklevel=2
+                    "No structure type information found. Returning empty list.", stacklevel=2,
                 )
                 gb_list = []
         elif self.backend == "lammps":
@@ -976,10 +973,10 @@ class GBStructure:
         """
         if self.backend == "ovito":
             fraction = len(self.get_non_crystalline_atoms(mode)) / len(
-                self.data.particles["Particle Identifier"]
+                self.data.particles["Particle Identifier"],
             )
             warnings.warn(
-                "Using all particles with a particle identifier as the base.", stacklevel=2
+                "Using all particles with a particle identifier as the base.", stacklevel=2,
             )
         elif self.backend == "lammps":
             # TODO
@@ -1038,8 +1035,8 @@ class GBStructure:
             raise not_implemented(self.backend)
         return atom_list
 
-    # Todo: Verkippungswinkel
-    # Todo: Grain Index
+    # TODO: Verkippungswinkel
+    # TODO: Grain Index
 
     def get_fraction(self, numerator: list, denominator: list) -> float:
         """Get fraction of ions/atoms. Helper function.
@@ -1098,9 +1095,9 @@ class GBStructure:
 class GBStructureTimeseries(GBStructure):
     """This is a class containing multiple snapshots from a time series."""
 
-    # Todo: enable inheritance
-    # Todo: get diffusion data
-    # Todo: differentiate between along/across GB
+    # TODO: enable inheritance
+    # TODO: get diffusion data
+    # TODO: differentiate between along/across GB
 
     def remove_timesteps(self, timesteps_to_exclude: int) -> None:
         """Remove timesteps from the beginning of a simulation.
@@ -1113,7 +1110,7 @@ class GBStructureTimeseries(GBStructure):
             Trajectory object.
         """
 
-    # Todo: Add differentiation between diffusion along a grain boundary, transverse to the GB,
+    # TODO: Add differentiation between diffusion along a grain boundary, transverse to the GB,
     # and between grains
 
 
