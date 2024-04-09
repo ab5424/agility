@@ -1,4 +1,5 @@
 ovito
+Pyside6<=6.6.2
 pymatgen
 ase
 black
