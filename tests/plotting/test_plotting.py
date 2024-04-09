@@ -5,10 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from unittest import TestCase
 
-try:
-    from PySide6.QtGui import QImage
-except ImportError:
-    QImage = None
+from PySide6.QtGui import QImage
 
 from agility.analysis import GBStructure
 from agility.plotting import render_ovito
