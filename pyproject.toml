@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agility"
-version = "0.0.1"
+version = "0.0.3"
 description = "Analysis tool for simulations of grain boundaries and interfaces"
 authors = [{name = "Alexander Bonkowski", email = "alexander.bonkowski@rwth-aachen.de"}]
 maintainers = [{name = "Alexander Bonkowski"}]
