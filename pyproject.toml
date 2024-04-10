@@ -47,6 +47,10 @@ ovito = [
     "PySide6<=6.6.2",
 ]
 
+[tool.setuptools.packages.find]
+include = ["agility", "agility.*"]
+exclude = ["tests", "tests.*"]
+
 [tool.codespell]
 ignore-words-list = """
 cna
