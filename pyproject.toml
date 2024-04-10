@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agility"
-version = "0.0.1"
+version = "0.0.3"
 description = "Analysis tool for simulations of grain boundaries and interfaces"
 authors = [{name = "Alexander Bonkowski", email = "alexander.bonkowski@rwth-aachen.de"}]
 maintainers = [{name = "Alexander Bonkowski"}]
@@ -47,11 +47,9 @@ ovito = [
     "PySide6<=6.6.2",
 ]
 
-[tool.codespell]
-ignore-words-list = """
-cna
-"""
-check-filenames = true
+[tool.setuptools.packages.find]
+include = ["agility", "agility.*"]
+exclude = ["tests", "tests.*"]
 
 [tool.ruff]
 target-version = "py38"
@@ -79,3 +77,9 @@ lint.ignore = [
 ]
 lint.pydocstyle.convention = "google"
 lint.isort.required-imports = ["from __future__ import annotations"]
+
+[tool.codespell]
+ignore-words-list = """
+cna
+"""
+check-filenames = true
