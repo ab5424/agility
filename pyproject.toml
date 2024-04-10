@@ -78,4 +78,4 @@ lint.ignore = [
   "TD005",   # Missing issue description after `TODO`
 ]
 lint.pydocstyle.convention = "google"
-#isort.required-imports = ["from __future__ import annotations"]
+lint.isort.required-imports = ["from __future__ import annotations"]
