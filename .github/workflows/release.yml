@@ -30,7 +30,7 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Build sdist
+      - name: Build
         run: |
           pip install build
           python -m build
