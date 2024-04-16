@@ -54,48 +54,28 @@ exclude = ["tests", "tests.*"]
 [tool.ruff]
 target-version = "py38"
 line-length = 100
-select = [
-  "A",   # flake8-bultins
-  "ANN", # flake8-annotations
-  "B",   # flake8-bugbear
-  "C4",  # flake8-comprehensions
-  "D",   # pydocstyle
-  "E",   # pycodestyle
-  "F",   # pyflakes
-  "G",   # flake8-logging-format
-  "FLY", # flynt
-  "I",   # isort
-  "ICN", # flake8-import-conventions
-  "ISC", # flake8-implicit-str-concat
-  "NPY", # NumPy-specific rules
-  "PD",  # pandas-vet
-  "PIE", # flake8-pie
-  "PL",  # pylint
-  "PT",  # flake8-pytest-style
-  "PYI", # flake8-pyi
-  "Q",   # flake8-quotes
-  "RET", # flake8-return
-  "RSE", # flake8-raise
-  "RUF", # Ruff-specific rules
-  "SIM", # flake8-simplify
-  "TID", # tidy imports
-  "UP",  # pyupgrade
-  "W",   # pycodestyle
-  "YTT", # flake8-2020
-]
-ignore = [
+lint.select = ["ALL"]
+lint.ignore = [
   "ANN002",  # Missing type annotation for `*args`
   "ANN003",  # Missing type annotation for `**kwargs`
   "ANN101",  # Missing type annotation for self in method
-  "D417",    # Missing argument description in the docstring
+  "C901",    # Function is too complex
+  "ERA001",  # Found commented-out code
   "F841",    # Local variable name is assigned to but never used
+  "FIX002",  # Line contains TODO, consider resolving the issue
+  "FBT001",  # Boolean-typed positional argument in function definition
+  "FBT002",  # Boolean default positional argument in function definition
   "PLR0912", # too-many-branches
   "PLR0913", # too-many-arguments
   "PLR2004", # magic-value-comparison
+  "S101",    # Use of assert detected
   "SIM118",
+  "TD002",   # TD002 Missing author in TODO; try: `# TODO(<author_name>): ...` or `# TODO @<author_name>: ...`
+  "TD003",   # Missing issue link on the line following this TODO
+  "TD005",   # Missing issue description after `TODO`
 ]
-pydocstyle.convention = "google"
-#isort.required-imports = ["from __future__ import annotations"]
+lint.pydocstyle.convention = "google"
+lint.isort.required-imports = ["from __future__ import annotations"]
 
 [tool.codespell]
 ignore-words-list = """

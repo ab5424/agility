@@ -4,12 +4,14 @@
 # Distributed under the terms of the MIT License
 # author: Alexander Bonkowski
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 import pandas as pd
-import seaborn as sns
 
 if TYPE_CHECKING:
+    import seaborn as sns
     from ovito.data import DataCollection
     from ovito.pipeline import Pipeline
     from PySide6.QtGui import QImage
@@ -51,25 +53,27 @@ def plot_face_order(data: DataCollection, plot_property: str = "Max Face Order")
     """Plot the histogram of max. face order from ovito data.
 
     Args:
-        data:
-        plot_property:
+        data (DataCollection): Ovito data collection.
+        plot_property (str): Property to be plotted.
 
     Returns:
         Histogram plot.
 
     """
+    import seaborn as sns
+
     df_temp = pd.DataFrame(
         list(
             zip(
                 data.particles["Particle Identifier"],
                 data.particles[plot_property],
-            )
+            ),
         ),
         columns=["Particle Identifier", plot_property],
     )
 
     hist_plot = sns.displot(df_temp, x=plot_property, discrete=True)
-    return hist_plot.fig
+    return hist_plot.figure
 
 
 # TODO: Visualize Misorientation distribution function
