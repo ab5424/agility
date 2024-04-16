@@ -30,6 +30,11 @@ class TestGBStructure(TestCase):
         non_crystalline_atoms = self.data.get_non_crystalline_atoms()
         assert len(crystalline_atoms) == 4320
         assert len(non_crystalline_atoms) == 3361
+        self.data.perform_cna(mode= "AdaptiveCutoff", enabled=("fcc"))
+        crystalline_atoms = self.data.get_crystalline_atoms()
+        non_crystalline_atoms = self.data.get_non_crystalline_atoms()
+        assert len(crystalline_atoms) == 4275
+        assert len(non_crystalline_atoms) == 3406
 
     def test_ptm(self) -> None:
         """Test Polyhedral Template Matching method."""
