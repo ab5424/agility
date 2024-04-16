@@ -241,9 +241,15 @@ class GBStructure:
             None
         """
         if self.backend == "ovito":
-            if np.where(self.data.particles.selection != 0)[0].size > 0:
-                self._clear_selection()
-                warnings.warn("Selection currently not empty. Clearing selection.", stacklevel=2)
+            try:
+                if np.where(self.data.particles.selection != 0)[0].size > 0:
+                    self._clear_selection()
+                    warnings.warn(
+                        "Selection currently not empty. Clearing selection.",
+                        stacklevel=2,
+                    )
+            except AttributeError:
+                pass
 
             def modify(frame, data):  # noqa: ANN001,ANN202,ARG001  # pylint: disable=W0613
                 # Specify the IDs of all atoms that are to remain here
