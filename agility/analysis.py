@@ -310,7 +310,12 @@ class GBStructure:
 
     def perform_cna(
         self,
-        mode: str = "IntervalCutoff",
+        mode: Literal[
+            "IntervalCutoff",
+            "AdaptiveCutoff",
+            "FixedCutoff",
+            "BondBased",
+        ] = "IntervalCutoff",
         enabled: Sequence[str] = ("fcc", "hpc", "bcc"),
         cutoff: float = 3.2,
         color_by_type: bool = True,
@@ -340,14 +345,9 @@ class GBStructure:
                 "FixedCutoff": CommonNeighborAnalysisModifier.Mode.FixedCutoff,
                 "BondBased": CommonNeighborAnalysisModifier.Mode.BondBased,
             }
-            if mode in cna_modes:
-                cna_mode = cna_modes[mode]
-            else:
-                msg = f'Selected CNA mode "{mode}" unknown.'
-                raise ValueError(msg)
 
             _cna = CommonNeighborAnalysisModifier(  # type: ignore[call-arg]
-                mode=cna_mode,
+                mode=cna_modes[mode],
                 cutoff=cutoff,
                 color_by_type=color_by_type,
                 only_selected=only_selected,
