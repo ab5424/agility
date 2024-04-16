@@ -334,14 +334,14 @@ class GBStructure:
             # TODO: Enable/disable structure types
             from ovito.modifiers import CommonNeighborAnalysisModifier
 
-            if mode == "IntervalCutoff":
-                cna_mode = CommonNeighborAnalysisModifier.Mode.IntervalCutoff
-            elif mode == "AdaptiveCutoff":
-                cna_mode = CommonNeighborAnalysisModifier.Mode.AdaptiveCutoff
-            elif mode == "FixedCutoff":
-                cna_mode = CommonNeighborAnalysisModifier.Mode.FixedCutoff
-            elif mode == "BondBased":
-                cna_mode = CommonNeighborAnalysisModifier.Mode.BondBased
+            cna_modes = {
+                "IntervalCutoff": CommonNeighborAnalysisModifier.Mode.IntervalCutoff,
+                "AdaptiveCutoff": CommonNeighborAnalysisModifier.Mode.AdaptiveCutoff,
+                "FixedCutoff": CommonNeighborAnalysisModifier.Mode.FixedCutoff,
+                "BondBased": CommonNeighborAnalysisModifier.Mode.BondBased,
+            }
+            if mode in cna_modes:
+                cna_mode = cna_modes[mode]
             else:
                 msg = f'Selected CNA mode "{mode}" unknown.'
                 raise ValueError(msg)
@@ -932,7 +932,7 @@ class GBStructure:
                 )
                 gb_list = []
         elif self.backend == "lammps":
-            # TODO
+            # TODO: Implement
             raise not_implemented(self.backend)
         else:
             raise not_implemented(self.backend)
@@ -988,7 +988,7 @@ class GBStructure:
             if return_type == "Identifier":
                 gb_edge_ions = [self.data.particles["Particle Identifier"][i] for i in gb_edge_ions]
         elif self.backend == "lammps":
-            # TODO
+            # TODO: Implement
             raise not_implemented(self.backend)
         else:
             raise not_implemented(self.backend)
@@ -1015,7 +1015,7 @@ class GBStructure:
                 stacklevel=2,
             )
         elif self.backend == "lammps":
-            # TODO
+            # TODO: Implement
             raise not_implemented(self.backend)
         else:
             raise not_implemented(self.backend)
@@ -1066,7 +1066,7 @@ class GBStructure:
             # return list(df_atom["Particle Identifier"])
 
         elif self.backend == "lammps":
-            # TODO
+            # TODO: Implement
             atom_list = []
         else:
             raise not_implemented(self.backend)

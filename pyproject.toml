@@ -72,7 +72,6 @@ lint.ignore = [
   "SIM118",
   "TD002",   # TD002 Missing author in TODO; try: `# TODO(<author_name>): ...` or `# TODO @<author_name>: ...`
   "TD003",   # Missing issue link on the line following this TODO
-  "TD004",   # Missing colon in TODO
   "TD005",   # Missing issue description after `TODO`
 ]
 lint.pydocstyle.convention = "google"
