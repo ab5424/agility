@@ -1,7 +1,6 @@
 matplotlib
 numpy
 scipy
-coveralls
 coverage
 seaborn
 pandas
