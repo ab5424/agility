@@ -44,7 +44,7 @@ dev = [
 ]
 ovito = [
     "ovito",
-    "PySide6<=6.6.2",
+    "PySide6<=6.7.0",
 ]
 
 [tool.setuptools.packages.find]
