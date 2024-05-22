@@ -8,7 +8,7 @@ version = "0.0.3"
 description = "Analysis tool for simulations of grain boundaries and interfaces"
 authors = [{name = "Alexander Bonkowski", email = "alexander.bonkowski@rwth-aachen.de"}]
 maintainers = [{name = "Alexander Bonkowski"}]
-dependencies = ["numpy", "pandas", "scipy"]
+dependencies = ["numpy", "pandas", "scipy", "seaborn"]
 requires-python = ">=3.8"
 readme = "README.md"
 license = {file = "LICENSE"}
