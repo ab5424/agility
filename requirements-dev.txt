@@ -1,11 +1,7 @@
-ovito
-Pyside6<=6.7.0
-pymatgen
 ase
-black
-pylint
 mypy
+ovito
+pymatgen
+Pyside6<=6.7.0
 pytest
-data-science-types
-pydocstyle
-flake8
+ruff

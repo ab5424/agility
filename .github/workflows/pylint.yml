@@ -2,6 +2,9 @@ name: Lint
 
 on: [push]
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -10,22 +13,20 @@ jobs:
         python-version: ["3.9", "3.11"]
     steps:
     - uses: actions/checkout@v4
+
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
-        cache: pip
-        cache-dependency-path: requirements-dev.txt
+
     - name: Install dependencies
       run: |
-        pip install -r requirements-dev.txt
-        pip install ruff
+        pip install ruff mypy --upgrade
+
     - name: ruff
       run: |
         ruff check .
         ruff format --check .
+
     - name: mypy
-      run: |
-        mypy --version
-        rm -rf .mypy_cache
-        mypy $(find . -name "*.py" | xargs)
+      run: mypy ${{ github.event.repository.name }}
