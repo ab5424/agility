@@ -36,7 +36,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install uv
-          uv pip install packaging -r requirements.txt .[dev,ovito,ase,pymatgen] --system
+          uv pip install packaging -r requirements.txt -e .[dev,ovito,ase,pymatgen] --system
       # Fix ImportError: libEGL.so.1: ...
       - if: runner.os == 'Linux'
         run: |
