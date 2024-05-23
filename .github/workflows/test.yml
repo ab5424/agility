@@ -32,12 +32,11 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
-          cache-dependency-path: setup.py
+          cache-dependency-path: requirements.txt
       - name: Install dependencies
         run: |
           pip install uv
-          uv pip install numpy packaging --system
-          uv pip install -e '.[dev,ovito]' --system
+          uv pip install packaging -r requirements.txt -e .[dev,ovito,ase,pymatgen] --system
       # Fix ImportError: libEGL.so.1: ...
       - if: runner.os == 'Linux'
         run: |
