@@ -44,7 +44,12 @@ dev = [
 ]
 ovito = [
     "ovito",
-    "PySide6<=6.7.0",
+]
+ase = [
+    "ase",
+]
+pymatgen = [
+    "pymatgen",
 ]
 
 [tool.setuptools.packages.find]

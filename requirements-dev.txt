@@ -1,7 +1,0 @@
-ase
-mypy
-ovito
-pymatgen
-Pyside6<=6.7.0
-pytest
-ruff
