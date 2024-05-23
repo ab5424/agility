@@ -11,8 +11,6 @@
 
 While it is intendend that `agility` can be used with different "backends" such as ase, babel, pyiron, and others, the main functionality is (currently) implemented with ovito and LAMMPS.
 
-
-
 ## Installation
 
 There are different ways to install `agility`. Choose what works best with your workflow.
@@ -56,6 +54,4 @@ stored in the `doc` directory.
 
 After installation, in the home directory, use
 
-```bash
-% pytest
-```
+    pytest
