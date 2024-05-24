@@ -20,6 +20,11 @@ repos:
     hooks:
       - id: mypy
 
+  - repo: https://github.com/RobertCraigie/pyright-python
+    rev: v1.1.361
+    hooks:
+      - id: pyright
+
   - repo: https://github.com/codespell-project/codespell
     rev: v2.2.6
     hooks:
