@@ -1,5 +1,11 @@
 exclude: ^(examples)
 
+ci:
+  autoupdate_schedule: weekly
+  skip: [pyright]
+  autofix_commit_msg: pre-commit auto-fixes
+  autoupdate_commit_msg: pre-commit autoupdate
+
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.4.4
