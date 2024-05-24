@@ -1,4 +1,5 @@
 .idea/
 agility.egg-info/
 coverage.xml
+.coverage
 .DS_Store

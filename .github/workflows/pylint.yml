@@ -21,7 +21,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        pip install ruff mypy --upgrade
+        pip install ruff mypy pyright --upgrade
 
     - name: ruff
       run: |
@@ -30,3 +30,6 @@ jobs:
 
     - name: mypy
       run: mypy ${{ github.event.repository.name }}
+
+    - name: pyright
+      run: pyright

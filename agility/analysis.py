@@ -710,6 +710,8 @@ class GBStructure:
             finder = get_finder(self.data, cutoff=cutoff, nearest_n=nearest_n)
             if nearest_n:
                 from ovito.data import NearestNeighborFinder
+            else:
+                NearestNeighborFinder = None  # noqa: N806
 
             gb_non_selected = []
             # edge = []
