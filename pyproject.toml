@@ -102,6 +102,5 @@ check-filenames = true
 
 [tool.coverage.report]
 exclude_lines = [
-    'from __future__ import annotations',
     'if TYPE_CHECKING:',
 ]
