@@ -41,6 +41,7 @@ strict = [
 ]
 dev = [
     "mypy",
+    "coverage<=7.5.1", # Weird issues 7.5.2
     "pre-commit",
     "pytest-cov",
     "pytest-split",
@@ -104,3 +105,8 @@ ignore-words-list = """
 cna
 """
 check-filenames = true
+
+[tool.coverage.report]
+exclude_lines = [
+    'if TYPE_CHECKING:',
+]

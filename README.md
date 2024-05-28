@@ -9,7 +9,7 @@
 
 ## Implementations
 
-While it is intendend that `agility` can be used with different "backends" such as ase, babel, pyiron, and others, the main functionality is (currently) implemented with ovito and LAMMPS.
+While it is intended that `agility` can be used with different "backends" such as ase, babel, pyiron, and others, the main functionality is (currently) implemented with ovito and LAMMPS.
 
 ## Installation
 
