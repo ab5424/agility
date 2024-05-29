@@ -9,7 +9,7 @@ description = "Analysis tool for simulations of grain boundaries and interfaces"
 authors = [{name = "Alexander Bonkowski", email = "alexander.bonkowski@rwth-aachen.de"}]
 maintainers = [{name = "Alexander Bonkowski"}]
 dependencies = ["numpy", "pandas", "scipy", "seaborn"]
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 readme = "README.md"
 license = {file = "LICENSE"}
 keywords = ["grain boundaries", "interfaces", "science", "analysis"]
@@ -19,7 +19,6 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -34,9 +33,15 @@ Repo = "https://github.com/ab5424/agility"
 Package = "https://pypi.org/project/agility/"
 
 [project.optional-dependencies]
+strict = [
+    "numpy==1.26.4",
+    "pandas==2.2.2",
+    "scipy==1.13.0",
+    "seaborn==0.13.2",
+]
 dev = [
     "mypy",
-    "coverage<=7.5.1", # Weird issues 7.5.2
+    "coverage<=7.5.1", # Weird issues with 7.5.2 (coverage decreases)
     "pre-commit",
     "pytest-cov",
     "pytest-split",
@@ -47,7 +52,7 @@ ovito = [
     "ovito",
 ]
 ase = [
-    "ase",
+    "ase@git+https://gitlab.com/ase/ase.git",
 ]
 pymatgen = [
     "pymatgen",

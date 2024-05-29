@@ -28,7 +28,7 @@ jobs:
       - name: Install Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: 3.11
 
       - name: Build
         run: |
@@ -46,7 +46,7 @@ jobs:
       # For pypi trusted publishing
       id-token: write
     steps:
-      - name: Set up Python 3.11
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: 3.11
