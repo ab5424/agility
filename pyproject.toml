@@ -41,7 +41,7 @@ strict = [
 ]
 dev = [
     "mypy",
-    "coverage<=7.5.1", # Weird issues 7.5.2
+    "coverage<=7.5.1", # Weird issues with 7.5.2 (coverage decreases)
     "pre-commit",
     "pytest-cov",
     "pytest-split",
@@ -52,7 +52,7 @@ ovito = [
     "ovito",
 ]
 ase = [
-    "ase",
+    "ase@git+https://gitlab.com/ase/ase.git",
 ]
 pymatgen = [
     "pymatgen",
