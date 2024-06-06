@@ -1,5 +1,6 @@
 [![Documentation Status](https://readthedocs.org/projects/agility1/badge/?version=latest)](https://agility1.readthedocs.io/en/latest/?badge=latest)
-[![Coverage Status](https://coveralls.io/repos/github/ab5424/agility/badge.svg?branch=main)](https://coveralls.io/github/ab5424/agility?branch=main)
+[![code coverage](https://img.shields.io/codecov/c/gh/ab5424/agility)](https://codecov.io/gh/ab5424/agility)
+[![pre-commit.ci status](https://results.pre-commit.ci/badge/github/ab5424/agility/main.svg)](https://results.pre-commit.ci/latest/github/ab5424/agility/main)
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/ab5424/agility/HEAD)
 
 # Agility
@@ -8,9 +9,7 @@
 
 ## Implementations
 
-While it is intendend that `agility` can be used with different "backends" such as ase, babel, pyiron, and others, the main functionality is (currently) implemented with ovito and LAMMPS.
-
-
+While it is intended that `agility` can be used with different "backends" such as ase, babel, pyiron, and others, the main functionality is (currently) implemented with ovito and LAMMPS.
 
 ## Installation
 
@@ -46,26 +45,6 @@ Any contributions or even questions about the code are welcome - please use the 
 
 The development takes place on the `development` branch. Python 3.9 is the minimum requirement. Some backends (like ovito) currently do not support Python 3.10.
 
-If you use VSCode, you might edit `settings.json` as follows:
-
-  ```json
-  "python.linting.flake8Enabled": true,
-  "python.linting.flake8Args": ["--max-line-length=100", "--ignore=F841"],
-  "python.linting.enabled": true,
-  "python.linting.pylintEnabled": false,
-  "python.linting.mypyEnabled": true,
-  "python.linting.pycodestyleEnabled": false,
-  "python.linting.pydocstyleEnabled": true,
-  "python.formatting.provider": "black",
-  "python.formatting.blackArgs": ["--line-length=100"],
-  "python.sortImports.args": ["--profile", "black"],
-  "[python]": {
-      "editor.codeActionsOnSave": {
-      "source.organizeImports": true
-    },
-  }
-  ```
-
 ## Documentation
 
 The user documentation will be written in python sphinx. The source files should be
@@ -75,6 +54,4 @@ stored in the `doc` directory.
 
 After installation, in the home directory, use
 
-```bash
-% pytest
-```
+    pytest

@@ -1,12 +1,112 @@
 [build-system]
 requires = ["setuptools", "wheel", "numpy", "pandas", "scipy"]
+build-backend = "setuptools.build_meta"
 
-[tool.flake8]
-max-line-length = 100
-extend-ignore = "F841"
+[project]
+name = "agility"
+version = "0.0.3"
+description = "Analysis tool for simulations of grain boundaries and interfaces"
+authors = [{name = "Alexander Bonkowski", email = "alexander.bonkowski@rwth-aachen.de"}]
+maintainers = [{name = "Alexander Bonkowski"}]
+dependencies = ["numpy", "pandas", "scipy", "seaborn"]
+requires-python = ">=3.9"
+readme = "README.md"
+license = {file = "LICENSE"}
+keywords = ["grain boundaries", "interfaces", "science", "analysis"]
+classifiers = [
+    "Development Status :: 1 - Planning",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
 
-[tool.black]
+[project.urls]
+Repo = "https://github.com/ab5424/agility"
+Package = "https://pypi.org/project/agility/"
+
+[project.optional-dependencies]
+strict = [
+    "numpy==1.26.4",
+    "pandas==2.2.2",
+    "scipy==1.13.1",
+    "seaborn==0.13.2",
+]
+dev = [
+    "mypy",
+    "coverage<=7.5.1", # Weird issues with 7.5.2 (coverage decreases)
+    "pre-commit",
+    "pytest-cov",
+    "pytest-split",
+    "pytest",
+    "ruff",
+]
+ovito = [
+    "ovito",
+]
+ase = [
+    "ase@git+https://gitlab.com/ase/ase.git",
+]
+pymatgen = [
+    "pymatgen",
+]
+
+[tool.setuptools.packages.find]
+include = ["agility", "agility.*"]
+exclude = ["tests", "tests.*"]
+
+[tool.ruff]
+target-version = "py38"
 line-length = 100
+lint.select = ["ALL"]
+lint.ignore = [
+  "ANN002",  # Missing type annotation for `*args`
+  "ANN003",  # Missing type annotation for `**kwargs`
+  "ANN101",  # Missing type annotation for self in method
+  "C901",    # Function is too complex
+  "ERA001",  # Found commented-out code
+  "F841",    # Local variable name is assigned to but never used
+  "FIX002",  # Line contains TODO, consider resolving the issue
+  "FBT001",  # Boolean-typed positional argument in function definition
+  "FBT002",  # Boolean default positional argument in function definition
+  "PLR0912", # too-many-branches
+  "PLR0913", # too-many-arguments
+  "PLR2004", # magic-value-comparison
+  "S101",    # Use of assert detected
+  "SIM118",
+  "TD002",   # TD002 Missing author in TODO; try: `# TODO(<author_name>): ...` or `# TODO @<author_name>: ...`
+  "TD003",   # Missing issue link on the line following this TODO
+  "TD005",   # Missing issue description after `TODO`
+]
+lint.pydocstyle.convention = "google"
+lint.isort.required-imports = ["from __future__ import annotations"]
 
-[tool.isort]
-profile = "black"
+[tool.mypy]
+ignore_missing_imports = true
+
+[tool.pyright]
+typeCheckingMode = "off"
+reportPossiblyUnboundVariable = true
+reportUnboundVariable = true
+reportMissingImports = false
+reportMissingModuleSource = false
+reportInvalidTypeForm = false
+exclude = ["**/tests"]
+
+[tool.codespell]
+ignore-words-list = """
+cna
+"""
+check-filenames = true
+
+[tool.coverage.report]
+exclude_lines = [
+    'if TYPE_CHECKING:',
+]

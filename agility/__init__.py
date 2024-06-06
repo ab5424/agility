@@ -1,1 +1,1 @@
-"""Grain Boundary analisis tool."""
+"""Grain Boundary analysis tool."""

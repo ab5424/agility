@@ -1,4 +1,4 @@
-# Configuration file for the Sphinx documentation builder.
+"""Configuration file for the Sphinx documentation builder."""
 #
 # This file only contains a selection of the most common options. For a full
 # list see the documentation:
@@ -14,11 +14,11 @@
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
 
-
 # -- Project information -----------------------------------------------------
+from __future__ import annotations
 
 project = "agility"
-copyright = "2022, Alexander Bonkowski"
+project_copyright = "2022, Alexander Bonkowski"
 author = "Alexander Bonkowski"
 
 # The full version, including alpha/beta/rc tags

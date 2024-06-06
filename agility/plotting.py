@@ -1,23 +1,31 @@
-"""
-Plotting and rendering functions.
-"""
+"""Plotting and rendering functions."""
 
 # Copyright (c) Alexander Bonkowski
 # Distributed under the terms of the MIT License
 # author: Alexander Bonkowski
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import pandas as pd
-import seaborn as sns
+
+if TYPE_CHECKING:
+    import seaborn as sns
+    from ovito.data import DataCollection
+    from ovito.pipeline import Pipeline
+    from PySide6.QtGui import QImage
 
 
-def render_ovito(pipeline=None, res_factor: int = 1):
-    """
-    Render an ovito pipeline object.
+def render_ovito(pipeline: Pipeline, res_factor: int = 1) -> QImage:
+    """Render an ovito pipeline object.
+
     Args:
         pipeline: The ovito pipeline to be rendered.
-        res_factor: Factor to scale the resolution of the rendering. 2=Full HD, 4=4K
+        res_factor: Factor to scale the resolution of the rendering. 2=Full HD, 4=4K.
 
     Returns:
+    -------
         image: Image object. Can be saved via image.save("figure.png")
 
     """
@@ -31,7 +39,7 @@ def render_ovito(pipeline=None, res_factor: int = 1):
     viewport.zoom_all(size=(640, 480))
 
     tachyon = TachyonRenderer(shadows=False, direct_light_intensity=1.1)  # type: ignore[call-arg]
-    image = viewport.render_image(
+    return viewport.render_image(
         size=(res_factor * 640, res_factor * 480),
         # filename="figure.png",
         background=(1, 1, 1),
@@ -40,31 +48,32 @@ def render_ovito(pipeline=None, res_factor: int = 1):
         crop=True,
     )
 
-    return image
 
+def plot_face_order(data: DataCollection, plot_property: str = "Max Face Order") -> sns.FacetGrid:
+    """Plot the histogram of max. face order from ovito data.
 
-def plot_face_order(data=None, plot_property="Max Face Order"):
-    """
-    Plot the histogram of max. face order from ovito data.
     Args:
-        data:
-        plot_property:
+        data (DataCollection): Ovito data collection.
+        plot_property (str): Property to be plotted.
 
     Returns:
+        Histogram plot.
 
     """
+    import seaborn as sns
+
     df_temp = pd.DataFrame(
         list(
             zip(
                 data.particles["Particle Identifier"],
                 data.particles[plot_property],
-            )
+            ),
         ),
         columns=["Particle Identifier", plot_property],
     )
 
     hist_plot = sns.displot(df_temp, x=plot_property, discrete=True)
-    return hist_plot.fig
+    return hist_plot.figure
 
 
 # TODO: Visualize Misorientation distribution function
