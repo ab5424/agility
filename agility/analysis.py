@@ -637,7 +637,7 @@ class GBStructure:
             None
         """
         if self.backend == "ovito":
-            from ovito.plugins.CrystalAnalysisPython import GrainSegmentationModifier
+            from ovito.modifiers import GrainSegmentationModifier
 
             if algorithm == "GraphClusteringAuto":
                 gsm_mode = GrainSegmentationModifier.Algorithm.GraphClusteringAuto
