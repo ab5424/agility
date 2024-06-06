@@ -55,10 +55,11 @@ class TestGBStructure(TestCase):
     def test_grain_segmentation(self) -> None:
         """Test the grain segmentation method."""
         from ovito.modifiers import GrainSegmentationModifier
+
         self.data.perform_ptm(enabled=("fcc"), output_orientation=True)
         self.data.get_distinct_grains(compute=False)
         assert isinstance(self.data.pipeline.modifiers[1], GrainSegmentationModifier)
-        assert self.data.pipeline.compute().attributes['GrainSegmentation.grain_count'] == 6
+        assert self.data.pipeline.compute().attributes["GrainSegmentation.grain_count"] == 6
 
 
 class TestGBStructureOxide(TestCase):
