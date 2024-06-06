@@ -1,4 +1,5 @@
 """Minimiser for lammps, vasp, gulp."""
+from typing import Optional
 
 # Copyright (c) Alexander Bonkowski.
 # Distributed under the terms of the MIT License.
@@ -8,13 +9,14 @@ def mimimise_lmp(
     lmp,
     style: str = "fire",
     min_opt: tuple = (0.0, 1e-8, 1000, 100000),
-    mod: tuple = None,
+    mod: Optional[tuple] = None,
 ):
-    """Run mimimisation in lammps.
+    """Run minimisation in lammps.
 
     Args:
         lmp: lammps instance for minimisation
-        style: Mimimisation style. Possible options: cg or hftn or sd or quickmin or fire or
+        style: Minimisation style. Possible options: cg or hftn or sd or quickmin or fire or
+        min_opt:
         fire/old or spin or spin/cg or spin/lbfgs.
         mod: list of modifications for
 

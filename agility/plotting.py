@@ -1,5 +1,5 @@
 """
-Plotting and rendering funtions.
+Plotting and rendering functions.
 """
 
 # Copyright (c) Alexander Bonkowski
@@ -15,22 +15,22 @@ def render_ovito(pipeline=None, res_factor: int = 1):
     Render an ovito pipeline object.
     Args:
         pipeline: The ovito pipeline to be rendered.
-        res_factor: Factor to scale the resolution of the redering. 2=Full HD, 4=4K
+        res_factor: Factor to scale the resolution of the rendering. 2=Full HD, 4=4K
 
     Returns:
         image: Image object. Can be saved via image.save("figure.png")
 
     """
-    from ovito.vis import Viewport, TachyonRenderer
+    from ovito.vis import TachyonRenderer, Viewport
 
     pipeline.add_to_scene()
 
-    viewport = Viewport(type=Viewport.Type.Ortho)
-    viewport.type = Viewport.Type.Perspective
-    viewport.camera_dir = (-1, 2, -1)
+    viewport = Viewport()
+    viewport.type = Viewport.Type.Perspective  # type: ignore[misc]
+    viewport.camera_dir = (-1, 2, -1)  # type: ignore[misc]
     viewport.zoom_all(size=(640, 480))
 
-    tachyon = TachyonRenderer(shadows=False, direct_light_intensity=1.1)
+    tachyon = TachyonRenderer(shadows=False, direct_light_intensity=1.1)  # type: ignore[call-arg]
     image = viewport.render_image(
         size=(res_factor * 640, res_factor * 480),
         # filename="figure.png",

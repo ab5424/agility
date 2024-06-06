@@ -6,6 +6,7 @@ Setup.py for agility.
 """
 
 import os
+
 from setuptools import setup
 
 __author__ = "Alexander Bonkowski"
@@ -30,6 +31,10 @@ if __name__ == "__main__":
         author=__author__,
         author_email=__email__,
         license="MIT license",
+         project_url={
+        "Package": "https://pypi.org/project/agility",
+        "Repo": "https://github.com/ab5424/agility",
+        },
         packages=["agility"],
         zip_safe=False,
         install_requires=["scipy", "numpy", "pandas"],

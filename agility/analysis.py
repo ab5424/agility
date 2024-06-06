@@ -4,43 +4,42 @@
 
 """Analysis functions."""
 
+from __future__ import annotations
+
 import pathlib
 import random
-import sys
 import warnings
+from typing import Any, Literal, Sequence
 
 import numpy as np
 import pandas as pd
+from typing_extensions import Self
 
 from agility.minimiser import mimimise_lmp
 
+available_backends = Literal["ovito", "pymatgen", "babel", "pyiron", "ase", "lammps"]
+# https://github.com/pyiron/pylammpsmpi
+
 
 class GBStructure:
-    """This is the fundamental class of a grain boundary object."""
+    """Fundamental class of a grain boundary object."""
 
-    def __init__(self, backend, filename, **kwargs):
+    def __init__(
+        self,
+        backend: available_backends,
+        filename: str | pathlib.Path,
+        **kwargs,
+    ) -> None:
         """Initialize."""
         self.backend = backend
         self.filename = filename
-        self.data = None
-
-        if self.backend not in [
-            "ovito",
-            "pymatgen",
-            "babel",
-            "pyiron",
-            # https://github.com/pyiron/pylammpsmpi
-            "ase",
-            "lammps",
-        ]:
-            # Put error here
-            pass
+        self.data: Any = None
 
         if self.backend == "lammps":
             # Determine if a jupyter notebook is used
             # Taken from shorturl.at/aikzP
             try:
-                shell = get_ipython().__class__.__name__
+                shell = get_ipython().__class__.__name__  # type: ignore[name-defined]
                 if shell == "ZMQInteractiveShell":
                     ipy = True  # Jupyter notebook or qtconsole
                 elif shell == "TerminalInteractiveShell":
@@ -62,11 +61,13 @@ class GBStructure:
         if filename:
             self.read_file(filename, **kwargs)
 
-    def read_file(self, filename, **kwargs):
+    def read_file(self, filename: str | pathlib.Path, **kwargs) -> None:
         """Read structure from file.
 
         Args:
             filename: File to read.
+            **kwargs: Additional arguments for reading the file.
+
         Returns:
             None
         """
@@ -85,18 +86,18 @@ class GBStructure:
 
     def _init_lmp(
         self,
-        filename,
+        filename: str | pathlib.Path,
         file_type: str = "data",
         pair_style: str = "none",
         kspace_style: str = "none",
-    ):
+    ) -> None:
         """Initialise lammps backend.
 
         Args:
             filename: File to read.
-            file_type: File type (data, dump, restart)
-            pair_style: lammps pair style
-            kspace_style:
+            file_type (str): File type (data, dump, restart)
+            pair_style (str): lammps pair style
+            kspace_style (str): lammps kspace style
         """
         self.pylmp.units("metal")
         self.pylmp.atom_style("charge")
@@ -111,14 +112,16 @@ class GBStructure:
         elif file_type == "restart":
             self.pylmp.read_restart(filename)
         else:
-            print("Please specify the type of lammps file to read.")
+            msg = "Please specify the type of lammps file to read."
+            raise ValueError(msg)
 
-    def save_structure(self, filename: str, file_type: str, **kwargs):
+    def save_structure(self, filename: str, file_type: str, **kwargs) -> None:
         """Save structure to disc.
 
         Args:
-            filename:
-            file_type:
+            filename (str): Filename to save.
+            file_type (str): File type (data, dump, restart)
+            **kwargs: Additional arguments for saving the file.
         """
         if self.backend == "ovito":
             from ovito.io import export_file
@@ -133,26 +136,27 @@ class GBStructure:
             elif file_type == "restart":
                 self.pylmp.write_restart(filename)
 
-    def minimise(self, *args, **kwargs):
-        """Minimise structure.
-
-        Returns:
-        """
+    def minimise(self, *args, **kwargs) -> None:
+        """Minimise structure."""
         if self.backend == "ovito":
-            print(f"The {self.backend} backend does not support minimisation.")
-            sys.exit(1)
-        elif self.backend == "lammps":
+            msg = f"The {self.backend} backend has no minimisation capabilities."
+            raise NotImplementedError(msg)
+        if self.backend == "lammps":
             self.pylmp = mimimise_lmp(self.pylmp, *args, **kwargs)
+        else:
+            msg = f"The {self.backend} backend does not support minimisation yet."
+            raise NotImplementedError(msg)
 
-    def delete_particles(self, particle_type):
+    def delete_particles(self, particle_type: set) -> None:
         """Delete a specific type of particles from a structure.
 
         This can be particularly useful if
         there is a mobile type in the structure. Note that for ovito structures you need to make
         sure that type information is included.
+
         Args:
-            particle_type:
-        Returns:
+            particle_type: Particle type to delete.
+
         """
         if self.backend == "ovito":
             from ovito.modifiers import DeleteSelectedModifier
@@ -182,15 +186,12 @@ class GBStructure:
     #            self.pipeline.modifiers.append(setup_atom_types)
     #            self.set_analysis()
 
-    def select_particles_by_type(self, particle_type: set):
-        """Select a specific type of particles from a strcture.
+    def select_particles_by_type(self, particle_type: set) -> None:
+        """Select a specific type of particles from a structure.
 
-        Text.
         Args:
-            particle_type:
-        Returns:
+            particle_type (set): Particle type to select.
         """
-
         if self.backend == "ovito":
             # from ovito.plugins.StdModPython import (
             #     SelectTypeModifier,
@@ -198,56 +199,71 @@ class GBStructure:
             # )
             from ovito.modifiers import SelectTypeModifier
 
-            def assign_particle_types(frame, data):  # pylint: disable=W0613
+            def assign_particle_types(  # noqa: ANN202
+                frame,  # noqa: ANN001,ARG001
+                data,  # noqa: ANN001
+            ):  # pylint: disable=W0613
                 atom_types = data.particles_.particle_types_  # pylint: disable=W0612
 
             self.pipeline.modifiers.append(assign_particle_types)
 
             # Select atoms and delete them
             self.pipeline.modifiers.append(
-                SelectTypeModifier(
+                SelectTypeModifier(  # type: ignore[call-arg]
                     operate_on="particles",
                     property="Particle Type",
                     types=particle_type,
-                )
+                ),
             )
 
     def select_particles(
         self,
-        list_ids,
-        list_ids_type: str = "Identifier",
-        invert=True,
-        delete=True,
-        expand_cutoff=None,
-        expand_nearest_neighbors=None,
-        iterations=1,
-    ):
+        list_ids: list,
+        list_ids_type: Literal["Identifier", "Indices"] = "Identifier",
+        invert: bool = True,
+        delete: bool = True,
+        expand_cutoff: float | None = None,
+        expand_nearest_neighbors: int | None = None,
+        iterations: int = 1,
+    ) -> None:
         """Select particles by ID.
 
         Args:
+            list_ids (list): List of IDs to select.
+            list_ids_type (str): "Indices" or "Identifier"
             expand_nearest_neighbors (int): Number of nearest neighbors. Default 1.
-            delete:
-            iterations:
+            invert (bool): Invert selection.
+            delete (bool): Delete selection.
+            iterations (int): Number of iterations for expansion.
             expand_cutoff (float): Expansion cutoff. Default 3.2.
-            invert:
-            list_ids:
 
         Returns:
             None
         """
         if self.backend == "ovito":
+            try:
+                if np.where(self.data.particles.selection != 0)[0].size > 0:
+                    self._clear_selection()
+                    warnings.warn(
+                        "Selection currently not empty. Clearing selection.",
+                        stacklevel=2,
+                    )
+            except AttributeError:
+                pass
 
-            def modify(frame, data):  # pylint: disable=W0613
+            def modify(frame, data):  # noqa: ANN001,ANN202,ARG001  # pylint: disable=W0613
                 # Specify the IDs of all atoms that are to remain here
                 if list_ids_type == "Identifier":
                     ids = data.particles["Particle Identifier"]
                 elif list_ids_type == "Indices":
                     ids = list(np.where(self.data.particles["Structure Type"] != 10000)[0])
                 else:
-                    raise NameError("Only Indices and Identifier are possible as list id types.")
+                    msg = "Only Indices and Identifier are possible as list id types."
+                    raise NameError(msg)
                 l_ids = np.in1d(ids, list_ids, assume_unique=True, invert=False)
                 selection = data.particles_.create_property(  # pylint: disable=W0612
-                    "Selection", data=l_ids
+                    "Selection",
+                    data=l_ids,
                 )
 
             self.pipeline.modifiers.append(modify)
@@ -261,7 +277,7 @@ class GBStructure:
                             mode=ExpandSelectionModifier.ExpansionMode.Nearest,
                             num_neighbors=expand_nearest_neighbors,
                             iterations=iterations,
-                        )
+                        ),
                     )
                 else:
                     self.pipeline.modifiers.append(
@@ -269,79 +285,98 @@ class GBStructure:
                             cutoff=expand_cutoff,
                             mode=ExpandSelectionModifier.ExpansionMode.Cutoff,
                             iterations=iterations,
-                        )
+                        ),
                     )
             if invert:
                 self._invert_selection()  # for bulk ions
             if delete:
                 self._delete_selection()
 
-    def _invert_selection(self):
-
+    def _invert_selection(self) -> None:
         if self.backend == "ovito":
             from ovito.modifiers import InvertSelectionModifier
 
             self.pipeline.modifiers.append(InvertSelectionModifier())
 
         if self.backend == "pymatgen":
-            # Todo: Look which ids are in the list and invert by self.structure
+            # TODO: Look which ids are in the list and invert by self.structure
             pass
 
-    def _delete_selection(self):
-
+    def _delete_selection(self) -> None:
         if self.backend == "ovito":
             from ovito.modifiers import DeleteSelectedModifier
 
             self.pipeline.modifiers.append(DeleteSelectedModifier())
 
+    def _clear_selection(self) -> None:
+        if self.backend == "ovito":
+            from ovito.modifiers import ClearSelectionModifier
+
+            self.pipeline.modifiers.append(ClearSelectionModifier())
+
     def perform_cna(
         self,
-        mode: str = "IntervalCutoff",
-        enabled: tuple = ("fcc", "hpc", "bcc"),
+        mode: Literal[
+            "IntervalCutoff",
+            "AdaptiveCutoff",
+            "FixedCutoff",
+            "BondBased",
+        ] = "IntervalCutoff",
+        enabled: Sequence[str] = ("fcc", "hpc", "bcc"),
         cutoff: float = 3.2,
+        color_by_type: bool = True,
         only_selected: bool = False,
         compute: bool = True,
-    ):
+    ) -> None:
         """Perform Common neighbor analysis.
 
         Args:
             mode: Mode of common neighbor analysis. The lammps backend uses "FixedCutoff".
             enabled: Enabled structures for identifier.
             cutoff: Cutoff for the FixedCutoff mode.
+            color_by_type: Color by structure type.
+            only_selected: Only selected particles.
             compute: Compute results.
+
         Returns:
             None
         """
         if self.backend == "ovito":
-            # TODO: Enable/diable structure types
+            # TODO: Enable/disable structure types
             from ovito.modifiers import CommonNeighborAnalysisModifier
 
-            if mode == "IntervalCutoff":
-                cna_mode = CommonNeighborAnalysisModifier.Mode.IntervalCutoff
-            elif mode == "AdaptiveCutoff":
-                cna_mode = CommonNeighborAnalysisModifier.Mode.AdaptiveCutoff
-            elif mode == "FixedCutoff":
-                cna_mode = CommonNeighborAnalysisModifier.Mode.FixedCutoff
-            elif mode == "BondBased":
-                cna_mode = CommonNeighborAnalysisModifier.Mode.BondBased
-            else:
-                print(f'Selected CNA mode "{mode}" unknown.')
-                sys.exit(1)
+            cna_modes = {
+                "IntervalCutoff": CommonNeighborAnalysisModifier.Mode.IntervalCutoff,
+                "AdaptiveCutoff": CommonNeighborAnalysisModifier.Mode.AdaptiveCutoff,
+                "FixedCutoff": CommonNeighborAnalysisModifier.Mode.FixedCutoff,
+                "BondBased": CommonNeighborAnalysisModifier.Mode.BondBased,
+            }
 
-            cna = CommonNeighborAnalysisModifier(
-                mode=cna_mode, cutoff=cutoff, only_selected=only_selected
+            _cna = CommonNeighborAnalysisModifier(  # type: ignore[call-arg]
+                mode=cna_modes[mode],
+                cutoff=cutoff,
+                color_by_type=color_by_type,
+                only_selected=only_selected,
             )
             # Enabled by default: FCC, HCP, BCC
             if "fcc" not in enabled:
-                cna.structures[CommonNeighborAnalysisModifier.Type.FCC].enabled = False
+                _cna.structures[
+                    CommonNeighborAnalysisModifier.Type.FCC  # type: ignore[attr-defined]
+                ].enabled = False  # type: ignore[misc]
             if "hcp" not in enabled:
-                cna.structures[CommonNeighborAnalysisModifier.Type.HCP].enabled = False
+                _cna.structures[
+                    CommonNeighborAnalysisModifier.Type.HCP  # type: ignore[attr-defined]
+                ].enabled = False  # type: ignore[misc]
             if "bcc" not in enabled:
-                cna.structures[CommonNeighborAnalysisModifier.Type.BCC].enabled = False
+                _cna.structures[
+                    CommonNeighborAnalysisModifier.Type.BCC  # type: ignore[attr-defined]
+                ].enabled = False  # type: ignore[misc]
             if "ico" not in enabled:
-                cna.structures[CommonNeighborAnalysisModifier.Type.ICO].enabled = False
+                _cna.structures[
+                    CommonNeighborAnalysisModifier.Type.ICO  # type: ignore[attr-defined]
+                ].enabled = False  # type: ignore[misc]
 
-            self.pipeline.modifiers.append(cna)
+            self.pipeline.modifiers.append(_cna)
 
         elif self.backend == "lammps":
             # https://docs.lammps.org/compute_cna_atom.html
@@ -354,12 +389,13 @@ class GBStructure:
         if only_selected:
             warnings.warn(
                 "Evaluating only the selected atoms. Be aware that non-selected atoms may be "
-                "assigned to the wrong category."
+                "assigned to the wrong category.",
+                stacklevel=2,
             )
         if compute:
             self.set_analysis()
 
-    def perfom_cnp(self, cutoff: float = 3.20, compute: bool = False):
+    def perform_cnp(self, cutoff: float = 3.20, compute: bool = False) -> None:
         """Perform Common Neighborhood Parameter calculation.
 
         Please cite https://doi.org/10.1016/j.cpc.2007.05.018
@@ -373,10 +409,11 @@ class GBStructure:
         if compute:
             self.set_analysis()
 
-    def perform_voroni_analysis(self, compute: bool = False):
+    def perform_voronoi_analysis(self, compute: bool = False) -> None:
         """Perform Voronoi analysis.
 
         Args:
+            compute (bool): Compute results.
             ovito:
                 bonds_vis = False
                 edge_threshold = 0.0
@@ -409,7 +446,9 @@ class GBStructure:
             from ovito.plugins.ParticlesPython import VoronoiAnalysisModifier
 
             voro = VoronoiAnalysisModifier(
-                compute_indices=True, use_radii=False, edge_threshold=0.0
+                compute_indices=True,
+                use_radii=False,
+                edge_threshold=0.0,
             )
             self.pipeline.modifiers.append(voro)
 
@@ -425,13 +464,12 @@ class GBStructure:
 
     def perform_ptm(
         self,
-        *args,
-        enabled: tuple = ("fcc", "hpc", "bcc"),
+        enabled: Sequence[str] = ("fcc", "hpc", "bcc"),
         rmsd_threshold: float = 0.1,
         only_selected: bool = False,
         compute: bool = True,
         **kwargs,
-    ):
+    ) -> None:
         """Perform Polyhedral template matching.
 
         https://dx.doi.org/10.1088/0965-0393/24/5/055007
@@ -440,6 +478,9 @@ class GBStructure:
         Args:
             enabled (tuple): List of strings for enabled structure types. Possible values:
                 fcc-hcp-bcc-ico-sc-dcub-dhex-graphene
+            rmsd_threshold (float): RMSD threshold.
+            only_selected (bool): Only selected particles.
+            compute (bool): Compute results.
             for ovito:
                 output_deformation_gradient = False
                 output_interatomic_distance = False
@@ -452,45 +493,68 @@ class GBStructure:
                 group-ID = all
                 threshold = 0.1
                 group2-ID = all
+            **kwargs: Additional arguments for the modifier.
 
         Returns:
             None
         """
+        if isinstance(enabled, str):
+            enabled = [enabled]
         for i in enabled:
             if i not in ["fcc", "hcp", "bcc", "ico", "sc", "dcub", "dhex", "graphene"]:
-                print(f"Enabled structure type {i} unknown")
+                msg = f"Enabled structure type {i} unknown"
+                raise ValueError(msg)
         if self.backend == "ovito":
-
             from ovito.modifiers import PolyhedralTemplateMatchingModifier
 
-            ptm = PolyhedralTemplateMatchingModifier(*args, rmsd_cutoff=rmsd_threshold, only_selected=only_selected, **kwargs)
+            _ptm = PolyhedralTemplateMatchingModifier(  # type: ignore[call-arg]
+                rmsd_cutoff=rmsd_threshold,
+                only_selected=only_selected,
+                **kwargs,
+            )
 
             # Enabled by default: FCC, HCP, BCC
             if "fcc" not in enabled:
-                ptm.structures[PolyhedralTemplateMatchingModifier.Type.FCC].enabled = False
+                _ptm.structures[
+                    PolyhedralTemplateMatchingModifier.Type.FCC  # type: ignore[attr-defined]
+                ].enabled = False  # type: ignore[misc]
             if "hcp" not in enabled:
-                ptm.structures[PolyhedralTemplateMatchingModifier.Type.HCP].enabled = False
+                _ptm.structures[
+                    PolyhedralTemplateMatchingModifier.Type.HCP  # type: ignore[attr-defined]
+                ].enabled = False  # type: ignore[misc]
             if "bcc" not in enabled:
-                ptm.structures[PolyhedralTemplateMatchingModifier.Type.BCC].enabled = False
+                _ptm.structures[
+                    PolyhedralTemplateMatchingModifier.Type.BCC  # type: ignore[attr-defined]
+                ].enabled = False  # type: ignore[misc]
             if "ico" in enabled:
-                ptm.structures[PolyhedralTemplateMatchingModifier.Type.ICO].enabled = True
+                _ptm.structures[
+                    PolyhedralTemplateMatchingModifier.Type.ICO  # type: ignore[attr-defined]
+                ].enabled = True  # type: ignore[misc]
             if "sc" in enabled:
-                ptm.structures[PolyhedralTemplateMatchingModifier.Type.SC].enabled = True
+                _ptm.structures[
+                    PolyhedralTemplateMatchingModifier.Type.SC  # type: ignore[attr-defined]
+                ].enabled = True  # type: ignore[misc]
             if "dcub" in enabled:
-                ptm.structures[PolyhedralTemplateMatchingModifier.Type.CUBIC_DIAMOND].enabled = True
+                _ptm.structures[
+                    PolyhedralTemplateMatchingModifier.Type.CUBIC_DIAMOND  # type: ignore[attr-defined]
+                ].enabled = True  # type: ignore[misc]
             if "dhex" in enabled:
-                ptm.structures[PolyhedralTemplateMatchingModifier.Type.HEX_DIAMOND].enabled = True
+                _ptm.structures[
+                    PolyhedralTemplateMatchingModifier.Type.HEX_DIAMOND  # type: ignore[attr-defined]
+                ].enabled = True  # type: ignore[misc]
             if "graphene" in enabled:
-                ptm.structures[PolyhedralTemplateMatchingModifier.Type.GRAPHENE].enabled = True
+                _ptm.structures[
+                    PolyhedralTemplateMatchingModifier.Type.GRAPHENE  # type: ignore[attr-defined]
+                ].enabled = True  # type: ignore[misc]
 
-            self.pipeline.modifiers.append(ptm)
+            self.pipeline.modifiers.append(_ptm)
 
         elif self.backend == "lammps":
             # https://docs.lammps.org/compute_ptm_atom.html
             n_compute = len([i["style"] for i in self.pylmp.computes if i["style"] == "ptm/atom"])
             enabled_structures = " ".join(enabled)
             self.pylmp.compute(
-                f"ptm_{n_compute} all ptm/atom {enabled_structures} {rmsd_threshold}"
+                f"ptm_{n_compute} all ptm/atom {enabled_structures} {rmsd_threshold}",
             )
         else:
             raise not_implemented(self.backend)
@@ -498,7 +562,7 @@ class GBStructure:
         if compute:
             self.set_analysis()
 
-    def perform_ajm(self, compute: bool = True):
+    def perform_ajm(self, compute: bool = True) -> None:
         """Ackland-Jones analysis.
 
         https://doi.org/10.1103/PhysRevB.73.054104
@@ -515,7 +579,7 @@ class GBStructure:
 
         elif self.backend == "lammps":
             n_compute = len(
-                [i["style"] for i in self.pylmp.computes if i["style"] == "ackland/atom"]
+                [i["style"] for i in self.pylmp.computes if i["style"] == "ackland/atom"],
             )
             self.pylmp.compute(f"ackland_{n_compute} all ackland/atom")
 
@@ -525,7 +589,7 @@ class GBStructure:
         if compute:
             self.set_analysis()
 
-    def perform_csp(self, num_neighbors: int = 12, compute: bool = True):
+    def perform_csp(self, num_neighbors: int = 12, compute: bool = True) -> None:
         """Centrosymmetric parameter.
 
         Use 12 for fcc and 8 for bcc, respectively
@@ -540,7 +604,7 @@ class GBStructure:
         elif self.backend == "lammps":
             # https://docs.lammps.org/compute_centro_atom.html
             n_compute = len(
-                [i["style"] for i in self.pylmp.computes if i["style"] == "centro/atom"]
+                [i["style"] for i in self.pylmp.computes if i["style"] == "centro/atom"],
             )
             self.pylmp.compute(f"centro_{n_compute} all centro/atom {num_neighbors}")
 
@@ -548,11 +612,19 @@ class GBStructure:
             self.set_analysis()
 
     def get_distinct_grains(
-        self, *args, algorithm: str = "GraphClusteringAuto", compute: bool = True, **kwargs
-    ):
+        self,
+        *args,
+        algorithm: str = "GraphClusteringAuto",
+        compute: bool = True,
+        **kwargs,
+    ) -> None:
         """Get distinct grains from the structure.
 
         Args:
+            *args: Arguments specific to the backend (see below)
+            algorithm: Algorithm for grain segmentation.
+            compute: Compute results.
+            **kwargs: Additional arguments for the algorithm.
             ovito:
                     algorithm = GrainSegmentationModifier.Algorithm.GraphClusteringAuto
                     color_particles = True
@@ -574,8 +646,8 @@ class GBStructure:
             elif algorithm == "MinimumSpanningTree":
                 gsm_mode = GrainSegmentationModifier.Algorithm.MinimumSpanningTree
             else:
-                print("Incorrenct Grain Segmentation algorithm specified.")
-                sys.exit(1)
+                msg = "Incorrect Grain Segmentation algorithm specified."
+                raise ValueError(msg)
 
             gsm = GrainSegmentationModifier(*args, algorithm=gsm_mode, **kwargs)
             self.pipeline.modifiers.append(gsm)
@@ -583,11 +655,12 @@ class GBStructure:
                 self.set_analysis()
             # TODO: Get misorientation plot
 
-    def set_analysis(self):
+    def set_analysis(self) -> None:
         """Compute results.
 
         Important function for the ovito backend. The lammps backend can access compute results
         without evaluation of this function.
+
         Returns:
             None
         """
@@ -598,33 +671,51 @@ class GBStructure:
             self.pylmp.run(1)
 
         elif self.backend == "pymatgen":
-            print("The pymatgen backend does not require setting the analysis.")
+            msg = "The pymatgen backend does not require setting the analysis."
+            raise NotImplementedError(msg)
 
     def expand_to_non_selected(
-        self, cutoff=4.5, return_type: str = "Identifier", return_random: bool = False, invert: bool = False
-    ):
+        self,
+        nearest_n: int | None = None,
+        cutoff: float | None = None,
+        expansion_base: list | None = None,
+        return_type: str = "Identifier",
+        return_random: bool = False,
+        invert: bool = False,
+    ) -> list[int]:
         """Useful method if only_selected was chosen for structural analysis.
 
         Args:
+            nearest_n: Number of nearest neighbors to consider.
+            cutoff: Cutoff distance to consider.
+            expansion_base: List of atoms to expand from. Must be Indices.
+            return_type: Either Identifier or Indices.
+            return_random: If True, return a random selection of the non-selected atoms.
+            invert: If True, invert the selection.
+
         Returns:
-            gb_non_selected: list of GB atoms that were not in the previously selected group."""
-
+        gb_non_selected: list of GB atoms that were not in the previously selected group.
+        """
+        if nearest_n and cutoff:
+            msg = "Only one of nearest_n and cutoff can be specified."
+            raise ValueError(msg)
         if self.backend == "ovito":
-
             if return_type not in ["Identifier", "Indices"]:
-                raise NameError("Only Indices and Identifier are possible as return types.")
+                msg = "Only Indices and Identifier are possible as return types."
+                raise NameError(msg)
 
             self._invert_selection()
             self.set_analysis()
 
-            from ovito.data import CutoffNeighborFinder
-
-            finder = CutoffNeighborFinder(cutoff, self.data)
+            finder = get_finder(self.data, cutoff=cutoff, nearest_n=nearest_n)
+            if nearest_n:
+                from ovito.data import NearestNeighborFinder
 
             gb_non_selected = []
             # edge = []
             # Obtain a set of bulk (=crystalline) cations
-            bulk_atoms_set = set(self.get_crystalline_atoms(return_type="Indices"))
+            bulk_atoms = expansion_base or self.get_crystalline_atoms(return_type="Indices")
+            bulk_atoms_set = set(bulk_atoms)
             # These are the atoms that haven't been analysed in the structure analysis, i.e. anions
             non_selected = set(np.where(self.data.particles.selection == 1)[0])
 
@@ -632,17 +723,29 @@ class GBStructure:
                 neighbors = {neigh.index for neigh in finder.find(index)}
                 # The following is the neighbors w/o the atoms excluded from structural analysis
                 neighbors_no_selected = neighbors - non_selected
-                if len(neighbors_no_selected) < 1:
-                    raise ValueError("Cutoff radius too small.")
-                elif len(neighbors_no_selected) < 3:
-                    warnings.warn("At least one atoms has only two other atoms to assign.")
+                # If NN, correct for non-selected atoms
+                if nearest_n:
+                    nearest_n_added = nearest_n
+                    while len(neighbors_no_selected) < nearest_n:
+                        finder = NearestNeighborFinder(nearest_n_added, self.data)
+                        neighbors = {neigh.index for neigh in finder.find(index)}
+                        neighbors_no_selected = neighbors - non_selected
+                        nearest_n_added += 1
+                if len(neighbors_no_selected) == 0:
+                    msg = "Cutoff radius too small."
+                    raise ValueError(msg)
+                if len(neighbors_no_selected) <= 2:
+                    warnings.warn(
+                        "At least one atoms has only two other atoms to assign. "
+                        "Consider increasing the cutoff value.",
+                        stacklevel=2,
+                    )
                 bulk_neighbors = bulk_atoms_set.intersection(neighbors_no_selected)
                 bulk_fraction = len(bulk_neighbors) / len(neighbors_no_selected)
                 if bulk_fraction < 0.5:
                     gb_non_selected.append(index)
-                if return_random:
-                    if bulk_fraction == 0.5 and np.random.random_sample() < 0.5:
-                        gb_non_selected.append(index)
+                if return_random and bulk_fraction == 0.5 and random.random() < 0.5:  # noqa: S311
+                    gb_non_selected.append(index)
 
             self._invert_selection()
 
@@ -663,29 +766,28 @@ class GBStructure:
         cutoff: float = 4.5,
         return_type: str = "Identifier",
         return_random: bool = False,
-    ):
+    ) -> list:
         """Useful method if only_selected was chosen for structural analysis.
 
         Args:
-            groups: list of lists countaining the groups (as indices).
+            groups: list of lists containing the groups (as indices).
             cutoff (float): Cutoff (in Angstrom) for the neighbour finder.
             return_type (str): return either identifiers or indices.
-            return_random (bool): Some particles will have the same (maximum) neighbours in multiple groups.
-            If true, returns a random group from that pool.
+            return_random (bool): Some particles will have the same (maximum) neighbours in
+                multiple groups. If true, returns a random group from that pool.
+
         Returns:
-            groups_non_selected (list): atoms that were not in the previously selected group."""
-
+        groups_non_selected (list): atoms that were not in the previously selected group.
+        """
         if self.backend == "ovito":
-
             if return_type not in ["Identifier", "Indices"]:
-                raise NameError("Only Indices and Identifier are possible as return types.")
+                msg = "Only Indices and Identifier are possible as return types."
+                raise NameError(msg)
 
             self._invert_selection()
             self.set_analysis()
 
-            from ovito.data import CutoffNeighborFinder
-
-            finder = CutoffNeighborFinder(cutoff, self.data)
+            finder = get_finder(self.data, cutoff=cutoff)
 
             groups_non_selected = [[] for _ in range(len(groups))]  # type: list[list]
             # Obtain sets of bulk (=crystalline) cations
@@ -696,14 +798,17 @@ class GBStructure:
 
             for index in non_selected:
                 neighbors = {neigh.index for neigh in finder.find(index)}
-                # The following is the neighbors w/o the atoms excluded from strucural analysis
+                # The following is the neighbors w/o the atoms excluded from structural analysis
                 neighbors_no_selected = neighbors - non_selected
                 if len(neighbors_no_selected) < 3:
-                    warnings.warn("At least one atoms has only two other atoms to assign.")
+                    warnings.warn(
+                        "At least one atoms has only two other atoms to assign.",
+                        stacklevel=2,
+                    )
                 group_neighbors = [len(i.intersection(neighbors_no_selected)) for i in group_sets]
                 indices_max = np.where(group_neighbors == np.amax(group_neighbors))[0]
                 if len(indices_max) > 1 and return_random:
-                    groups_non_selected[random.choice(indices_max)].append(index)
+                    groups_non_selected[random.choice(indices_max)].append(index)  # noqa: S311
                 else:
                     group_maximum_interception = np.argmax(group_neighbors)
                     groups_non_selected[group_maximum_interception].append(index)
@@ -720,16 +825,18 @@ class GBStructure:
 
         return groups_non_selected
 
-    def get_non_crystalline_atoms(self, mode: str = "cna", return_type: str = "Identifier"):
+    # TODO: Rename to particles
+    def get_non_crystalline_atoms(self, mode: str = "cna", return_type: str = "Identifier") -> list:
         """Get the atoms at the grain boundary.
 
         For this to work, some sort of structural analysis has to be performed.
 
         Args:
             mode: Mode for selection of grain boundary atoms.
-            return_type:
+            return_type (str): Identifier or Indices.
+
         Returns:
-            None
+            List of non-crystalline particles.
         """
         if self.backend == "ovito":
             if "Structure Type" in self.data.particles.keys():
@@ -745,9 +852,11 @@ class GBStructure:
                 elif return_type == "Indices":
                     gb_list = list(np.where(self.data.particles["Structure Type"] == 0)[0])
                 else:
-                    raise NameError("Only Indices and Identifier are possible as return types.")
+                    msg = "Only Indices and Identifier are possible as return types."
+                    raise NameError(msg)
             elif "Centrosymmetry" in self.data.particles.keys():
-                print("Implementation in progress.")
+                msg = "Implementation in progress."
+                raise NotImplementedError(msg)
                 gb_list = []
             else:
                 raise not_implemented(self.backend)
@@ -759,7 +868,7 @@ class GBStructure:
             # for i in range(len(self.pylmp.atoms)):
             #     ids.append(self.pylmp.atoms[i].id)
             types = np.concatenate(
-                self.pylmp.lmp.numpy.extract_compute("cna_0", LMP_STYLE_ATOM, LMP_TYPE_VECTOR)
+                self.pylmp.lmp.numpy.extract_compute("cna_0", LMP_STYLE_ATOM, LMP_TYPE_VECTOR),
             )
             # https://docs.lammps.org/Classes_atom.html#_CPPv4N9LAMMPS_NS4Atom7extractEPKc
             ids = np.concatenate(self.pylmp.lmp.numpy.extract_atom("id"))
@@ -768,7 +877,7 @@ class GBStructure:
                     zip(
                         ids,
                         types,
-                    )
+                    ),
                 ),
                 columns=["Particle Identifier", "Structure Type"],
             )
@@ -778,20 +887,22 @@ class GBStructure:
             elif mode in ("ptm", "ackland"):
                 df_gb = df_temp[df_temp["Structure Type"] == 0]
             elif mode in ("voronoi", "centro"):
-                raise NotImplementedError(f"Mode {mode} currently not implemented")
+                msg = f"Mode {mode} currently not implemented"
+                raise NotImplementedError(msg)
             else:
-                print(f"Incorrect mode {mode} specified")
-                sys.exit(1)
+                msg = f"Incorrect mode {mode} specified"
+                raise ValueError(msg)
             gb_list = list(df_gb["Particle Identifier"])
         else:
             raise not_implemented(self.backend)
         return gb_list
 
-    def get_crystalline_atoms(self, return_type: str = "Identifier"):
+    # TODO: Rename to particles
+    def get_crystalline_atoms(self, return_type: str = "Identifier") -> list:
         """Get the atoms in the bulk, as determined by structural analysis.
 
         Returns:
-            None
+            List of crystalline particles.
         """
         if self.backend == "ovito":
             if "Structure Type" in self.data.particles.keys():
@@ -807,9 +918,8 @@ class GBStructure:
                 elif return_type == "Indices":
                     gb_list = list(np.where(self.data.particles["Structure Type"] != 0)[0])
                 else:
-                    raise NotImplementedError(
-                        "Indices and Identifier are possible as return types."
-                    )
+                    msg = "Indices and Identifier are possible as return types."
+                    raise NotImplementedError(msg)
                 # df_temp = pd.DataFrame(
                 #     list(
                 #         zip(
@@ -822,42 +932,46 @@ class GBStructure:
                 # df_gb = df_temp[df_temp["Structure Type"] != 0]
                 # return list(df_gb["Particle Identifier"])
             else:
-                print("No structure type information found.")
-                gb_list = None
+                warnings.warn(
+                    "No structure type information found. Returning empty list.",
+                    stacklevel=2,
+                )
+                gb_list = []
         elif self.backend == "lammps":
-            # TODO
-            gb_list = None
+            # TODO: Implement
+            raise not_implemented(self.backend)
         else:
             raise not_implemented(self.backend)
         return gb_list
 
+    # TODO: Rename to particles
     def get_grain_edge_ions(
         self,
         nearest_n: int = 12,
-        cutoff: float = None,
-        gb_ions: set = None,
+        cutoff: float | None = None,
+        gb_ions: set | None = None,
+        bulk_ions: list | None = None,
         return_type: str = "Identifier",
-    ):
+    ) -> list:
         """Get the atoms at the grain edge, as determined by structural analysis.
 
         Returns a list of IDs, which were identified as crystalline/bulk atoms, but border at
-        least one non-cristalline/grain boundary atom.
+        least one non-crystalline/grain boundary atom.
 
         Args:
             nearest_n (int): Number of nearest neighbors to consider. Examples: fcc=12, bcc=8
-            cutoff (float):
+            cutoff (float): Cutoff distance for the neighbor finder.
             gb_ions (set): Indices of grain boundary ions. Default: non-crystalline ions.
-            return_type (str):
+            bulk_ions (list): Indices of bulk ions. Default: crystalline ions.
+            return_type (str): Identifier or Indices.
 
         """
-
         if self.backend == "ovito":
+            # finder: CutoffNeighborFinder | NearestNeighborFinder
+
             from ovito.data import CutoffNeighborFinder, NearestNeighborFinder
 
-            # finder: CutoffNeighborFinder | NearestNeighborFinder
-            from typing import Union
-
-            finder: Union[CutoffNeighborFinder, NearestNeighborFinder]
+            finder: CutoffNeighborFinder | NearestNeighborFinder
             if cutoff:
                 finder = CutoffNeighborFinder(cutoff, self.data)
             else:
@@ -866,8 +980,9 @@ class GBStructure:
 
             gb_edge_ions = []
             gb_ions_set = gb_ions or self.get_non_crystalline_atoms(return_type="Indices")
+            bulk_ions_list = bulk_ions or self.get_crystalline_atoms(return_type="Indices")
             gb_ions_set = set(gb_ions_set)
-            for index in self.get_crystalline_atoms(return_type="Indices"):
+            for index in bulk_ions_list:
                 # print("Nearest neighbors of particle %i:" % index)
                 # for neigh in finder.find(index):
                 #    print(neigh.index, neigh.distance, neigh.delta)
@@ -879,44 +994,49 @@ class GBStructure:
             if return_type == "Identifier":
                 gb_edge_ions = [self.data.particles["Particle Identifier"][i] for i in gb_edge_ions]
         elif self.backend == "lammps":
-            # TODO
-            gb_edge_ions = None
+            # TODO: Implement
+            raise not_implemented(self.backend)
         else:
             raise not_implemented(self.backend)
         return gb_edge_ions
 
-    def set_gb_type(self):
+    def set_gb_type(self) -> None:
         """Set a property for grain boundary/bulk/grain edge atoms."""
 
-    def get_gb_fraction(self, mode: str = "cna"):
+    def get_gb_fraction(self, mode: str = "cna") -> float:
         """Get fraction of grain boundary ions.
 
         Args:
-            mode:
+            mode (str): Mode for selection of grain boundary atoms.
 
         Returns:
+            fraction (float): Fraction of grain boundary ions.
         """
         if self.backend == "ovito":
             fraction = len(self.get_non_crystalline_atoms(mode)) / len(
-                self.data.particles["Particle Identifier"]
+                self.data.particles["Particle Identifier"],
             )
-            warnings.warn("Using all particles with a particle identifier as the base.")
+            warnings.warn(
+                "Using all particles with a particle identifier as the base.",
+                stacklevel=2,
+            )
         elif self.backend == "lammps":
-            # TODO
-            fraction = None
+            # TODO: Implement
+            raise not_implemented(self.backend)
         else:
             raise not_implemented(self.backend)
         return fraction
 
-    def get_type(self, atom_type, return_type: str = "Identifier"):
+    # TODO: Rename to particles
+    def get_type(self, atom_type: int, return_type: str = "Identifier") -> list:
         """Get all atoms by type.
 
         Args:
-            atom_type:
-            return_type (str):
+            atom_type (int): Type of atom.
+            return_type (str): Return type ("Identifier" or "Indices")
 
         Returns:
-            None
+            List of particles of the specified type.
         """
         if self.backend == "ovito":
             # Currently doesn't work!
@@ -937,7 +1057,8 @@ class GBStructure:
             elif return_type == "Indices":
                 atom_list = list(np.where(self.data.particles["Particle Type"] == atom_type)[0])
             else:
-                raise NameError("Only Indices and Identifier are possible as return types.")
+                msg = "Only Indices and Identifier are possible as return types."
+                raise NameError(msg)
             # df_temp = pd.DataFrame(
             #     list(
             #         zip(
@@ -951,21 +1072,21 @@ class GBStructure:
             # return list(df_atom["Particle Identifier"])
 
         elif self.backend == "lammps":
-            # TODO
-            atom_list = None
+            # TODO: Implement
+            atom_list = []
         else:
             raise not_implemented(self.backend)
         return atom_list
 
-    # Todo: Verkippungswinkel
-    # Todo: Grain Index
+    # TODO: Verkippungswinkel
+    # TODO: Grain Index
 
-    def get_fraction(self, numerator, denominator):
+    def get_fraction(self, numerator: list, denominator: list) -> float:
         """Get fraction of ions/atoms. Helper function.
 
         Args:
-            numerator:
-            denominator:
+            numerator: Particle type(s) in the numerator.
+            denominator: Particle type(s) in the denominator.
 
         Returns:
             None
@@ -978,7 +1099,7 @@ class GBStructure:
 
         return num / den
 
-    def save_image(self, filename: str = "image.png"):
+    def save_image(self, filename: str = "image.png") -> None:
         """Save image file.
 
         Args:
@@ -991,57 +1112,90 @@ class GBStructure:
             # Only works with IPython integration
             self.pylmp.image(filename=filename)
 
-    def convert_backend(self, convert_to: str = None):
+    def convert_backend(self, convert_to: available_backends) -> Self:
         """Convert the current backend.
 
         Args:
             convert_to: Backend to convert to.
         """
         if self.backend == "lammps":
-            from datetime import datetime
+            import datetime
 
-            filename = datetime.now().strftime("%d%m%Y_%H%M%S") + ".lmp"
+            filename = (
+                datetime.datetime.now(tz=datetime.timezone.utc).strftime("%d%m%Y_%H%M%S") + ".lmp"
+            )
             self.save_structure("filename", file_type="data")
             if convert_to == "ovito":
                 try:
-                    return GBStructure(backend=convert_to, filename=filename)
+                    return GBStructure(backend=convert_to, filename=filename)  # type: ignore[return-value]
                 finally:
                     tempfile = pathlib.Path(filename)
                     tempfile.unlink()
             else:
-                return None
+                raise not_implemented(convert_to)
         else:
-            return None
+            raise not_implemented(self.backend)
 
 
 class GBStructureTimeseries(GBStructure):
     """This is a class containing multiple snapshots from a time series."""
 
-    # Todo: enable inheritance
-    # Todo: get diffusion data
-    # Todo: differentiate between along/across GB
+    # TODO: enable inheritance
+    # TODO: get diffusion data
+    # TODO: differentiate between along/across GB
 
-    def remove_timesteps(self, timesteps_to_exclude):
-        """Remove timesteps from the beggining of a simulation.
+    def remove_timesteps(self, timesteps_to_exclude: int) -> None:
+        """Remove timesteps from the beginning of a simulation.
 
         Args:
-            timesteps_to_exclude (:py:class:`int`): Number of timesteps to exclude
+            timesteps_to_exclude (int): Number of timesteps to exclude
+
         Returns:
             new_trajectory (:py:class:`polypy.read.Trajectory`):
             Trajectory object.
         """
 
-    # Todo: Add differentiation between diffusion along a grain boundary, transverse to the GB,
+    # TODO: Add differentiation between diffusion along a grain boundary, transverse to the GB,
     # and between grains
 
 
-def not_implemented(backend):
-    """Raise not implemeted error.
+def get_finder(data, cutoff: float | None = None, nearest_n: int | None = None):  # noqa: ANN001,ANN201
+    """Get neighbor finder.
+
+    Args:
+        data: Data object.
+        cutoff: Cutoff distance.
+        nearest_n: Number of nearest neighbors.
+
+    Returns:
+        finder: Neighbor finder.
+
+    """
+    from ovito.data import CutoffNeighborFinder, NearestNeighborFinder
+
+    finder: CutoffNeighborFinder | NearestNeighborFinder
+
+    if cutoff:
+        finder = CutoffNeighborFinder(cutoff, data)
+    elif nearest_n:
+        finder = NearestNeighborFinder(nearest_n, data)
+    elif cutoff and nearest_n:
+        msg = "Only cutoff or nearest_n can be specified."
+        raise NameError(msg)
+    else:
+        msg = "Either cutoff or nearest_n must be specified."
+        raise NameError(msg)
+    return finder
+
+
+def not_implemented(backend: available_backends) -> NotImplementedError:
+    """Raise not implemented error.
 
     Args:
         backend: Backend currently in use.
 
     Returns:
+        NotImplementedError
 
     """
     return NotImplementedError(f"The backend {backend} doesn't support this function.")
