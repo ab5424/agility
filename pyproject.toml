@@ -52,7 +52,7 @@ ovito = [
     "ovito",
 ]
 ase = [
-    "ase@git+https://gitlab.com/ase/ase.git",
+    "ase",
 ]
 pymatgen = [
     "pymatgen",
