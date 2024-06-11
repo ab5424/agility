@@ -52,7 +52,7 @@ ovito = [
     "ovito",
 ]
 ase = [
-    "ase",
+    "ase>=3.23",
 ]
 pymatgen = [
     "pymatgen",
