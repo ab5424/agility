@@ -9,14 +9,16 @@ from __future__ import annotations
 import pathlib
 import random
 import warnings
-from collections.abc import Sequence
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 import pandas as pd
 from typing_extensions import Self
 
 from agility.minimiser import mimimise_lmp
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 available_backends = Literal["ovito", "pymatgen", "babel", "pyiron", "ase", "lammps"]
 # https://github.com/pyiron/pylammpsmpi
@@ -842,7 +844,7 @@ class GBStructure:
             List of non-crystalline particles.
         """
         if self.backend == "ovito":
-            if "Structure Type" in self.data.particles.keys():
+            if "Structure Type" in self.data.particles:
                 if return_type == "Identifier":
                     gb_list = [
                         i[0]
@@ -857,7 +859,7 @@ class GBStructure:
                 else:
                     msg = "Only Indices and Identifier are possible as return types."
                     raise NameError(msg)
-            elif "Centrosymmetry" in self.data.particles.keys():
+            elif "Centrosymmetry" in self.data.particles:
                 msg = "Implementation in progress."
                 raise NotImplementedError(msg)
             else:
@@ -907,7 +909,7 @@ class GBStructure:
             List of crystalline particles.
         """
         if self.backend == "ovito":
-            if "Structure Type" in self.data.particles.keys():
+            if "Structure Type" in self.data.particles:
                 if return_type == "Identifier":
                     gb_list = [
                         i[0]

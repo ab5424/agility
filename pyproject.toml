@@ -80,7 +80,6 @@ lint.ignore = [
   "PLR0913", # too-many-arguments
   "PLR2004", # magic-value-comparison
   "S101",    # Use of assert detected
-  "SIM118",
   "TD002",   # TD002 Missing author in TODO; try: `# TODO(<author_name>): ...` or `# TODO @<author_name>: ...`
   "TD003",   # Missing issue link on the line following this TODO
   "TD005",   # Missing issue description after `TODO`
