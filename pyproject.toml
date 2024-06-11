@@ -63,7 +63,7 @@ include = ["agility", "agility.*"]
 exclude = ["tests", "tests.*"]
 
 [tool.ruff]
-target-version = "py38"
+target-version = "py39"
 line-length = 100
 lint.select = ["ALL"]
 lint.ignore = [
