@@ -9,7 +9,8 @@ from __future__ import annotations
 import pathlib
 import random
 import warnings
-from typing import Any, Literal, Sequence
+from collections.abc import Sequence
+from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
