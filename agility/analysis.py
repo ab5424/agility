@@ -859,7 +859,6 @@ class GBStructure:
             elif "Centrosymmetry" in self.data.particles.keys():
                 msg = "Implementation in progress."
                 raise NotImplementedError(msg)
-                gb_list = []
             else:
                 raise not_implemented(self.backend)
         elif self.backend == "lammps":
