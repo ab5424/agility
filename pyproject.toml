@@ -100,9 +100,6 @@ reportInvalidTypeForm = false
 exclude = ["**/tests"]
 
 [tool.codespell]
-ignore-words-list = """
-cna
-"""
 check-filenames = true
 
 [tool.coverage.report]
