@@ -15,7 +15,7 @@ import numpy as np
 import pandas as pd
 from typing_extensions import Self
 
-from agility.minimiser import mimimise_lmp
+from agility.minimiser import minimise_lmp
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
