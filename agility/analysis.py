@@ -145,7 +145,7 @@ class GBStructure:
             msg = f"The {self.backend} backend has no minimisation capabilities."
             raise NotImplementedError(msg)
         if self.backend == "lammps":
-            self.pylmp = mimimise_lmp(self.pylmp, *args, **kwargs)
+            self.pylmp = minimise_lmp(self.pylmp, *args, **kwargs)
         else:
             msg = f"The {self.backend} backend does not support minimisation yet."
             raise NotImplementedError(msg)
@@ -206,7 +206,7 @@ class GBStructure:
                 frame,  # noqa: ANN001,ARG001
                 data,  # noqa: ANN001
             ):  # pylint: disable=W0613
-                atom_types = data.particles_.particle_types_  # pylint: disable=W0612
+                atom_types = data.particles_.particle_types_  # noqa: F841
 
             self.pipeline.modifiers.append(assign_particle_types)
 
@@ -264,7 +264,7 @@ class GBStructure:
                     msg = "Only Indices and Identifier are possible as list id types."
                     raise NameError(msg)
                 l_ids = np.in1d(ids, list_ids, assume_unique=True, invert=False)
-                selection = data.particles_.create_property(  # pylint: disable=W0612
+                selection = data.particles_.create_property(  # noqa: F841
                     "Selection",
                     data=l_ids,
                 )

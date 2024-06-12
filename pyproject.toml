@@ -72,7 +72,6 @@ lint.ignore = [
   "ANN101",  # Missing type annotation for self in method
   "C901",    # Function is too complex
   "ERA001",  # Found commented-out code
-  "F841",    # Local variable name is assigned to but never used
   "FIX002",  # Line contains TODO, consider resolving the issue
   "FBT001",  # Boolean-typed positional argument in function definition
   "FBT002",  # Boolean default positional argument in function definition
