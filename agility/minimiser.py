@@ -5,10 +5,13 @@
 
 from __future__ import annotations
 
-from typing import Sequence
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
-def mimimise_lmp(  # noqa: ANN201
+def minimise_lmp(  # noqa: ANN201
     lmp,  # noqa: ANN001
     style: str = "fire",
     min_opt: Sequence[int | float] = (0, 1e-8, 1000, 100000),

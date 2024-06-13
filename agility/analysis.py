@@ -9,13 +9,16 @@ from __future__ import annotations
 import pathlib
 import random
 import warnings
-from typing import Any, Literal, Sequence
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 import pandas as pd
 from typing_extensions import Self
 
-from agility.minimiser import mimimise_lmp
+from agility.minimiser import minimise_lmp
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 available_backends = Literal["ovito", "pymatgen", "babel", "pyiron", "ase", "lammps"]
 # https://github.com/pyiron/pylammpsmpi
@@ -142,7 +145,7 @@ class GBStructure:
             msg = f"The {self.backend} backend has no minimisation capabilities."
             raise NotImplementedError(msg)
         if self.backend == "lammps":
-            self.pylmp = mimimise_lmp(self.pylmp, *args, **kwargs)
+            self.pylmp = minimise_lmp(self.pylmp, *args, **kwargs)
         else:
             msg = f"The {self.backend} backend does not support minimisation yet."
             raise NotImplementedError(msg)
@@ -203,7 +206,7 @@ class GBStructure:
                 frame,  # noqa: ANN001,ARG001
                 data,  # noqa: ANN001
             ):  # pylint: disable=W0613
-                atom_types = data.particles_.particle_types_  # pylint: disable=W0612
+                atom_types = data.particles_.particle_types_  # noqa: F841
 
             self.pipeline.modifiers.append(assign_particle_types)
 
@@ -261,7 +264,7 @@ class GBStructure:
                     msg = "Only Indices and Identifier are possible as list id types."
                     raise NameError(msg)
                 l_ids = np.in1d(ids, list_ids, assume_unique=True, invert=False)
-                selection = data.particles_.create_property(  # pylint: disable=W0612
+                selection = data.particles_.create_property(  # noqa: F841
                     "Selection",
                     data=l_ids,
                 )
@@ -841,7 +844,7 @@ class GBStructure:
             List of non-crystalline particles.
         """
         if self.backend == "ovito":
-            if "Structure Type" in self.data.particles.keys():
+            if "Structure Type" in self.data.particles:
                 if return_type == "Identifier":
                     gb_list = [
                         i[0]
@@ -856,10 +859,9 @@ class GBStructure:
                 else:
                     msg = "Only Indices and Identifier are possible as return types."
                     raise NameError(msg)
-            elif "Centrosymmetry" in self.data.particles.keys():
+            elif "Centrosymmetry" in self.data.particles:
                 msg = "Implementation in progress."
                 raise NotImplementedError(msg)
-                gb_list = []
             else:
                 raise not_implemented(self.backend)
         elif self.backend == "lammps":
@@ -907,7 +909,7 @@ class GBStructure:
             List of crystalline particles.
         """
         if self.backend == "ovito":
-            if "Structure Type" in self.data.particles.keys():
+            if "Structure Type" in self.data.particles:
                 if return_type == "Identifier":
                     gb_list = [
                         i[0]
