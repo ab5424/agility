@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools", "wheel", "numpy", "pandas", "scipy"]
+requires = ["setuptools>=65"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -52,7 +52,7 @@ ovito = [
     "ovito",
 ]
 ase = [
-    "ase@git+https://gitlab.com/ase/ase.git",
+    "ase>=3.23",
 ]
 pymatgen = [
     "pymatgen",
@@ -63,7 +63,7 @@ include = ["agility", "agility.*"]
 exclude = ["tests", "tests.*"]
 
 [tool.ruff]
-target-version = "py38"
+target-version = "py39"
 line-length = 100
 lint.select = ["ALL"]
 lint.ignore = [
@@ -72,7 +72,6 @@ lint.ignore = [
   "ANN101",  # Missing type annotation for self in method
   "C901",    # Function is too complex
   "ERA001",  # Found commented-out code
-  "F841",    # Local variable name is assigned to but never used
   "FIX002",  # Line contains TODO, consider resolving the issue
   "FBT001",  # Boolean-typed positional argument in function definition
   "FBT002",  # Boolean default positional argument in function definition
@@ -80,8 +79,7 @@ lint.ignore = [
   "PLR0913", # too-many-arguments
   "PLR2004", # magic-value-comparison
   "S101",    # Use of assert detected
-  "SIM118",
-  "TD002",   # TD002 Missing author in TODO; try: `# TODO(<author_name>): ...` or `# TODO @<author_name>: ...`
+  "TD002",   # Missing author in TODO; try: `# TODO(<author_name>): ...` or `# TODO @<author_name>: ...`
   "TD003",   # Missing issue link on the line following this TODO
   "TD005",   # Missing issue description after `TODO`
 ]
@@ -101,9 +99,6 @@ reportInvalidTypeForm = false
 exclude = ["**/tests"]
 
 [tool.codespell]
-ignore-words-list = """
-cna
-"""
 check-filenames = true
 
 [tool.coverage.report]
