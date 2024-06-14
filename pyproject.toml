@@ -71,6 +71,8 @@ lint.ignore = [
   "ANN003",  # Missing type annotation for `**kwargs`
   "ANN101",  # Missing type annotation for self in method
   "C901",    # Function is too complex
+  "D203",   # 1 blank line required before class docstring (incompatible with D211)
+  "D213",   # Multi-line docstring summary should start at the second line (incompatible with D212)
   "ERA001",  # Found commented-out code
   "FIX002",  # Line contains TODO, consider resolving the issue
   "FBT001",  # Boolean-typed positional argument in function definition
@@ -83,7 +85,6 @@ lint.ignore = [
   "TD003",   # Missing issue link on the line following this TODO
   "TD005",   # Missing issue description after `TODO`
 ]
-lint.pydocstyle.convention = "google"
 lint.isort.required-imports = ["from __future__ import annotations"]
 
 [tool.mypy]

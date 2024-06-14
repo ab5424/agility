@@ -20,6 +20,7 @@ def minimise_lmp(  # noqa: ANN201
     """Run minimisation in lammps.
 
     Args:
+    ----
         lmp: lammps instance for minimisation
         style: Minimisation style. Possible options: cg or hftn or sd or quickmin or fire or
         min_opt (Sequence[int | float]): List of min. options (etol, ftol, maxiter, maxeval).
@@ -27,7 +28,9 @@ def minimise_lmp(  # noqa: ANN201
         mod: list of modifications for
 
     Returns:
+    -------
         lmp: lammps object with minimised structure.
+
     """
     if len(min_opt) != 4:
         msg = (

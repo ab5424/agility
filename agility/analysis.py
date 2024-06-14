@@ -68,11 +68,14 @@ class GBStructure:
         """Read structure from file.
 
         Args:
+        ----
             filename: File to read.
             **kwargs: Additional arguments for reading the file.
 
         Returns:
+        -------
             None
+
         """
         if self.backend == "ovito":
             from ovito.io import import_file
@@ -97,10 +100,12 @@ class GBStructure:
         """Initialise lammps backend.
 
         Args:
+        ----
             filename: File to read.
             file_type (str): File type (data, dump, restart)
             pair_style (str): lammps pair style
             kspace_style (str): lammps kspace style
+
         """
         self.pylmp.units("metal")
         self.pylmp.atom_style("charge")
@@ -122,9 +127,11 @@ class GBStructure:
         """Save structure to disc.
 
         Args:
+        ----
             filename (str): Filename to save.
             file_type (str): File type (data, dump, restart)
             **kwargs: Additional arguments for saving the file.
+
         """
         if self.backend == "ovito":
             from ovito.io import export_file
@@ -158,6 +165,7 @@ class GBStructure:
         sure that type information is included.
 
         Args:
+        ----
             particle_type: Particle type to delete.
 
         """
@@ -193,7 +201,9 @@ class GBStructure:
         """Select a specific type of particles from a structure.
 
         Args:
+        ----
             particle_type (set): Particle type to select.
+
         """
         if self.backend == "ovito":
             # from ovito.plugins.StdModPython import (
@@ -232,6 +242,7 @@ class GBStructure:
         """Select particles by ID.
 
         Args:
+        ----
             list_ids (list): List of IDs to select.
             list_ids_type (str): "Indices" or "Identifier"
             expand_nearest_neighbors (int): Number of nearest neighbors. Default 1.
@@ -241,7 +252,9 @@ class GBStructure:
             expand_cutoff (float): Expansion cutoff. Default 3.2.
 
         Returns:
+        -------
             None
+
         """
         if self.backend == "ovito":
             try:
@@ -334,6 +347,7 @@ class GBStructure:
         """Perform Common neighbor analysis.
 
         Args:
+        ----
             mode: Mode of common neighbor analysis. The lammps backend uses "FixedCutoff".
             enabled: Enabled structures for identifier.
             cutoff: Cutoff for the FixedCutoff mode.
@@ -342,7 +356,9 @@ class GBStructure:
             compute: Compute results.
 
         Returns:
+        -------
             None
+
         """
         if self.backend == "ovito":
             # TODO: Enable/disable structure types
@@ -403,8 +419,10 @@ class GBStructure:
 
         Please cite https://doi.org/10.1016/j.cpc.2007.05.018
 
-        Returns:
+        Returns
+        -------
             None
+
         """
         if self.backend == "lammps":
             self.pylmp.compute(f"compute 1 all cnp/atom {cutoff}")
@@ -416,6 +434,7 @@ class GBStructure:
         """Perform Voronoi analysis.
 
         Args:
+        ----
             compute (bool): Compute results.
             ovito:
                 bonds_vis = False
@@ -444,6 +463,7 @@ class GBStructure:
                 peratom value = yes or no = per-atom quantities accessible or no
         Returns:
             None
+
         """
         if self.backend == "ovito":
             from ovito.plugins.ParticlesPython import VoronoiAnalysisModifier
@@ -479,6 +499,7 @@ class GBStructure:
         https://github.com/pmla/polyhedral-template-matching.
 
         Args:
+        ----
             enabled (tuple): List of strings for enabled structure types. Possible values:
                 fcc-hcp-bcc-ico-sc-dcub-dhex-graphene
             rmsd_threshold (float): RMSD threshold.
@@ -499,7 +520,9 @@ class GBStructure:
             **kwargs: Additional arguments for the modifier.
 
         Returns:
+        -------
             None
+
         """
         if isinstance(enabled, str):
             enabled = [enabled]
@@ -624,6 +647,7 @@ class GBStructure:
         """Get distinct grains from the structure.
 
         Args:
+        ----
             *args: Arguments specific to the backend (see below)
             algorithm: Algorithm for grain segmentation.
             compute: Compute results.
@@ -637,7 +661,9 @@ class GBStructure:
                     orphan_adoption = True
 
         Returns:
+        -------
             None
+
         """
         if self.backend == "ovito":
             from ovito.modifiers import GrainSegmentationModifier
@@ -664,8 +690,10 @@ class GBStructure:
         Important function for the ovito backend. The lammps backend can access compute results
         without evaluation of this function.
 
-        Returns:
+        Returns
+        -------
             None
+
         """
         if self.backend == "ovito":
             self.data = self.pipeline.compute()
@@ -686,9 +714,10 @@ class GBStructure:
         return_random: bool = False,
         invert: bool = False,
     ) -> list[int]:
-        """Useful method if only_selected was chosen for structural analysis.
+        """Expand to other particles if only_selected was chosen for structural analysis.
 
         Args:
+        ----
             nearest_n: Number of nearest neighbors to consider.
             cutoff: Cutoff distance to consider.
             expansion_base: List of atoms to expand from. Must be Indices.
@@ -697,7 +726,9 @@ class GBStructure:
             invert: If True, invert the selection.
 
         Returns:
+        -------
         gb_non_selected: list of GB atoms that were not in the previously selected group.
+
         """
         if nearest_n and cutoff:
             msg = "Only one of nearest_n and cutoff can be specified."
@@ -772,9 +803,10 @@ class GBStructure:
         return_type: str = "Identifier",
         return_random: bool = False,
     ) -> list:
-        """Useful method if only_selected was chosen for structural analysis.
+        """Expand to other groups if only_selected was chosen for structural analysis.
 
         Args:
+        ----
             groups: list of lists containing the groups (as indices).
             cutoff (float): Cutoff (in Angstrom) for the neighbour finder.
             return_type (str): return either identifiers or indices.
@@ -782,7 +814,9 @@ class GBStructure:
                 multiple groups. If true, returns a random group from that pool.
 
         Returns:
+        -------
         groups_non_selected (list): atoms that were not in the previously selected group.
+
         """
         if self.backend == "ovito":
             if return_type not in ["Identifier", "Indices"]:
@@ -837,11 +871,14 @@ class GBStructure:
         For this to work, some sort of structural analysis has to be performed.
 
         Args:
+        ----
             mode: Mode for selection of grain boundary atoms.
             return_type (str): Identifier or Indices.
 
         Returns:
+        -------
             List of non-crystalline particles.
+
         """
         if self.backend == "ovito":
             if "Structure Type" in self.data.particles:
@@ -905,8 +942,10 @@ class GBStructure:
     def get_crystalline_atoms(self, return_type: str = "Identifier") -> list:
         """Get the atoms in the bulk, as determined by structural analysis.
 
-        Returns:
+        Returns
+        -------
             List of crystalline particles.
+
         """
         if self.backend == "ovito":
             if "Structure Type" in self.data.particles:
@@ -963,6 +1002,7 @@ class GBStructure:
         least one non-crystalline/grain boundary atom.
 
         Args:
+        ----
             nearest_n (int): Number of nearest neighbors to consider. Examples: fcc=12, bcc=8
             cutoff (float): Cutoff distance for the neighbor finder.
             gb_ions (set): Indices of grain boundary ions. Default: non-crystalline ions.
@@ -1011,10 +1051,13 @@ class GBStructure:
         """Get fraction of grain boundary ions.
 
         Args:
+        ----
             mode (str): Mode for selection of grain boundary atoms.
 
         Returns:
+        -------
             fraction (float): Fraction of grain boundary ions.
+
         """
         if self.backend == "ovito":
             fraction = len(self.get_non_crystalline_atoms(mode)) / len(
@@ -1036,11 +1079,14 @@ class GBStructure:
         """Get all atoms by type.
 
         Args:
+        ----
             atom_type (int): Type of atom.
             return_type (str): Return type ("Identifier" or "Indices")
 
         Returns:
+        -------
             List of particles of the specified type.
+
         """
         if self.backend == "ovito":
             # Currently doesn't work!
@@ -1089,11 +1135,14 @@ class GBStructure:
         """Get fraction of ions/atoms. Helper function.
 
         Args:
+        ----
             numerator: Particle type(s) in the numerator.
             denominator: Particle type(s) in the denominator.
 
         Returns:
+        -------
             None
+
         """
         if self.backend == "ovito":
             num = sum([len(self.get_type(i)) for i in numerator])
@@ -1107,7 +1156,9 @@ class GBStructure:
         """Save image file.
 
         Args:
+        ----
             filename: file to be saved.
+
         """
         if self.backend == "ovito":
             # TODO: use render function
@@ -1120,7 +1171,9 @@ class GBStructure:
         """Convert the current backend.
 
         Args:
+        ----
             convert_to: Backend to convert to.
+
         """
         if self.backend == "lammps":
             import datetime
@@ -1142,7 +1195,7 @@ class GBStructure:
 
 
 class GBStructureTimeseries(GBStructure):
-    """This is a class containing multiple snapshots from a time series."""
+    """Contains multiple snapshots from a time series."""
 
     # TODO: enable inheritance
     # TODO: get diffusion data
@@ -1152,11 +1205,14 @@ class GBStructureTimeseries(GBStructure):
         """Remove timesteps from the beginning of a simulation.
 
         Args:
+        ----
             timesteps_to_exclude (int): Number of timesteps to exclude
 
         Returns:
+        -------
             new_trajectory (:py:class:`polypy.read.Trajectory`):
             Trajectory object.
+
         """
 
     # TODO: Add differentiation between diffusion along a grain boundary, transverse to the GB,
@@ -1167,11 +1223,13 @@ def get_finder(data, cutoff: float | None = None, nearest_n: int | None = None):
     """Get neighbor finder.
 
     Args:
+    ----
         data: Data object.
         cutoff: Cutoff distance.
         nearest_n: Number of nearest neighbors.
 
     Returns:
+    -------
         finder: Neighbor finder.
 
     """
@@ -1196,9 +1254,11 @@ def not_implemented(backend: available_backends) -> NotImplementedError:
     """Raise not implemented error.
 
     Args:
+    ----
         backend: Backend currently in use.
 
     Returns:
+    -------
         NotImplementedError
 
     """

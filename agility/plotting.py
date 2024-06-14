@@ -21,6 +21,7 @@ def render_ovito(pipeline: Pipeline, res_factor: int = 1) -> QImage:
     """Render an ovito pipeline object.
 
     Args:
+    ----
         pipeline: The ovito pipeline to be rendered.
         res_factor: Factor to scale the resolution of the rendering. 2=Full HD, 4=4K.
 
@@ -53,10 +54,12 @@ def plot_face_order(data: DataCollection, plot_property: str = "Max Face Order")
     """Plot the histogram of max. face order from ovito data.
 
     Args:
+    ----
         data (DataCollection): Ovito data collection.
         plot_property (str): Property to be plotted.
 
     Returns:
+    -------
         Histogram plot.
 
     """
