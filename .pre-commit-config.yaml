@@ -36,7 +36,6 @@ repos:
     hooks:
       - id: codespell
         stages: [ commit, commit-msg ]
-        args: [ --ignore-words-list, 'cna' ]
         additional_dependencies: [tomli]
 
   - repo: https://github.com/igorshubovych/markdownlint-cli
