@@ -41,7 +41,7 @@ strict = [
 ]
 dev = [
     "mypy",
-    "coverage<=7.5.1", # Weird issues with 7.5.2 (coverage decreases)
+    "coverage<=7.5.4", # Weird issues with 7.5.2 (coverage decreases)
     "pre-commit",
     "pytest-cov",
     "pytest-split",
