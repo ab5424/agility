@@ -263,7 +263,7 @@ class GBStructure:
                 else:
                     msg = "Only Indices and Identifier are possible as list id types."
                     raise NameError(msg)
-                l_ids = np.in1d(ids, list_ids, assume_unique=True, invert=False)
+                l_ids = np.isin(ids, list_ids, assume_unique=True, invert=False)
                 selection = data.particles_.create_property(  # noqa: F841
                     "Selection",
                     data=l_ids,
