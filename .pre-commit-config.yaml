@@ -8,7 +8,7 @@ ci:
 
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.5.4
+    rev: v0.5.5
     hooks:
       - id: ruff
         args: [--fix]
@@ -27,7 +27,7 @@ repos:
       - id: mypy
 
   - repo: https://github.com/RobertCraigie/pyright-python
-    rev: v1.1.372
+    rev: v1.1.373
     hooks:
       - id: pyright
 
