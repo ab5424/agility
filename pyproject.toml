@@ -39,14 +39,10 @@ strict = [
     "scipy==1.13.1",
     "seaborn==0.13.2",
 ]
-dev = [
-    "mypy",
-    "coverage",
-    "pre-commit",
+tests = [
     "pytest-cov",
     "pytest-split",
     "pytest",
-    "ruff",
 ]
 ovito = [
     "ovito",
