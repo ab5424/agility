@@ -21,23 +21,30 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-        python-version: ["3.9", "3.12"]
+        version:
+          - { python: "3.9", resolution: lowest-direct, extra: "tests,ovito,ase,pymatgen" }
+          - { python: "3.12", resolution: highest, extra: "tests,ovito,ase,pymatgen" }
+        # Add macOS without optional dependencies, running only on python 3.10
+        include:
+          - os: macos-latest
+            version: { python: "3.10", resolution: highest, extra: "tests,strict" }
 
     runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python ${{ matrix.version.python }}
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: ${{ matrix.version.python }}
           cache: pip
       - name: Install dependencies
         run: |
           pip install uv
-          uv pip install packaging -e .[strict,dev,ovito,ase,pymatgen] --system
+          uv pip install -e .[${{ matrix.version.extra }}] --resolution=${{ matrix.version.resolution }} --system
       # Fix ImportError: libEGL.so.1: ...
-      - if: runner.os == 'Linux'
+      - name: Install libegl1-mesa-dev on Linux
+        if: runner.os == 'Linux'
         run: |
           sudo apt update && sudo apt install -y libegl1-mesa-dev
       - name: pytest

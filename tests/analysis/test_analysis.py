@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from importlib.util import find_spec
 from pathlib import Path
 from unittest import TestCase
 
@@ -15,6 +16,7 @@ MODULE_DIR = Path(__file__).absolute().parent
 TEST_FILES_DIR = Path(MODULE_DIR / ".." / ".." / "tests" / "files")
 
 
+@pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
 class TestGBStructure(TestCase):
     """Test the GBStructure class."""
 
@@ -62,6 +64,7 @@ class TestGBStructure(TestCase):
         assert self.data.pipeline.compute().attributes["GrainSegmentation.grain_count"] == 6
 
 
+@pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
 class TestGBStructureOxide(TestCase):
     """Test the GBStructure class for an oxide."""
 
