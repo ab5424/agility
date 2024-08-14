@@ -45,7 +45,7 @@ tests = [
     "pytest>=8",
 ]
 ovito = [
-    "ovito>=3.7", # <3.7 would install PySide2
+    "ovito>=3.8",
 ]
 ase = [
     "ase>=3.23",
