@@ -41,7 +41,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install uv
-          uv pip install packaging -e .[${{ matrix.version.extra }}] --resolution=${{ matrix.version.resolution }} --system
+          uv pip install -e .[${{ matrix.version.extra }}] --resolution=${{ matrix.version.resolution }} --system
       # Fix ImportError: libEGL.so.1: ...
       - name: Install libegl1-mesa-dev on Linux
         if: runner.os == 'Linux'

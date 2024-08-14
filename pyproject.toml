@@ -8,7 +8,7 @@ version = "0.0.3"
 description = "Analysis tool for simulations of grain boundaries and interfaces"
 authors = [{name = "Alexander Bonkowski", email = "alexander.bonkowski@rwth-aachen.de"}]
 maintainers = [{name = "Alexander Bonkowski"}]
-dependencies = ["numpy", "pandas", "scipy", "seaborn"]
+dependencies = ["numpy>=1.25", "pandas>=2", "scipy>=1.12", "seaborn>=0.13"]
 requires-python = ">=3.9"
 readme = "README.md"
 license = {file = "LICENSE"}
@@ -40,18 +40,18 @@ strict = [
     "seaborn==0.13.2",
 ]
 tests = [
-    "pytest-cov",
-    "pytest-split",
-    "pytest",
+    "pytest-cov>=5",
+    "pytest-split>=0.9",
+    "pytest>=8",
 ]
 ovito = [
-    "ovito",
+    "ovito>=3.6",
 ]
 ase = [
     "ase>=3.23",
 ]
 pymatgen = [
-    "pymatgen",
+    "pymatgen>=2024",
 ]
 
 [tool.setuptools.packages.find]
