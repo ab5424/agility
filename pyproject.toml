@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agility"
-version = "0.0.3"
+version = "0.0.4"
 description = "Analysis tool for simulations of grain boundaries and interfaces"
 authors = [{name = "Alexander Bonkowski", email = "alexander.bonkowski@rwth-aachen.de"}]
 maintainers = [{name = "Alexander Bonkowski"}]
@@ -34,9 +34,9 @@ Package = "https://pypi.org/project/agility/"
 
 [project.optional-dependencies]
 strict = [
-    "numpy==2.0.1",
+    "numpy==2.1.0",
     "pandas==2.2.2",
-    "scipy==1.13.1",
+    "scipy==1.14.1",
     "seaborn==0.13.2",
 ]
 tests = [
@@ -81,6 +81,9 @@ lint.ignore = [
 ]
 lint.pydocstyle.convention = "google"
 lint.isort.required-imports = ["from __future__ import annotations"]
+
+[tool.ruff.lint.per-file-ignores]
+"*.ipynb" = ["S", "T201"]
 
 [tool.mypy]
 ignore_missing_imports = true
