@@ -46,3 +46,9 @@ repos:
         # MD033: no inline HTML
         # MD041: first line in a file should be a top-level heading
         args: [--disable, MD013, MD033, MD041, "--"]
+
+  - repo: https://github.com/kynan/nbstripout
+    rev: 0.7.1
+    hooks:
+      - id: nbstripout
+        args: [--drop-empty-cells, --keep-output]
