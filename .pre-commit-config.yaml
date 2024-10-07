@@ -35,7 +35,8 @@ repos:
     rev: v2.3.0
     hooks:
       - id: codespell
-        stages: [ Nonepre-commitNone, commit-msg ]
+        stages: [ pre-commit, commit-msg ]
+
         additional_dependencies: [tomli]
 
   - repo: https://github.com/igorshubovych/markdownlint-cli
