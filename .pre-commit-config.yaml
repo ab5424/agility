@@ -8,14 +8,14 @@ ci:
 
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.6.8
+    rev: v0.6.9
     hooks:
       - id: ruff
         args: [--fix]
       - id: ruff-format
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+    rev: v5.0.0
     hooks:
       - id: check-yaml
       - id: end-of-file-fixer
@@ -27,7 +27,7 @@ repos:
       - id: mypy
 
   - repo: https://github.com/RobertCraigie/pyright-python
-    rev: v1.1.382.post1
+    rev: v1.1.383
     hooks:
       - id: pyright
 
@@ -35,7 +35,8 @@ repos:
     rev: v2.3.0
     hooks:
       - id: codespell
-        stages: [ commit, commit-msg ]
+        stages: [ pre-commit, commit-msg ]
+
         additional_dependencies: [tomli]
 
   - repo: https://github.com/igorshubovych/markdownlint-cli
