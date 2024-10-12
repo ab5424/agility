@@ -34,8 +34,8 @@ Package = "https://pypi.org/project/agility/"
 
 [project.optional-dependencies]
 strict = [
-    "numpy==2.1.1",
-    "pandas==2.2.2",
+    "numpy==2.1.2",
+    "pandas==2.2.3",
     "scipy==1.14.1",
     "seaborn==0.13.2",
 ]
@@ -45,7 +45,7 @@ tests = [
     "pytest>=8",
 ]
 ovito = [
-    "ovito>=3.8",
+    "ovito>=3.8,<3.11", # ovito 3.11 has import issues
 ]
 ase = [
     "ase>=3.23",
