@@ -45,7 +45,7 @@ tests = [
     "pytest>=8",
 ]
 ovito = [
-    "ovito>=3.8,<3.11", # ovito 3.11 has import issues
+    "ovito>=3.8",
 ]
 ase = [
     "ase>=3.23",

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from importlib.metadata import version
 from importlib.util import find_spec
 from pathlib import Path
 from unittest import TestCase
@@ -14,6 +15,12 @@ from agility.analysis import GBStructure
 
 MODULE_DIR = Path(__file__).absolute().parent
 TEST_FILES_DIR = Path(MODULE_DIR / ".." / ".." / "tests" / "files")
+
+# There is a breaking change in ovito 3.11 in the CNA modifier
+if find_spec("ovito"):
+    OVITO_VERSION = tuple(int(part) for part in version("ovito").split(".") if part.isdigit())
+    BREAKING_VERSION = tuple(map(int, "3.11".split(".")))
+    BREAKING = OVITO_VERSION < BREAKING_VERSION
 
 
 @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
@@ -31,13 +38,13 @@ class TestGBStructure(TestCase):
         self.data.perform_cna(enabled=("fcc"))
         crystalline_atoms = self.data.get_crystalline_atoms()
         non_crystalline_atoms = self.data.get_non_crystalline_atoms()
-        assert len(crystalline_atoms) == 4320
-        assert len(non_crystalline_atoms) == 3361
+        assert len(crystalline_atoms) == (4320 if BREAKING else 4330)
+        assert len(non_crystalline_atoms) == (3361 if BREAKING else 3351)
         self.data.perform_cna(mode="AdaptiveCutoff", enabled=("fcc"))
         crystalline_atoms = self.data.get_crystalline_atoms()
         non_crystalline_atoms = self.data.get_non_crystalline_atoms()
-        assert len(crystalline_atoms) == 4275
-        assert len(non_crystalline_atoms) == 3406
+        assert len(crystalline_atoms) == (4275 if BREAKING else 4277)
+        assert len(non_crystalline_atoms) == (3406 if BREAKING else 3404)
 
     def test_ptm(self) -> None:
         """Test Polyhedral Template Matching method."""
@@ -52,7 +59,7 @@ class TestGBStructure(TestCase):
         """Test the GB fraction method."""
         self.data.perform_cna(enabled=("fcc"))
         gb_fraction = self.data.get_gb_fraction()
-        assert_allclose(gb_fraction, 3361 / 7681)  # type: ignore[arg-type]
+        assert_allclose(gb_fraction, float(3361 / 7681 if BREAKING else 3351 / 7681))
 
     def test_grain_segmentation(self) -> None:
         """Test the grain segmentation method."""
