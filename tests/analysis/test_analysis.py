@@ -16,6 +16,12 @@ from agility.analysis import GBStructure
 MODULE_DIR = Path(__file__).absolute().parent
 TEST_FILES_DIR = Path(MODULE_DIR / ".." / ".." / "tests" / "files")
 
+# There is a breaking change in ovito 3.11 in the CNA modifier
+if find_spec("ovito"):
+    OVITO_VERSION = tuple(map(int, version("ovito").split(".")))
+    BREAKING_VERSION = tuple(map(int, "3.11".split(".")))
+    BREAKING = OVITO_VERSION >= BREAKING_VERSION
+
 
 @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
 class TestGBStructure(TestCase):
@@ -32,13 +38,13 @@ class TestGBStructure(TestCase):
         self.data.perform_cna(enabled=("fcc"))
         crystalline_atoms = self.data.get_crystalline_atoms()
         non_crystalline_atoms = self.data.get_non_crystalline_atoms()
-        assert len(crystalline_atoms) == 4320 if version("ovito") < "3.11" else 4330
-        assert len(non_crystalline_atoms) == 3361 if version("ovito") < "3.11" else 3351
+        assert len(crystalline_atoms) == 4320 if BREAKING_VERSION else 4330
+        assert len(non_crystalline_atoms) == 3361 if BREAKING_VERSION else 3351
         self.data.perform_cna(mode="AdaptiveCutoff", enabled=("fcc"))
         crystalline_atoms = self.data.get_crystalline_atoms()
         non_crystalline_atoms = self.data.get_non_crystalline_atoms()
-        assert len(crystalline_atoms) == 4275 if version("ovito") < "3.11" else 4277
-        assert len(non_crystalline_atoms) == 3406 if version("ovito") < "3.11" else 3404
+        assert len(crystalline_atoms) == 4275 if BREAKING_VERSION else 4277
+        assert len(non_crystalline_atoms) == 3406 if BREAKING_VERSION else 3404
 
     def test_ptm(self) -> None:
         """Test Polyhedral Template Matching method."""
