@@ -18,7 +18,7 @@ TEST_FILES_DIR = Path(MODULE_DIR / ".." / ".." / "tests" / "files")
 
 # There is a breaking change in ovito 3.11 in the CNA modifier
 if find_spec("ovito"):
-    OVITO_VERSION = tuple(map(int, version("ovito").split(".")))
+    OVITO_VERSION = tuple(int(part) for part in version("ovito").split(".") if part.isdigit())
     BREAKING_VERSION = tuple(map(int, "3.11".split(".")))
     BREAKING = OVITO_VERSION < BREAKING_VERSION
 
