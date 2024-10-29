@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from importlib.metadata import version
 from importlib.util import find_spec
 from pathlib import Path
 from unittest import TestCase
@@ -31,8 +32,8 @@ class TestGBStructure(TestCase):
         self.data.perform_cna(enabled=("fcc"))
         crystalline_atoms = self.data.get_crystalline_atoms()
         non_crystalline_atoms = self.data.get_non_crystalline_atoms()
-        assert len(crystalline_atoms) == 4320
-        assert len(non_crystalline_atoms) == 3361
+        assert len(crystalline_atoms) == 4320 if version("ovito") < "3.11" else 4330
+        assert len(non_crystalline_atoms) == 3361 if version("ovito") < "3.11" else 3351
         self.data.perform_cna(mode="AdaptiveCutoff", enabled=("fcc"))
         crystalline_atoms = self.data.get_crystalline_atoms()
         non_crystalline_atoms = self.data.get_non_crystalline_atoms()
@@ -52,7 +53,7 @@ class TestGBStructure(TestCase):
         """Test the GB fraction method."""
         self.data.perform_cna(enabled=("fcc"))
         gb_fraction = self.data.get_gb_fraction()
-        assert_allclose(gb_fraction, 3361 / 7681)  # type: ignore[arg-type]
+        assert_allclose(gb_fraction, 3361 / 7681 if version("ovito") < "3.11" else 3351 / 7681) # type: ignore[arg-type]
 
     def test_grain_segmentation(self) -> None:
         """Test the grain segmentation method."""
