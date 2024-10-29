@@ -37,8 +37,8 @@ class TestGBStructure(TestCase):
         self.data.perform_cna(mode="AdaptiveCutoff", enabled=("fcc"))
         crystalline_atoms = self.data.get_crystalline_atoms()
         non_crystalline_atoms = self.data.get_non_crystalline_atoms()
-        assert len(crystalline_atoms) == 4275
-        assert len(non_crystalline_atoms) == 3406
+        assert len(crystalline_atoms) == 4275 if version("ovito") < "3.11" else 4277
+        assert len(non_crystalline_atoms) == 3406 if version("ovito") < "3.11" else 3404
 
     def test_ptm(self) -> None:
         """Test Polyhedral Template Matching method."""
