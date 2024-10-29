@@ -59,7 +59,7 @@ class TestGBStructure(TestCase):
         """Test the GB fraction method."""
         self.data.perform_cna(enabled=("fcc"))
         gb_fraction = self.data.get_gb_fraction()
-        assert_allclose(gb_fraction, 3361 / 7681 if version("ovito") < "3.11" else 3351 / 7681)  # type: ignore[arg-type]
+        assert_allclose(gb_fraction, float(3361 / 7681 if BREAKING_VERSION else 3351 / 7681))
 
     def test_grain_segmentation(self) -> None:
         """Test the grain segmentation method."""
