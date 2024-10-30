@@ -67,7 +67,7 @@ def plot_face_order(data: DataCollection, plot_property: str = "Max Face Order")
             zip(
                 data.particles["Particle Identifier"],
                 data.particles[plot_property],
-                strict=False,
+                strict=True,
             ),
         ),
         columns=["Particle Identifier", plot_property],
