@@ -851,7 +851,7 @@ class GBStructure:
                         i[0]
                         for i in zip(
                             self.data.particles["Particle Identifier"],
-                            self.data.particles["Structure Type"],
+                            self.data.particles["Structure Type"], strict=False,
                         )
                         if i[1] == 0
                     ]
@@ -881,7 +881,7 @@ class GBStructure:
                 list(
                     zip(
                         ids,
-                        types,
+                        types, strict=False,
                     ),
                 ),
                 columns=["Particle Identifier", "Structure Type"],
@@ -916,7 +916,7 @@ class GBStructure:
                         i[0]
                         for i in zip(
                             self.data.particles["Particle Identifier"],
-                            self.data.particles["Structure Type"],
+                            self.data.particles["Structure Type"], strict=False,
                         )
                         if i[1] != 0
                     ]
@@ -1055,7 +1055,7 @@ class GBStructure:
                     i[0]
                     for i in zip(
                         self.data.particles["Particle Identifier"],
-                        self.data.particles["Particle Type"],
+                        self.data.particles["Particle Type"], strict=False,
                     )
                     if i[1] == atom_type
                 ]
