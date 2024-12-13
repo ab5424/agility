@@ -65,7 +65,6 @@ lint.select = ["ALL"]
 lint.ignore = [
   "ANN002",  # Missing type annotation for `*args`
   "ANN003",  # Missing type annotation for `**kwargs`
-  "ANN101",  # Missing type annotation for self in method
   "C901",    # Function is too complex
   "ERA001",  # Found commented-out code
   "FIX002",  # Line contains TODO, consider resolving the issue
