@@ -34,7 +34,7 @@ Package = "https://pypi.org/project/agility/"
 
 [project.optional-dependencies]
 strict = [
-    "numpy==2.2.2",
+    "numpy==2.2.3",
     "pandas==2.2.3",
     "scipy==1.15.2",
     "seaborn==0.13.2",
