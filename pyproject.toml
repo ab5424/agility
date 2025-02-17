@@ -36,7 +36,7 @@ Package = "https://pypi.org/project/agility/"
 strict = [
     "numpy==2.2.3",
     "pandas==2.2.3",
-    "scipy==1.15.1",
+    "scipy==1.15.2",
     "seaborn==0.13.2",
 ]
 tests = [
