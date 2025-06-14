@@ -2,6 +2,7 @@
 [![code coverage](https://img.shields.io/codecov/c/gh/ab5424/agility)](https://codecov.io/gh/ab5424/agility)
 [![pre-commit.ci status](https://results.pre-commit.ci/badge/github/ab5424/agility/main.svg)](https://results.pre-commit.ci/latest/github/ab5424/agility/main)
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/ab5424/agility/HEAD)
+[![DOI](https://zenodo.org/badge/411704224.svg)](https://doi.org/10.5281/zenodo.15662617)
 
 # Agility
 
