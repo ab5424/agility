@@ -29,7 +29,7 @@ def render_ovito(pipeline: Pipeline, res_factor: int = 1) -> QImage:
         image: Image object. Can be saved via image.save("figure.png")
 
     """
-    from ovito.vis import TachyonRenderer, Viewport  # noqa: PLC0415
+    from ovito.vis import TachyonRenderer, Viewport
 
     pipeline.add_to_scene()
 
@@ -60,7 +60,7 @@ def plot_face_order(data: DataCollection, plot_property: str = "Max Face Order")
         Histogram plot.
 
     """
-    import seaborn as sns  # noqa: PLC0415
+    import seaborn as sns
 
     df_temp = pd.DataFrame(
         list(
