@@ -28,7 +28,7 @@ class TestPlotting(TestCase):
     def test_render_ovito(self) -> None:
         """Test the render_ovito method."""
         image = render_ovito(self.data.pipeline)
-        from PySide6.QtGui import QImage
+        from PySide6.QtGui import QImage  # noqa: PLC0415
 
         assert isinstance(image, QImage)
         assert image.width() == 282
