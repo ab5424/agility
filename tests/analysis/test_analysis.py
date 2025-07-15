@@ -63,7 +63,7 @@ class TestGBStructure(TestCase):
 
     def test_grain_segmentation(self) -> None:
         """Test the grain segmentation method."""
-        from ovito.modifiers import GrainSegmentationModifier
+        from ovito.modifiers import GrainSegmentationModifier  # noqa: PLC0415
 
         self.data.perform_ptm(enabled=("fcc"), output_orientation=True)
         self.data.get_distinct_grains(compute=False)

@@ -54,11 +54,11 @@ class GBStructure:
                 ipy = False  # Probably standard Python interpreter
 
             if ipy:
-                from lammps import IPyLammps
+                from lammps import IPyLammps  # noqa: PLC0415
 
                 self.pylmp = IPyLammps()
             else:
-                from lammps import PyLammps
+                from lammps import PyLammps  # noqa: PLC0415
 
                 self.pylmp = PyLammps()
 
@@ -76,12 +76,12 @@ class GBStructure:
             None
         """
         if self.backend == "ovito":
-            from ovito.io import import_file
+            from ovito.io import import_file  # noqa: PLC0415
 
             self.pipeline = import_file(str(filename))
 
         if self.backend == "pymatgen":
-            from pymatgen.core import Structure
+            from pymatgen.core import Structure  # noqa: PLC0415
 
             self.data.structure = Structure.from_file(filename)
 
@@ -128,7 +128,7 @@ class GBStructure:
             **kwargs: Additional arguments for saving the file.
         """
         if self.backend == "ovito":
-            from ovito.io import export_file
+            from ovito.io import export_file  # noqa: PLC0415
 
             export_file(self.pipeline, filename, file_type, **kwargs)
 
@@ -163,7 +163,7 @@ class GBStructure:
 
         """
         if self.backend == "ovito":
-            from ovito.modifiers import DeleteSelectedModifier
+            from ovito.modifiers import DeleteSelectedModifier  # noqa: PLC0415
 
             self.select_particles_by_type(particle_type)
             self.pipeline.modifiers.append(DeleteSelectedModifier())
@@ -201,7 +201,7 @@ class GBStructure:
             #     SelectTypeModifier,
             #     DeleteSelectedModifier,
             # )
-            from ovito.modifiers import SelectTypeModifier
+            from ovito.modifiers import SelectTypeModifier  # noqa: PLC0415
 
             def assign_particle_types(  # noqa: ANN202
                 frame,  # noqa: ANN001,ARG001
@@ -273,7 +273,7 @@ class GBStructure:
             self.pipeline.modifiers.append(modify)
 
             if expand_nearest_neighbors or expand_cutoff:
-                from ovito.plugins.ParticlesPython import ExpandSelectionModifier
+                from ovito.plugins.ParticlesPython import ExpandSelectionModifier  # noqa: PLC0415
 
                 if expand_nearest_neighbors:
                     self.pipeline.modifiers.append(
@@ -298,7 +298,7 @@ class GBStructure:
 
     def _invert_selection(self) -> None:
         if self.backend == "ovito":
-            from ovito.modifiers import InvertSelectionModifier
+            from ovito.modifiers import InvertSelectionModifier  # noqa: PLC0415
 
             self.pipeline.modifiers.append(InvertSelectionModifier())
 
@@ -308,13 +308,13 @@ class GBStructure:
 
     def _delete_selection(self) -> None:
         if self.backend == "ovito":
-            from ovito.modifiers import DeleteSelectedModifier
+            from ovito.modifiers import DeleteSelectedModifier  # noqa: PLC0415
 
             self.pipeline.modifiers.append(DeleteSelectedModifier())
 
     def _clear_selection(self) -> None:
         if self.backend == "ovito":
-            from ovito.modifiers import ClearSelectionModifier
+            from ovito.modifiers import ClearSelectionModifier  # noqa: PLC0415
 
             self.pipeline.modifiers.append(ClearSelectionModifier())
 
@@ -347,7 +347,7 @@ class GBStructure:
         """
         if self.backend == "ovito":
             # TODO: Enable/disable structure types
-            from ovito.modifiers import CommonNeighborAnalysisModifier
+            from ovito.modifiers import CommonNeighborAnalysisModifier  # noqa: PLC0415
 
             cna_modes = {
                 "IntervalCutoff": CommonNeighborAnalysisModifier.Mode.IntervalCutoff,
@@ -447,7 +447,7 @@ class GBStructure:
             None
         """
         if self.backend == "ovito":
-            from ovito.plugins.ParticlesPython import VoronoiAnalysisModifier
+            from ovito.plugins.ParticlesPython import VoronoiAnalysisModifier  # noqa: PLC0415
 
             voro = VoronoiAnalysisModifier(
                 compute_indices=True,
@@ -509,7 +509,7 @@ class GBStructure:
                 msg = f"Enabled structure type {i} unknown"
                 raise ValueError(msg)
         if self.backend == "ovito":
-            from ovito.modifiers import PolyhedralTemplateMatchingModifier
+            from ovito.modifiers import PolyhedralTemplateMatchingModifier  # noqa: PLC0415
 
             _ptm = PolyhedralTemplateMatchingModifier(  # type: ignore[call-arg]
                 rmsd_cutoff=rmsd_threshold,
@@ -573,7 +573,7 @@ class GBStructure:
         Returns:
         """
         if self.backend == "ovito":
-            from ovito.plugins.ParticlesPython import AcklandJonesModifier
+            from ovito.plugins.ParticlesPython import AcklandJonesModifier  # noqa: PLC0415
 
             ajm = AcklandJonesModifier()
             self.pipeline.modifiers.append(ajm)
@@ -600,7 +600,7 @@ class GBStructure:
         Returns:
         """
         if self.backend == "ovito":
-            from ovito.plugins.ParticlesPython import CentroSymmetryModifier
+            from ovito.plugins.ParticlesPython import CentroSymmetryModifier  # noqa: PLC0415
 
             csp = CentroSymmetryModifier()
             self.pipeline.modifiers.append(csp)
@@ -641,7 +641,7 @@ class GBStructure:
             None
         """
         if self.backend == "ovito":
-            from ovito.modifiers import GrainSegmentationModifier
+            from ovito.modifiers import GrainSegmentationModifier  # noqa: PLC0415
 
             if algorithm == "GraphClusteringAuto":
                 gsm_mode = GrainSegmentationModifier.Algorithm.GraphClusteringAuto
@@ -713,7 +713,7 @@ class GBStructure:
 
             finder = get_finder(self.data, cutoff=cutoff, nearest_n=nearest_n)
             if nearest_n:
-                from ovito.data import NearestNeighborFinder
+                from ovito.data import NearestNeighborFinder  # noqa: PLC0415
             else:
                 NearestNeighborFinder = None  # noqa: N806
 
@@ -868,7 +868,7 @@ class GBStructure:
                 raise not_implemented(self.backend)
         elif self.backend == "lammps":
             # Supported analysis methods: cna, ptm,
-            from lammps import LMP_STYLE_ATOM, LMP_TYPE_VECTOR
+            from lammps import LMP_STYLE_ATOM, LMP_TYPE_VECTOR  # noqa: PLC0415
 
             # ids = []
             # for i in range(len(self.pylmp.atoms)):
@@ -977,7 +977,7 @@ class GBStructure:
         if self.backend == "ovito":
             # finder: CutoffNeighborFinder | NearestNeighborFinder
 
-            from ovito.data import CutoffNeighborFinder, NearestNeighborFinder
+            from ovito.data import CutoffNeighborFinder, NearestNeighborFinder  # noqa: PLC0415
 
             finder: CutoffNeighborFinder | NearestNeighborFinder
             if cutoff:
@@ -1128,7 +1128,7 @@ class GBStructure:
             convert_to: Backend to convert to.
         """
         if self.backend == "lammps":
-            import datetime
+            import datetime  # noqa: PLC0415
 
             filename = (
                 datetime.datetime.now(tz=datetime.timezone.utc).strftime("%d%m%Y_%H%M%S") + ".lmp"
@@ -1180,7 +1180,7 @@ def get_finder(data, cutoff: float | None = None, nearest_n: int | None = None):
         finder: Neighbor finder.
 
     """
-    from ovito.data import CutoffNeighborFinder, NearestNeighborFinder
+    from ovito.data import CutoffNeighborFinder, NearestNeighborFinder  # noqa: PLC0415
 
     finder: CutoffNeighborFinder | NearestNeighborFinder
 
