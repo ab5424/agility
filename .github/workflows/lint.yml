@@ -21,15 +21,12 @@ jobs:
 
     - name: Install dependencies
       run: |
-        pip install ruff mypy 'pyright<=1.1.385' --upgrade
+        pip install ruff ty --upgrade
 
     - name: ruff
       run: |
         ruff check .
         ruff format --check .
 
-    - name: mypy
-      run: mypy ${{ github.event.repository.name }}
-
-    - name: pyright
-      run: pyright
+    - name: ty
+      run: ty check
