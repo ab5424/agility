@@ -6,7 +6,7 @@
 
 ## Project Structure
 
-```
+```text
 agility/          # Main package source
   __init__.py
   analysis.py     # Core GBStructure class and analysis routines
@@ -55,11 +55,10 @@ ruff check .
 ruff format --check .
 
 # Type checking
-mypy agility
-pyright
+ty check
 ```
 
-Pre-commit hooks (configured in `.pre-commit-config.yaml`) run ruff, mypy, pyright, codespell, markdownlint, and nbstripout automatically on commit. Run all hooks manually with:
+Pre-commit hooks (configured in `.pre-commit-config.yaml`) run ruff, ty, codespell, markdownlint, and nbstripout automatically on commit. Run all hooks manually with:
 
 ```bash
 pre-commit run --all-files

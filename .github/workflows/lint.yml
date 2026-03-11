@@ -8,25 +8,16 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.10", "3.13"]
     steps:
     - uses: actions/checkout@v6
 
-    - name: Set up Python ${{ matrix.python-version }}
+    - name: Set up Python
       uses: actions/setup-python@v6
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: "3.13"
 
-    - name: Install dependencies
-      run: |
-        pip install ruff ty --upgrade
+    - name: Install pre-commit
+      run: pip install pre-commit
 
-    - name: ruff
-      run: |
-        ruff check .
-        ruff format --check .
-
-    - name: ty
-      run: ty check
+    - name: Run pre-commit
+      run: pre-commit run --all-files
