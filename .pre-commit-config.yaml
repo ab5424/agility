@@ -2,7 +2,6 @@ exclude: ^(examples)
 
 ci:
   autoupdate_schedule: monthly
-  skip: [pyright]
   autofix_commit_msg: pre-commit auto-fixes
   autoupdate_commit_msg: pre-commit autoupdate
 
@@ -21,15 +20,15 @@ repos:
       - id: end-of-file-fixer
       - id: trailing-whitespace
 
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.19.1
+  - repo: local
     hooks:
-      - id: mypy
-
-  - repo: https://github.com/RobertCraigie/pyright-python
-    rev: v1.1.408
-    hooks:
-      - id: pyright
+      - id: ty
+        name: ty
+        entry: ty check
+        language: python
+        types: [python]
+        pass_filenames: false
+        additional_dependencies: [ty]
 
   - repo: https://github.com/codespell-project/codespell
     rev: v2.4.1

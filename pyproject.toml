@@ -84,17 +84,16 @@ lint.isort.required-imports = ["from __future__ import annotations"]
 [tool.ruff.lint.per-file-ignores]
 "*.ipynb" = ["S", "T201"]
 
-[tool.mypy]
-ignore_missing_imports = true
+[tool.ty.rules]
+unresolved-import = "ignore"
+possibly-unresolved-reference = "warn"
+invalid-type-form = "ignore"
 
-[tool.pyright]
-typeCheckingMode = "off"
-reportPossiblyUnboundVariable = true
-reportUnboundVariable = true
-reportMissingImports = false
-reportMissingModuleSource = false
-reportInvalidTypeForm = false
-exclude = ["**/tests"]
+[tool.ty.analysis]
+replace-imports-with-any = ["ovito", "ovito.**", "lammps", "lammps.**", "ase", "ase.**", "pymatgen", "pymatgen.**"]
+
+[tool.ty.src]
+exclude = ["**/tests", "examples"]
 
 [tool.codespell]
 ignore-words-list = [
