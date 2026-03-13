@@ -132,6 +132,12 @@ class TestGBStructurePymatgen(TestCase):
         species_remaining = {str(s) for s in self.gbs.data.structure.species}
         assert species_remaining == {"Cl"}
 
+    def test_delete_particles_resets_selection(self) -> None:
+        """Test that delete_particles resets the selection list after mutating the structure."""
+        self.gbs.data.selection = [4, 5, 6, 7]
+        self.gbs.delete_particles(["Na"])
+        assert self.gbs.data.selection == []
+
     def test_invert_selection_empty(self) -> None:
         """Test that inverting an empty selection selects all sites."""
         n_sites = len(self.gbs.data.structure)
@@ -169,3 +175,33 @@ class TestGBStructurePymatgen(TestCase):
         self.gbs._invert_selection()  # noqa: SLF001
 
         assert self.gbs.data.selection == original_selection
+
+    def test_delete_selection(self) -> None:
+        """Test that _delete_selection removes the selected sites from the structure."""
+        # Select the 4 Na sites (indices 0-3 in the NaCl structure)
+        self.gbs.data.selection = [0, 1, 2, 3]
+
+        self.gbs._delete_selection()  # noqa: SLF001
+
+        # 4 sites should have been removed, leaving 4 Cl sites
+        assert len(self.gbs.data.structure) == 4
+        assert self.gbs.data.selection == []
+
+    def test_invert_then_delete_selection(self) -> None:
+        """Test the invert+delete workflow removes the non-selected sites."""
+        n_sites = len(self.gbs.data.structure)
+        # Start with 4 Na sites selected
+        self.gbs.data.selection = [0, 1, 2, 3]
+
+        # Invert: now the 4 Cl sites (indices 4-7) are selected
+        self.gbs._invert_selection()  # noqa: SLF001
+        assert self.gbs.data.selection == list(range(4, n_sites))
+
+        # Delete the selected (Cl) sites
+        self.gbs._delete_selection()  # noqa: SLF001
+
+        # Only the 4 Na sites should remain
+        assert len(self.gbs.data.structure) == 4
+        species_remaining = {str(s) for s in self.gbs.data.structure.species}
+        assert species_remaining == {"Na"}
+        assert self.gbs.data.selection == []

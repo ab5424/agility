@@ -177,6 +177,7 @@ class GBStructure:
 
         elif self.backend == "pymatgen":
             self.data.structure.remove_species(particle_type)
+            self.data.selection = []
 
         elif self.backend == "babel":
             pass
@@ -305,7 +306,7 @@ class GBStructure:
 
             self.pipeline.modifiers.append(InvertSelectionModifier())
 
-        if self.backend == "pymatgen":
+        elif self.backend == "pymatgen":
             all_indices = set(range(len(self.data.structure)))
             selected_set = set(self.data.selection)
             self.data.selection = sorted(all_indices - selected_set)
@@ -315,6 +316,10 @@ class GBStructure:
             from ovito.modifiers import DeleteSelectedModifier  # noqa: PLC0415
 
             self.pipeline.modifiers.append(DeleteSelectedModifier())
+
+        elif self.backend == "pymatgen":
+            self.data.structure.remove_sites(self.data.selection)
+            self.data.selection = []
 
     def _clear_selection(self) -> None:
         if self.backend == "ovito":
