@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import pathlib
 import random
+import types
 import warnings
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -83,7 +84,9 @@ class GBStructure:
         if self.backend == "pymatgen":
             from pymatgen.core import Structure  # noqa: PLC0415
 
+            self.data = types.SimpleNamespace()
             self.data.structure = Structure.from_file(filename)
+            self.data.selection = []
 
         if self.backend == "lammps":
             self._init_lmp(filename=filename, **kwargs)
@@ -174,6 +177,7 @@ class GBStructure:
 
         elif self.backend == "pymatgen":
             self.data.structure.remove_species(particle_type)
+            self.data.selection = []
 
         elif self.backend == "babel":
             pass
@@ -291,10 +295,19 @@ class GBStructure:
                             iterations=iterations,
                         ),
                     )
-            if invert:
-                self._invert_selection()  # for bulk ions
-            if delete:
-                self._delete_selection()
+
+        elif self.backend == "pymatgen":
+            if self.data.selection:
+                warnings.warn(
+                    "Selection currently not empty. Overwriting selection.",
+                    stacklevel=2,
+                )
+            self.data.selection = list(list_ids)
+
+        if invert:
+            self._invert_selection()  # for bulk ions
+        if delete:
+            self._delete_selection()
 
     def _invert_selection(self) -> None:
         if self.backend == "ovito":
@@ -302,16 +315,20 @@ class GBStructure:
 
             self.pipeline.modifiers.append(InvertSelectionModifier())
 
-        if self.backend == "pymatgen":
-            # TODO @ab5424: Look which ids are in the list and invert by self.structure
-            # https://github.com/ab5424/agility/issues/170
-            pass
+        elif self.backend == "pymatgen":
+            all_indices = set(range(len(self.data.structure)))
+            selected_set = set(self.data.selection)
+            self.data.selection = sorted(all_indices - selected_set)
 
     def _delete_selection(self) -> None:
         if self.backend == "ovito":
             from ovito.modifiers import DeleteSelectedModifier  # noqa: PLC0415
 
             self.pipeline.modifiers.append(DeleteSelectedModifier())
+
+        elif self.backend == "pymatgen":
+            self.data.structure.remove_sites(self.data.selection)
+            self.data.selection = []
 
     def _clear_selection(self) -> None:
         if self.backend == "ovito":
