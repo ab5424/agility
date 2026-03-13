@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agility"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Analysis tool for simulations of grain boundaries and interfaces"
 authors = [{name = "Alexander Bonkowski", email = "alexander.bonkowski@rwth-aachen.de"}]
 maintainers = [{name = "Alexander Bonkowski"}]
@@ -23,6 +23,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Scientific/Engineering :: Physics",
     "Topic :: Scientific/Engineering :: Chemistry",
     "Topic :: Software Development :: Libraries :: Python Modules",
@@ -54,6 +55,9 @@ pymatgen = [
     "pymatgen>=2024",
 ]
 
+[tool.setuptools.dynamic]
+version = {"attr" = "agility.__version__"}
+
 [tool.setuptools.packages.find]
 include = ["agility", "agility.*"]
 exclude = ["tests", "tests.*"]
@@ -73,13 +77,13 @@ lint.ignore = [
   "PLR0912", # too-many-branches
   "PLR0913", # too-many-arguments
   "PLR2004", # magic-value-comparison
-  "S101",    # Use of assert detected
 ]
 lint.pydocstyle.convention = "google"
 lint.isort.required-imports = ["from __future__ import annotations"]
 
 [tool.ruff.lint.per-file-ignores]
 "*.ipynb" = ["S", "T201"]
+"tests/**" = ["S101"] # Use of assert detected
 
 [tool.ty.rules]
 unresolved-import = "ignore"
