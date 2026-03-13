@@ -77,10 +77,12 @@ def plot_face_order(data: DataCollection, plot_property: str = "Max Face Order")
     return hist_plot.figure
 
 
-# TODO: Visualize Misorientation distribution function
+# TODO @ab5424: Visualize Misorientation distribution function
+# https://github.com/ab5424/agility/issues/184
 # https://www.osti.gov/pages/servlets/purl/1657149
 # https://mtex-toolbox.github.io/index.html
 
-# TODO: get RDFs https://github.com/by256/rdfpy
+# TODO @ab5424: Implement RDF calculation
+# https://github.com/ab5424/agility/issues/185
 # https://rdfpy.readthedocs.io/en/latest/introduction_and_examples.html
 # #example-rdf-of-a-crystal-structure
