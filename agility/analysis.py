@@ -304,7 +304,7 @@ class GBStructure:
 
         if self.backend == "pymatgen":
             # TODO @ab5424: Look which ids are in the list and invert by self.structure
-            # https://github.com/ab5424/agility/issues/169
+            # https://github.com/ab5424/agility/issues/170
             pass
 
     def _delete_selection(self) -> None:
@@ -348,7 +348,7 @@ class GBStructure:
         """
         if self.backend == "ovito":
             # TODO @ab5424: Enable/disable structure types
-            # https://github.com/ab5424/agility/issues/170
+            # https://github.com/ab5424/agility/issues/171
             from ovito.modifiers import CommonNeighborAnalysisModifier  # noqa: PLC0415
 
             cna_modes = {
@@ -660,7 +660,7 @@ class GBStructure:
             if compute:
                 self.set_analysis()
             # TODO @ab5424: Get misorientation plot
-            # https://github.com/ab5424/agility/issues/171
+            # https://github.com/ab5424/agility/issues/172
 
     def set_analysis(self) -> None:
         """Compute results.
@@ -835,7 +835,7 @@ class GBStructure:
         return groups_non_selected
 
     # TODO @ab5424: Rename to particles
-    # https://github.com/ab5424/agility/issues/172
+    # https://github.com/ab5424/agility/issues/173
     def get_non_crystalline_atoms(self, mode: str = "cna", return_type: str = "Identifier") -> list:
         """Get the atoms at the grain boundary.
 
@@ -909,7 +909,7 @@ class GBStructure:
         return gb_list
 
     # TODO @ab5424: Rename to particles
-    # https://github.com/ab5424/agility/issues/172
+    # https://github.com/ab5424/agility/issues/173
     def get_crystalline_atoms(self, return_type: str = "Identifier") -> list:
         """Get the atoms in the bulk, as determined by structural analysis.
 
@@ -952,14 +952,14 @@ class GBStructure:
                 gb_list = []
         elif self.backend == "lammps":
             # TODO @ab5424: Implement lammps backend for get_crystalline_atoms
-            # https://github.com/ab5424/agility/issues/173
+            # https://github.com/ab5424/agility/issues/174
             raise not_implemented(self.backend)
         else:
             raise not_implemented(self.backend)
         return gb_list
 
     # TODO @ab5424: Rename to particles
-    # https://github.com/ab5424/agility/issues/172
+    # https://github.com/ab5424/agility/issues/173
     def get_grain_edge_ions(
         self,
         nearest_n: int = 12,
@@ -1010,7 +1010,7 @@ class GBStructure:
                 gb_edge_ions = [self.data.particles["Particle Identifier"][i] for i in gb_edge_ions]
         elif self.backend == "lammps":
             # TODO @ab5424: Implement lammps backend for get_grain_edge_ions
-            # https://github.com/ab5424/agility/issues/174
+            # https://github.com/ab5424/agility/issues/175
             raise not_implemented(self.backend)
         else:
             raise not_implemented(self.backend)
@@ -1038,14 +1038,14 @@ class GBStructure:
             )
         elif self.backend == "lammps":
             # TODO @ab5424: Implement lammps backend for get_gb_fraction
-            # https://github.com/ab5424/agility/issues/175
+            # https://github.com/ab5424/agility/issues/176
             raise not_implemented(self.backend)
         else:
             raise not_implemented(self.backend)
         return fraction
 
     # TODO @ab5424: Rename to particles
-    # https://github.com/ab5424/agility/issues/172
+    # https://github.com/ab5424/agility/issues/173
     def get_type(self, atom_type: int, return_type: str = "Identifier") -> list:
         """Get all atoms by type.
 
@@ -1092,16 +1092,16 @@ class GBStructure:
 
         elif self.backend == "lammps":
             # TODO @ab5424: Implement lammps backend for get_type
-            # https://github.com/ab5424/agility/issues/176
+            # https://github.com/ab5424/agility/issues/177
             atom_list = []
         else:
             raise not_implemented(self.backend)
         return atom_list
 
     # TODO @ab5424: Add Verkippungswinkel (tilt angle) calculation
-    # https://github.com/ab5424/agility/issues/177
-    # TODO @ab5424: Add Grain Index calculation
     # https://github.com/ab5424/agility/issues/178
+    # TODO @ab5424: Add Grain Index calculation
+    # https://github.com/ab5424/agility/issues/179
 
     def get_fraction(self, numerator: list, denominator: list) -> float:
         """Get fraction of ions/atoms. Helper function.
@@ -1129,7 +1129,7 @@ class GBStructure:
         """
         if self.backend == "ovito":
             # TODO @ab5424: Use render function
-            # https://github.com/ab5424/agility/issues/179
+            # https://github.com/ab5424/agility/issues/180
             pass
         if self.backend == "lammps":
             # Only works with IPython integration
@@ -1164,9 +1164,9 @@ class GBStructureTimeseries(GBStructure):
     """This is a class containing multiple snapshots from a time series."""
 
     # TODO @ab5424: Enable class inheritance in GBStructureTimeseries
-    # https://github.com/ab5424/agility/issues/180
-    # TODO @ab5424: Implement diffusion data retrieval
     # https://github.com/ab5424/agility/issues/181
+    # TODO @ab5424: Implement diffusion data retrieval
+    # https://github.com/ab5424/agility/issues/182
 
     def remove_timesteps(self, timesteps_to_exclude: int) -> None:
         """Remove timesteps from the beginning of a simulation.
@@ -1180,7 +1180,7 @@ class GBStructureTimeseries(GBStructure):
         """
 
     # TODO @ab5424: Differentiate between diffusion along GB, transverse to GB, and between grains
-    # https://github.com/ab5424/agility/issues/182
+    # https://github.com/ab5424/agility/issues/183
 
 
 def get_finder(data, cutoff: float | None = None, nearest_n: int | None = None):  # noqa: ANN001,ANN201
