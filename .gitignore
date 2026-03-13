@@ -3,3 +3,5 @@ agility.egg-info/
 coverage.xml
 .coverage
 .DS_Store
+__pycache__/
+*.pyc
