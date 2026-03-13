@@ -24,7 +24,7 @@ jobs:
         version:
           - { python: "3.10", resolution: lowest-direct, extra: "tests,ovito,ase,pymatgen" }
           - { python: "3.14", resolution: highest, extra: "tests,ovito,ase,pymatgen" }
-        # Add macOS without optional dependencies, running only on python 3.10
+        # Add macOS without optional dependencies, running only on python 3.12
         include:
           - os: macos-latest
             version: { python: "3.12", resolution: highest, extra: "tests,strict" }
