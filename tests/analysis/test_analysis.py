@@ -205,3 +205,22 @@ class TestGBStructurePymatgen(TestCase):
         species_remaining = {str(s) for s in self.gbs.data.structure.species}
         assert species_remaining == {"Na"}
         assert self.gbs.data.selection == []
+
+    def test_select_particles_invert_delete(self) -> None:
+        """Test select_particles via public API: select Na, invert, delete → only Na remains."""
+        # Select the 4 Na sites (indices 0-3), invert (selects Cl), then delete Cl
+        self.gbs.select_particles([0, 1, 2, 3], invert=True, delete=True)
+
+        # Only the 4 Na sites should remain
+        assert len(self.gbs.data.structure) == 4
+        species_remaining = {str(s) for s in self.gbs.data.structure.species}
+        assert species_remaining == {"Na"}
+        assert self.gbs.data.selection == []
+
+    def test_select_particles_no_invert_no_delete(self) -> None:
+        """Test select_particles sets the selection without inverting or deleting."""
+        self.gbs.select_particles([2, 3, 4], invert=False, delete=False)
+
+        assert self.gbs.data.selection == [2, 3, 4]
+        # Structure is unchanged
+        assert len(self.gbs.data.structure) == 8

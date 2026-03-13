@@ -295,10 +295,14 @@ class GBStructure:
                             iterations=iterations,
                         ),
                     )
-            if invert:
-                self._invert_selection()  # for bulk ions
-            if delete:
-                self._delete_selection()
+
+        elif self.backend == "pymatgen":
+            self.data.selection = list(list_ids)
+
+        if invert:
+            self._invert_selection()  # for bulk ions
+        if delete:
+            self._delete_selection()
 
     def _invert_selection(self) -> None:
         if self.backend == "ovito":
