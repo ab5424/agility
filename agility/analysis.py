@@ -297,6 +297,11 @@ class GBStructure:
                     )
 
         elif self.backend == "pymatgen":
+            if self.data.selection:
+                warnings.warn(
+                    "Selection currently not empty. Overwriting selection.",
+                    stacklevel=2,
+                )
             self.data.selection = list(list_ids)
 
         if invert:
