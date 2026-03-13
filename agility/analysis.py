@@ -303,7 +303,8 @@ class GBStructure:
             self.pipeline.modifiers.append(InvertSelectionModifier())
 
         if self.backend == "pymatgen":
-            # TODO: Look which ids are in the list and invert by self.structure
+            # TODO @ab5424: Look which ids are in the list and invert by self.structure
+            # https://github.com/ab5424/agility/issues/169
             pass
 
     def _delete_selection(self) -> None:
@@ -346,7 +347,8 @@ class GBStructure:
             None
         """
         if self.backend == "ovito":
-            # TODO: Enable/disable structure types
+            # TODO @ab5424: Enable/disable structure types
+            # https://github.com/ab5424/agility/issues/170
             from ovito.modifiers import CommonNeighborAnalysisModifier  # noqa: PLC0415
 
             cna_modes = {
@@ -657,7 +659,8 @@ class GBStructure:
             self.pipeline.modifiers.append(gsm)
             if compute:
                 self.set_analysis()
-            # TODO: Get misorientation plot
+            # TODO @ab5424: Get misorientation plot
+            # https://github.com/ab5424/agility/issues/171
 
     def set_analysis(self) -> None:
         """Compute results.
@@ -831,7 +834,8 @@ class GBStructure:
 
         return groups_non_selected
 
-    # TODO: Rename to particles
+    # TODO @ab5424: Rename to particles
+    # https://github.com/ab5424/agility/issues/172
     def get_non_crystalline_atoms(self, mode: str = "cna", return_type: str = "Identifier") -> list:
         """Get the atoms at the grain boundary.
 
@@ -904,7 +908,8 @@ class GBStructure:
             raise not_implemented(self.backend)
         return gb_list
 
-    # TODO: Rename to particles
+    # TODO @ab5424: Rename to particles
+    # https://github.com/ab5424/agility/issues/172
     def get_crystalline_atoms(self, return_type: str = "Identifier") -> list:
         """Get the atoms in the bulk, as determined by structural analysis.
 
@@ -946,13 +951,15 @@ class GBStructure:
                 )
                 gb_list = []
         elif self.backend == "lammps":
-            # TODO: Implement
+            # TODO @ab5424: Implement lammps backend for get_crystalline_atoms
+            # https://github.com/ab5424/agility/issues/173
             raise not_implemented(self.backend)
         else:
             raise not_implemented(self.backend)
         return gb_list
 
-    # TODO: Rename to particles
+    # TODO @ab5424: Rename to particles
+    # https://github.com/ab5424/agility/issues/172
     def get_grain_edge_ions(
         self,
         nearest_n: int = 12,
@@ -1002,7 +1009,8 @@ class GBStructure:
             if return_type == "Identifier":
                 gb_edge_ions = [self.data.particles["Particle Identifier"][i] for i in gb_edge_ions]
         elif self.backend == "lammps":
-            # TODO: Implement
+            # TODO @ab5424: Implement lammps backend for get_grain_edge_ions
+            # https://github.com/ab5424/agility/issues/174
             raise not_implemented(self.backend)
         else:
             raise not_implemented(self.backend)
@@ -1029,13 +1037,15 @@ class GBStructure:
                 stacklevel=2,
             )
         elif self.backend == "lammps":
-            # TODO: Implement
+            # TODO @ab5424: Implement lammps backend for get_gb_fraction
+            # https://github.com/ab5424/agility/issues/175
             raise not_implemented(self.backend)
         else:
             raise not_implemented(self.backend)
         return fraction
 
-    # TODO: Rename to particles
+    # TODO @ab5424: Rename to particles
+    # https://github.com/ab5424/agility/issues/172
     def get_type(self, atom_type: int, return_type: str = "Identifier") -> list:
         """Get all atoms by type.
 
@@ -1081,14 +1091,17 @@ class GBStructure:
             # return list(df_atom["Particle Identifier"])
 
         elif self.backend == "lammps":
-            # TODO: Implement
+            # TODO @ab5424: Implement lammps backend for get_type
+            # https://github.com/ab5424/agility/issues/176
             atom_list = []
         else:
             raise not_implemented(self.backend)
         return atom_list
 
-    # TODO: Verkippungswinkel
-    # TODO: Grain Index
+    # TODO @ab5424: Add Verkippungswinkel (tilt angle) calculation
+    # https://github.com/ab5424/agility/issues/177
+    # TODO @ab5424: Add Grain Index calculation
+    # https://github.com/ab5424/agility/issues/178
 
     def get_fraction(self, numerator: list, denominator: list) -> float:
         """Get fraction of ions/atoms. Helper function.
@@ -1115,7 +1128,8 @@ class GBStructure:
             filename: file to be saved.
         """
         if self.backend == "ovito":
-            # TODO: use render function
+            # TODO @ab5424: Use render function
+            # https://github.com/ab5424/agility/issues/179
             pass
         if self.backend == "lammps":
             # Only works with IPython integration
@@ -1149,9 +1163,10 @@ class GBStructure:
 class GBStructureTimeseries(GBStructure):
     """This is a class containing multiple snapshots from a time series."""
 
-    # TODO: enable inheritance
-    # TODO: get diffusion data
-    # TODO: differentiate between along/across GB
+    # TODO @ab5424: Enable class inheritance in GBStructureTimeseries
+    # https://github.com/ab5424/agility/issues/180
+    # TODO @ab5424: Implement diffusion data retrieval
+    # https://github.com/ab5424/agility/issues/181
 
     def remove_timesteps(self, timesteps_to_exclude: int) -> None:
         """Remove timesteps from the beginning of a simulation.
@@ -1164,8 +1179,8 @@ class GBStructureTimeseries(GBStructure):
             Trajectory object.
         """
 
-    # TODO: Add differentiation between diffusion along a grain boundary, transverse to the GB,
-    # and between grains
+    # TODO @ab5424: Differentiate between diffusion along GB, transverse to GB, and between grains
+    # https://github.com/ab5424/agility/issues/182
 
 
 def get_finder(data, cutoff: float | None = None, nearest_n: int | None = None):  # noqa: ANN001,ANN201
