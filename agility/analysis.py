@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import pathlib
 import random
+import types
 import warnings
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -83,7 +84,9 @@ class GBStructure:
         if self.backend == "pymatgen":
             from pymatgen.core import Structure  # noqa: PLC0415
 
+            self.data = types.SimpleNamespace()
             self.data.structure = Structure.from_file(filename)
+            self.data.selection = []
 
         if self.backend == "lammps":
             self._init_lmp(filename=filename, **kwargs)
@@ -303,9 +306,9 @@ class GBStructure:
             self.pipeline.modifiers.append(InvertSelectionModifier())
 
         if self.backend == "pymatgen":
-            # TODO @ab5424: Look which ids are in the list and invert by self.structure
-            # https://github.com/ab5424/agility/issues/170
-            pass
+            all_indices = set(range(len(self.data.structure)))
+            selected_set = set(self.data.selection)
+            self.data.selection = sorted(all_indices - selected_set)
 
     def _delete_selection(self) -> None:
         if self.backend == "ovito":

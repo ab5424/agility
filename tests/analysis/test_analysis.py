@@ -101,3 +101,71 @@ class TestGBStructureOxide(TestCase):
         non_cryst_anions = self.data.expand_to_non_selected(nearest_n=12)
         assert len(non_cryst_anions) == 2582
         assert len(o) - len(non_cryst_anions) == 3748
+
+
+@pytest.mark.skipif(not find_spec("pymatgen"), reason="pymatgen not installed")
+class TestGBStructurePymatgen(TestCase):
+    """Test the GBStructure class with the pymatgen backend."""
+
+    def setUp(self) -> None:
+        """Set up the test."""
+        self.gbs = GBStructure("pymatgen", f"{TEST_FILES_DIR}/NaCl.vasp")
+
+        assert self.gbs is not None
+
+    def test_read_file(self) -> None:
+        """Test that the structure is loaded correctly from file."""
+        assert self.gbs.data is not None
+        assert self.gbs.data.structure is not None
+        # NaCl has 4 Na + 4 Cl = 8 sites
+        assert len(self.gbs.data.structure) == 8
+
+    def test_read_file_selection_initialized(self) -> None:
+        """Test that the selection list is initialized empty after reading a file."""
+        assert self.gbs.data.selection == []
+
+    def test_delete_particles(self) -> None:
+        """Test that delete_particles removes the specified species."""
+        self.gbs.delete_particles(["Na"])
+        # Only 4 Cl atoms should remain
+        assert len(self.gbs.data.structure) == 4
+        species_remaining = {str(s) for s in self.gbs.data.structure.species}
+        assert species_remaining == {"Cl"}
+
+    def test_invert_selection_empty(self) -> None:
+        """Test that inverting an empty selection selects all sites."""
+        n_sites = len(self.gbs.data.structure)
+        assert self.gbs.data.selection == []
+
+        self.gbs._invert_selection()  # noqa: SLF001
+
+        assert self.gbs.data.selection == list(range(n_sites))
+
+    def test_invert_selection_full(self) -> None:
+        """Test that inverting a full selection yields an empty selection."""
+        n_sites = len(self.gbs.data.structure)
+        self.gbs.data.selection = list(range(n_sites))
+
+        self.gbs._invert_selection()  # noqa: SLF001
+
+        assert self.gbs.data.selection == []
+
+    def test_invert_selection_partial(self) -> None:
+        """Test that inverting a partial selection returns the complementary set."""
+        n_sites = len(self.gbs.data.structure)
+        # Select the first 3 sites
+        self.gbs.data.selection = [0, 1, 2]
+
+        self.gbs._invert_selection()  # noqa: SLF001
+
+        assert self.gbs.data.selection == list(range(3, n_sites))
+
+    def test_invert_selection_twice(self) -> None:
+        """Test that inverting a selection twice restores the original selection."""
+        original_selection = [0, 2, 5]
+        self.gbs.data.selection = list(original_selection)
+
+        self.gbs._invert_selection()  # noqa: SLF001
+        self.gbs._invert_selection()  # noqa: SLF001
+
+        assert self.gbs.data.selection == original_selection
