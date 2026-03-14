@@ -7,6 +7,7 @@ from importlib.metadata import version
 from importlib.util import find_spec
 from pathlib import Path
 from unittest import TestCase
+from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
@@ -226,6 +227,34 @@ class TestGBStructurePymatgen(TestCase):
         # Structure is unchanged
         assert len(self.gbs.data.structure) == 8
 
+    def test_minimise(self) -> None:
+        """Test that minimise calls Structure.relax() and updates the structure."""
+        mock_calculator = MagicMock()
+        mock_relaxed_structure = MagicMock()
+        original_structure = self.gbs.data.structure
+        original_structure.relax = MagicMock(return_value=mock_relaxed_structure)
+
+        self.gbs.minimise(calculator=mock_calculator)
+
+        original_structure.relax.assert_called_once_with(calculator=mock_calculator)
+        assert self.gbs.data.structure is mock_relaxed_structure
+
+    def test_minimise_with_trajectory(self) -> None:
+        """Test that minimise correctly unwraps tuple return from Structure.relax()."""
+        mock_calculator = MagicMock()
+        mock_relaxed_structure = MagicMock()
+        mock_trajectory = MagicMock()
+        original_structure = self.gbs.data.structure
+        original_structure.relax = MagicMock(return_value=(mock_relaxed_structure, mock_trajectory))
+
+        self.gbs.minimise(calculator=mock_calculator, return_trajectory=True)
+
+        original_structure.relax.assert_called_once_with(
+            calculator=mock_calculator,
+            return_trajectory=True,
+        )
+        assert self.gbs.data.structure is mock_relaxed_structure
+
     def test_save_structure_cif(self) -> None:
         """Test that save_structure writes a CIF file with the pymatgen backend."""
         with tempfile.NamedTemporaryFile(suffix=".cif", delete=False) as tmp:
@@ -364,3 +393,41 @@ class TestGBStructureASE(TestCase):
         assert self.gbs.data.selection == [2, 3, 4]
         # Structure is unchanged
         assert len(self.gbs.data.atoms) == 8
+
+    def test_minimise(self) -> None:
+        """Test that minimise sets the calculator and runs the optimizer on atoms."""
+        mock_calculator = MagicMock()
+        mock_optimizer_instance = MagicMock()
+        mock_optimizer_cls = MagicMock(return_value=mock_optimizer_instance)
+
+        self.gbs.minimise(calculator=mock_calculator, optimizer=mock_optimizer_cls)
+
+        assert self.gbs.data.atoms.calc is mock_calculator
+        mock_optimizer_cls.assert_called_once_with(self.gbs.data.atoms)
+        mock_optimizer_instance.run.assert_called_once_with(fmax=0.1, steps=500)
+
+    def test_minimise_custom_fmax_and_steps(self) -> None:
+        """Test that custom fmax and steps are forwarded to the optimizer run() call."""
+        mock_calculator = MagicMock()
+        mock_optimizer_instance = MagicMock()
+        mock_optimizer_cls = MagicMock(return_value=mock_optimizer_instance)
+
+        self.gbs.minimise(
+            calculator=mock_calculator,
+            optimizer=mock_optimizer_cls,
+            fmax=0.01,
+            steps=1000,
+        )
+
+        mock_optimizer_instance.run.assert_called_once_with(fmax=0.01, steps=1000)
+
+    def test_minimise_unknown_optimizer_raises(self) -> None:
+        """Test that passing an unknown optimizer string raises a ValueError."""
+        mock_calculator = MagicMock()
+        with pytest.raises(ValueError, match="Unknown optimizer"):
+            self.gbs.minimise(calculator=mock_calculator, optimizer="UNKNOWN")
+
+    def test_minimise_no_calculator_raises(self) -> None:
+        """Test that minimise raises ValueError when no calculator is set on the atoms."""
+        with pytest.raises(ValueError, match="No ASE calculator"):
+            self.gbs.minimise()
