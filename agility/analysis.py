@@ -81,6 +81,13 @@ class GBStructure:
 
             self.pipeline = import_file(str(filename))
 
+        if self.backend == "ase":
+            from ase.io import read  # noqa: PLC0415
+
+            self.data = types.SimpleNamespace()
+            self.data.atoms = read(str(filename))
+            self.data.selection = []
+
         if self.backend == "pymatgen":
             from pymatgen.core import Structure  # noqa: PLC0415
 
@@ -130,6 +137,11 @@ class GBStructure:
             file_type (str): File type (data, dump, restart)
             **kwargs: Additional arguments for saving the file.
         """
+        if self.backend == "ase":
+            from ase.io import write  # noqa: PLC0415
+
+            write(filename, self.data.atoms, format=file_type, **kwargs)
+
         if self.backend == "ovito":
             from ovito.io import export_file  # noqa: PLC0415
 
@@ -177,6 +189,13 @@ class GBStructure:
 
         elif self.backend == "pymatgen":
             self.data.structure.remove_species(particle_type)
+            self.data.selection = []
+
+        elif self.backend == "ase":
+            indices_to_keep = [
+                i for i, atom in enumerate(self.data.atoms) if atom.symbol not in particle_type
+            ]
+            self.data.atoms = self.data.atoms[indices_to_keep]
             self.data.selection = []
 
         elif self.backend == "babel":
@@ -296,7 +315,7 @@ class GBStructure:
                         ),
                     )
 
-        elif self.backend == "pymatgen":
+        elif self.backend in ("pymatgen", "ase"):
             if self.data.selection:
                 warnings.warn(
                     "Selection currently not empty. Overwriting selection.",
@@ -315,8 +334,9 @@ class GBStructure:
 
             self.pipeline.modifiers.append(InvertSelectionModifier())
 
-        elif self.backend == "pymatgen":
-            all_indices = set(range(len(self.data.structure)))
+        elif self.backend in ("pymatgen", "ase"):
+            structure = self.data.structure if self.backend == "pymatgen" else self.data.atoms
+            all_indices = set(range(len(structure)))
             selected_set = set(self.data.selection)
             self.data.selection = sorted(all_indices - selected_set)
 
@@ -330,11 +350,20 @@ class GBStructure:
             self.data.structure.remove_sites(self.data.selection)
             self.data.selection = []
 
+        elif self.backend == "ase":
+            selected_set = set(self.data.selection)
+            indices_to_keep = [i for i in range(len(self.data.atoms)) if i not in selected_set]
+            self.data.atoms = self.data.atoms[indices_to_keep]
+            self.data.selection = []
+
     def _clear_selection(self) -> None:
         if self.backend == "ovito":
             from ovito.modifiers import ClearSelectionModifier  # noqa: PLC0415
 
             self.pipeline.modifiers.append(ClearSelectionModifier())
+
+        elif self.backend == "ase":
+            self.data.selection = []
 
     def perform_cna(
         self,
