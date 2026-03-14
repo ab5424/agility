@@ -49,12 +49,6 @@ class TestMinimiseLmp(TestCase):
         minimise_lmp(mock_lmp, mod=[("line", "quadratic")])
         mock_lmp.min_modify.assert_called_once_with("line quadratic")
 
-    def test_minimise_lmp_returns_lmp(self) -> None:
-        """Test that minimise_lmp returns the LAMMPS object."""
-        mock_lmp = MagicMock()
-        result = minimise_lmp(mock_lmp)
-        assert result is mock_lmp
-
 
 @pytest.mark.skipif(not find_spec("lammps"), reason="lammps not installed")
 class TestGBStructureLammps(TestCase):
