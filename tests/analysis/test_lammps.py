@@ -33,7 +33,7 @@ class TestMinimiseLmp(TestCase):
         # The four default min_opt values are formatted into a single space-separated string
         default_min_opt = (0, 1e-8, 1000, 100000)
         mock_lmp.minimize.assert_called_once_with(
-            f"{default_min_opt[0]} {default_min_opt[1]} {default_min_opt[2]} {default_min_opt[3]}"
+            f"{default_min_opt[0]} {default_min_opt[1]} {default_min_opt[2]} {default_min_opt[3]}",
         )
         assert result is mock_lmp
 
