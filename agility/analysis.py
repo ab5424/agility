@@ -174,8 +174,9 @@ class GBStructure:
                 - **calculator**: ASE :class:`~ase.calculators.calculator.Calculator` instance
                   to attach to the atoms object before relaxation.
                 - **optimizer** (*str* or optimizer class, default ``"FIRE"``): ASE optimizer
-                  to use. Supported string values: ``"FIRE"``, ``"BFGS"``, ``"LBFGS"``.
-                  An actual optimizer class may also be passed directly.
+                  to use. Any optimizer class available in :mod:`ase.optimize` may be
+                  referenced by name (e.g. ``"FIRE"``, ``"BFGS"``, ``"LBFGS"``,
+                  ``"MDMin"``). An actual optimizer class may also be passed directly.
                 - **fmax** (*float*, default ``0.1``): Force convergence criterion in eV/Å.
                 - **steps** (*int*, default ``500``): Maximum number of optimisation steps.
                 - Any remaining kwargs are forwarded to the optimizer constructor.
@@ -191,7 +192,9 @@ class GBStructure:
                 relax_output[0] if isinstance(relax_output, tuple) else relax_output
             )
         elif self.backend == "ase":
-            from ase.optimize import BFGS, FIRE, LBFGS  # noqa: PLC0415
+            import inspect  # noqa: PLC0415
+
+            import ase.optimize  # noqa: PLC0415
 
             calculator = kwargs.pop("calculator", None)
             optimizer = kwargs.pop("optimizer", "FIRE")
@@ -202,11 +205,19 @@ class GBStructure:
                 self.data.atoms.calc = calculator
 
             if isinstance(optimizer, str):
-                optimizer_map = {"FIRE": FIRE, "BFGS": BFGS, "LBFGS": LBFGS}
+                from ase.optimize.optimize import Optimizer as _AseOptimizer  # noqa: PLC0415
+
+                optimizer_map = {
+                    name: obj
+                    for name, obj in inspect.getmembers(ase.optimize)
+                    if inspect.isclass(obj)
+                    and issubclass(obj, _AseOptimizer)
+                    and obj is not _AseOptimizer
+                }
                 if optimizer not in optimizer_map:
                     msg = (
                         f"Unknown optimizer '{optimizer}'. "
-                        f"Supported string values: {list(optimizer_map)}."
+                        f"Available optimizers: {sorted(optimizer_map)}."
                     )
                     raise ValueError(msg)
                 optimizer_cls = optimizer_map[optimizer]
