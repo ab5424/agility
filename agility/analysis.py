@@ -85,7 +85,7 @@ class GBStructure:
             from ase.io import read  # noqa: PLC0415
 
             self.data = types.SimpleNamespace()
-            self.data.atoms = read(str(filename))
+            self.data.atoms = read(str(filename), **kwargs)
             self.data.selection = []
 
         if self.backend == "pymatgen":
@@ -362,7 +362,7 @@ class GBStructure:
 
             self.pipeline.modifiers.append(ClearSelectionModifier())
 
-        elif self.backend == "ase":
+        elif self.backend in ("pymatgen", "ase"):
             self.data.selection = []
 
     def perform_cna(
