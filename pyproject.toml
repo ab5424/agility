@@ -54,9 +54,6 @@ ase = [
 pymatgen = [
     "pymatgen>=2024",
 ]
-lammps = [
-    "lammps>=20230208",
-]
 
 [tool.setuptools.dynamic]
 version = {"attr" = "agility.__version__"}
