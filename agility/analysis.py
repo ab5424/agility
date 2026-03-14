@@ -161,7 +161,6 @@ class GBStructure:
         else:
             raise not_implemented(self.backend)
 
-
     def minimise(self, *args, **kwargs) -> None:
         """Minimise structure."""
         if self.backend == "ovito":
