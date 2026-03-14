@@ -43,10 +43,17 @@ jobs:
           pip install uv
           uv pip install -e .[${{ matrix.version.extra }}] --resolution=${{ matrix.version.resolution }} --system
       # Fix ImportError: libEGL.so.1: ...
-      - name: Install libegl1-mesa-dev on Linux
+      - name: Install Linux system dependencies
         if: runner.os == 'Linux'
         run: |
-          sudo apt update && sudo apt install -y libegl1-mesa-dev
+          sudo apt-get update && sudo apt-get install -y libegl1-mesa-dev lammps python3-lammps
+      # Expose the apt-installed LAMMPS Python bindings (pure-Python ctypes module)
+      # to the test runner regardless of the Python version used by setup-python.
+      - name: Add LAMMPS Python bindings to PYTHONPATH
+        if: runner.os == 'Linux'
+        # ${PYTHONPATH:+:$PYTHONPATH} appends the existing PYTHONPATH (with a colon separator)
+        # only when PYTHONPATH is already set, avoiding a leading colon when it is empty.
+        run: echo "PYTHONPATH=/usr/lib/python3/dist-packages${PYTHONPATH:+:$PYTHONPATH}" >> "$GITHUB_ENV"
       - name: pytest
         run: |
           pytest --cov=agility --cov-report=xml tests
