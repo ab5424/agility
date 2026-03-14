@@ -43,10 +43,21 @@ jobs:
           pip install uv
           uv pip install -e .[${{ matrix.version.extra }}] --resolution=${{ matrix.version.resolution }} --system
       # Fix ImportError: libEGL.so.1: ...
-      - name: Install libegl1-mesa-dev on Linux
+      - name: Install Linux system dependencies
         if: runner.os == 'Linux'
         run: |
-          sudo apt update && sudo apt install -y libegl1-mesa-dev
+          sudo apt-get update && sudo apt-get install -y libegl1-mesa-dev lammps python3-lammps
+          # Copy only the lammps Python package to an isolated directory so that the
+          # system mpi4py (compiled for the system Python, not the test runner) is NOT
+          # exposed via PYTHONPATH.  Without a visible mpi4py, lammps sets has_mpi4py=False
+          # and skips the MPI communicator setup that would otherwise raise ImportError.
+          mkdir -p /tmp/lammps-bindings
+          cp -r /usr/lib/python3/dist-packages/lammps /tmp/lammps-bindings/
+      # Expose the apt-installed LAMMPS Python bindings (pure-Python ctypes module)
+      # to the test runner regardless of the Python version used by setup-python.
+      - name: Add LAMMPS Python bindings to PYTHONPATH
+        if: runner.os == 'Linux'
+        run: echo "PYTHONPATH=/tmp/lammps-bindings${PYTHONPATH:+:$PYTHONPATH}" >> "$GITHUB_ENV"
       - name: pytest
         run: |
           pytest --cov=agility --cov-report=xml tests
