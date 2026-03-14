@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import tempfile
 from importlib.metadata import version
 from importlib.util import find_spec
 from pathlib import Path
@@ -253,6 +254,23 @@ class TestGBStructurePymatgen(TestCase):
             return_trajectory=True,
         )
         assert self.gbs.data.structure is mock_relaxed_structure
+
+    def test_save_structure_cif(self) -> None:
+        """Test that save_structure writes a CIF file with the pymatgen backend."""
+        with tempfile.NamedTemporaryFile(suffix=".cif", delete=False) as tmp:
+            tmp_path = tmp.name
+        self.addCleanup(lambda: Path(tmp_path).unlink(missing_ok=True))
+        self.gbs.save_structure(tmp_path, "cif")
+        assert Path(tmp_path).stat().st_size > 0
+
+    def test_save_structure_poscar(self) -> None:
+        """Test that save_structure writes a POSCAR file with the pymatgen backend."""
+        with tempfile.NamedTemporaryFile(suffix=".vasp", delete=False) as tmp:
+            tmp_path = tmp.name
+        self.addCleanup(lambda: Path(tmp_path).unlink(missing_ok=True))
+        self.gbs.save_structure(tmp_path, "poscar")
+        assert Path(tmp_path).stat().st_size > 0
+
 
 
 @pytest.mark.skipif(not find_spec("ase"), reason="ase not installed")

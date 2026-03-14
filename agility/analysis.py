@@ -157,6 +157,15 @@ class GBStructure:
                 self.pylmp.write_dump(filename)
             elif file_type == "restart":
                 self.pylmp.write_restart(filename)
+            else:
+                msg = (
+                    f"Unrecognised file type '{file_type}' for the lammps backend."
+                    " Expected one of: data, dump, restart."
+                )
+                raise ValueError(msg)
+
+        elif self.backend == "pymatgen":
+            self.data.structure.to(filename=filename, fmt=file_type, **kwargs)
 
         else:
             raise not_implemented(self.backend)
