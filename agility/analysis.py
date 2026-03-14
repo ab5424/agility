@@ -81,22 +81,25 @@ class GBStructure:
 
             self.pipeline = import_file(str(filename))
 
-        if self.backend == "ase":
+        elif self.backend == "ase":
             from ase.io import read  # noqa: PLC0415
 
             self.data = types.SimpleNamespace()
             self.data.atoms = read(str(filename), **kwargs)
             self.data.selection = []
 
-        if self.backend == "pymatgen":
+        elif self.backend == "pymatgen":
             from pymatgen.core import Structure  # noqa: PLC0415
 
             self.data = types.SimpleNamespace()
             self.data.structure = Structure.from_file(filename)
             self.data.selection = []
 
-        if self.backend == "lammps":
+        elif self.backend == "lammps":
             self._init_lmp(filename=filename, **kwargs)
+
+        else:
+            raise not_implemented(self.backend)
 
     def _init_lmp(
         self,
@@ -142,18 +145,22 @@ class GBStructure:
 
             write(filename, self.data.atoms, format=file_type, **kwargs)
 
-        if self.backend == "ovito":
+        elif self.backend == "ovito":
             from ovito.io import export_file  # noqa: PLC0415
 
             export_file(self.pipeline, filename, file_type, **kwargs)
 
-        if self.backend == "lammps":
+        elif self.backend == "lammps":
             if file_type == "data":
                 self.pylmp.write_data(filename)
             elif file_type == "dump":
                 self.pylmp.write_dump(filename)
             elif file_type == "restart":
                 self.pylmp.write_restart(filename)
+
+        else:
+            raise not_implemented(self.backend)
+
 
     def minimise(self, *args, **kwargs) -> None:
         """Minimise structure."""
@@ -162,9 +169,16 @@ class GBStructure:
             raise NotImplementedError(msg)
         if self.backend == "lammps":
             self.pylmp = minimise_lmp(self.pylmp, *args, **kwargs)
+        elif self.backend == "pymatgen":
+            # TODO @ab5424: Perform relaxation using Structure.relax()
+            # https://github.com/ab5424/agility/issues/193
+            pass
+        elif self.backend == "ase":
+            # TODO @ab5424: Perform relaxation using aseCalculator
+            # https://github.com/ab5424/agility/issues/193
+            pass
         else:
-            msg = f"The {self.backend} backend does not support minimisation yet."
-            raise NotImplementedError(msg)
+            raise not_implemented(self.backend)
 
     def delete_particles(self, particle_type: set) -> None:
         """Delete a specific type of particles from a structure.
