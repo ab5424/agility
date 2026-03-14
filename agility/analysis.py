@@ -85,8 +85,10 @@ class GBStructure:
             from ase.io import read  # noqa: PLC0415
 
             self.data = types.SimpleNamespace()
-            self.data.atoms = read(str(filename), **kwargs)
+            self.data.atoms = read(str(filename))
             self.data.selection = []
+
+        elif self.backend == "pymatgen":
 
         if self.backend == "pymatgen":
             from pymatgen.core import Structure  # noqa: PLC0415
