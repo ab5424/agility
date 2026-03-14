@@ -272,7 +272,6 @@ class TestGBStructurePymatgen(TestCase):
         assert Path(tmp_path).stat().st_size > 0
 
 
-
 @pytest.mark.skipif(not find_spec("ase"), reason="ase not installed")
 class TestGBStructureASE(TestCase):
     """Test the GBStructure class with the ASE backend."""
