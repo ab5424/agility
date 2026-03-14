@@ -162,20 +162,66 @@ class GBStructure:
             raise not_implemented(self.backend)
 
     def minimise(self, *args, **kwargs) -> None:
-        """Minimise structure."""
+        """Minimise structure.
+
+        Args:
+            *args: Positional arguments passed to the backend minimiser.
+            **kwargs: Keyword arguments passed to the backend minimiser.
+                For the ``pymatgen`` backend, all arguments are forwarded directly to
+                :py:meth:`pymatgen.core.Structure.relax`.
+                For the ``ase`` backend, the following kwargs are consumed here:
+
+                - **calculator**: ASE :class:`~ase.calculators.calculator.Calculator` instance
+                  to attach to the atoms object before relaxation.
+                - **optimizer** (*str* or optimizer class, default ``"FIRE"``): ASE optimizer
+                  to use. Supported string values: ``"FIRE"``, ``"BFGS"``, ``"LBFGS"``.
+                  An actual optimizer class may also be passed directly.
+                - **fmax** (*float*, default ``0.1``): Force convergence criterion in eV/Å.
+                - **steps** (*int*, default ``500``): Maximum number of optimisation steps.
+                - Any remaining kwargs are forwarded to the optimizer constructor.
+        """
         if self.backend == "ovito":
             msg = f"The {self.backend} backend has no minimisation capabilities."
             raise NotImplementedError(msg)
         if self.backend == "lammps":
             self.pylmp = minimise_lmp(self.pylmp, *args, **kwargs)
         elif self.backend == "pymatgen":
-            # TODO @ab5424: Perform relaxation using Structure.relax()
-            # https://github.com/ab5424/agility/issues/193
-            pass
+            relax_output = self.data.structure.relax(*args, **kwargs)
+            self.data.structure = (
+                relax_output[0] if isinstance(relax_output, tuple) else relax_output
+            )
         elif self.backend == "ase":
-            # TODO @ab5424: Perform relaxation using aseCalculator
-            # https://github.com/ab5424/agility/issues/193
-            pass
+            from ase.optimize import BFGS, FIRE, LBFGS  # noqa: PLC0415
+
+            calculator = kwargs.pop("calculator", None)
+            optimizer = kwargs.pop("optimizer", "FIRE")
+            fmax = kwargs.pop("fmax", 0.1)
+            steps = kwargs.pop("steps", 500)
+
+            if calculator is not None:
+                self.data.atoms.calc = calculator
+
+            if isinstance(optimizer, str):
+                optimizer_map = {"FIRE": FIRE, "BFGS": BFGS, "LBFGS": LBFGS}
+                if optimizer not in optimizer_map:
+                    msg = (
+                        f"Unknown optimizer '{optimizer}'. "
+                        f"Supported string values: {list(optimizer_map)}."
+                    )
+                    raise ValueError(msg)
+                optimizer_cls = optimizer_map[optimizer]
+            else:
+                optimizer_cls = optimizer
+
+            if self.data.atoms.calc is None:
+                msg = (
+                    "No ASE calculator is set on the atoms object. "
+                    "Pass a calculator via the 'calculator' keyword argument."
+                )
+                raise ValueError(msg)
+
+            opt = optimizer_cls(self.data.atoms, **kwargs)
+            opt.run(fmax=fmax, steps=steps)
         else:
             raise not_implemented(self.backend)
 
