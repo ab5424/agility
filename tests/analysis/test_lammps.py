@@ -16,6 +16,36 @@ MODULE_DIR = Path(__file__).absolute().parent
 TEST_FILES_DIR = MODULE_DIR.parent / "files"
 
 
+class TestSaveStructureLammps(TestCase):
+    """Test save_structure for the lammps backend using a mock LAMMPS object."""
+
+    def setUp(self) -> None:
+        """Set up a GBStructure with a mocked pylmp."""
+        self.gbs = GBStructure.__new__(GBStructure)
+        self.gbs.backend = "lammps"
+        self.gbs.pylmp = MagicMock()
+
+    def test_save_structure_invalid_file_type_raises_value_error(self) -> None:
+        """Test that save_structure raises ValueError for an unknown file type."""
+        with pytest.raises(ValueError, match="Unrecognised file type"):
+            self.gbs.save_structure("out.xyz", "xyz")
+
+    def test_save_structure_data_delegates_to_pylmp(self) -> None:
+        """Test that save_structure calls write_data for file_type='data'."""
+        self.gbs.save_structure("out.lmp", "data")
+        self.gbs.pylmp.write_data.assert_called_once_with("out.lmp")
+
+    def test_save_structure_dump_delegates_to_pylmp(self) -> None:
+        """Test that save_structure calls write_dump for file_type='dump'."""
+        self.gbs.save_structure("out.dump", "dump")
+        self.gbs.pylmp.write_dump.assert_called_once_with("out.dump")
+
+    def test_save_structure_restart_delegates_to_pylmp(self) -> None:
+        """Test that save_structure calls write_restart for file_type='restart'."""
+        self.gbs.save_structure("out.restart", "restart")
+        self.gbs.pylmp.write_restart.assert_called_once_with("out.restart")
+
+
 class TestMinimiseLmp(TestCase):
     """Test the minimise_lmp function using mock LAMMPS objects."""
 
