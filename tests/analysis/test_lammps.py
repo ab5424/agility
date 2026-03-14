@@ -66,7 +66,9 @@ class TestGBStructureLammps(TestCase):
 
     def tearDown(self) -> None:
         """Close the LAMMPS instance after each test."""
-        self.gbs.pylmp.lmp.close()
+        lmp = getattr(getattr(self, "gbs", None), "pylmp", None)
+        if lmp is not None:
+            lmp.lmp.close()
 
     def test_backend_attribute(self) -> None:
         """Test that the backend attribute is set correctly."""
@@ -86,5 +88,7 @@ class TestGBStructureLammps(TestCase):
     def test_read_lammps_data_file(self) -> None:
         """Test reading a charge-style LAMMPS data file via GBStructure."""
         gbs = GBStructure("lammps", f"{TEST_FILES_DIR}/test_charge.lmp")
-        assert gbs.pylmp.system.natoms == 2
-        gbs.pylmp.lmp.close()
+        try:
+            assert gbs.pylmp.system.natoms == 2
+        finally:
+            gbs.pylmp.lmp.close()
