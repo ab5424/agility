@@ -1216,9 +1216,15 @@ class GBStructure:
             # return list(df_atom["Particle Identifier"])
 
         elif self.backend == "lammps":
-            # TODO @ab5424: Implement lammps backend for get_type
-            # https://github.com/ab5424/agility/issues/177
-            atom_list = []
+            ids = np.concatenate(self.pylmp.lmp.numpy.extract_atom("id"))
+            atom_types = np.concatenate(self.pylmp.lmp.numpy.extract_atom("type"))
+            if return_type == "Identifier":
+                atom_list = list(ids[atom_types == atom_type])
+            elif return_type == "Indices":
+                atom_list = list(np.where(atom_types == atom_type)[0])
+            else:
+                msg = "Only Indices and Identifier are possible as return types."
+                raise NameError(msg)
         else:
             raise not_implemented(self.backend)
         return atom_list

@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest import TestCase
 from unittest.mock import MagicMock
 
+import numpy as np
 import pytest
 
 from agility.analysis import GBStructure
@@ -116,3 +117,49 @@ class TestGBStructureLammps(TestCase):
             assert gbs.pylmp.system.natoms == 2
         finally:
             gbs.pylmp.lmp.close()
+
+
+class TestGetTypeLammps(TestCase):
+    """Test get_type for the lammps backend using a mock LAMMPS object."""
+
+    def setUp(self) -> None:
+        """Set up a GBStructure with a mocked pylmp and 5 atoms of 3 types."""
+        self.gbs = GBStructure.__new__(GBStructure)
+        self.gbs.backend = "lammps"
+        self.gbs.pylmp = MagicMock()
+        # Atom IDs: [1, 2, 3, 4, 5], types: [1, 2, 1, 3, 2]
+        self.ids = np.array([[1], [2], [3], [4], [5]])
+        self.atom_types = np.array([[1], [2], [1], [3], [2]])
+        self.gbs.pylmp.lmp.numpy.extract_atom.side_effect = lambda name: (
+            self.ids if name == "id" else self.atom_types
+        )
+
+    def test_get_type_identifier(self) -> None:
+        """Test that get_type returns correct atom IDs for a given type."""
+        result = self.gbs.get_type(1)
+        assert sorted(result) == [1, 3]
+
+    def test_get_type_identifier_type2(self) -> None:
+        """Test that get_type returns correct atom IDs for type 2."""
+        result = self.gbs.get_type(2)
+        assert sorted(result) == [2, 5]
+
+    def test_get_type_indices(self) -> None:
+        """Test that get_type returns correct indices for a given type."""
+        result = self.gbs.get_type(1, return_type="Indices")
+        assert sorted(result) == [0, 2]
+
+    def test_get_type_indices_type3(self) -> None:
+        """Test that get_type returns correct indices for type 3."""
+        result = self.gbs.get_type(3, return_type="Indices")
+        assert sorted(result) == [3]
+
+    def test_get_type_empty_for_nonexistent_type(self) -> None:
+        """Test that get_type returns an empty list for a non-existent type."""
+        result = self.gbs.get_type(99)
+        assert list(result) == []
+
+    def test_get_type_invalid_return_type_raises(self) -> None:
+        """Test that get_type raises NameError for an invalid return_type."""
+        with pytest.raises(NameError, match="Only Indices and Identifier"):
+            self.gbs.get_type(1, return_type="Invalid")
