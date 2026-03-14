@@ -231,7 +231,7 @@ class GBStructure:
                 )
                 raise ValueError(msg)
 
-            opt = optimizer_cls(self.data.atoms, **kwargs)
+            opt = optimizer_cls(self.data.atoms, *args, **kwargs)
             opt.run(fmax=fmax, steps=steps)
         else:
             raise not_implemented(self.backend)
