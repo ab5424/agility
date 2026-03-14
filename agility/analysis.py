@@ -296,7 +296,7 @@ class GBStructure:
                 if list_ids_type == "Identifier":
                     ids = data.particles["Particle Identifier"]
                 elif list_ids_type == "Indices":
-                    ids = list(np.where(self.data.particles["Structure Type"] != 10000)[0])
+                    ids = np.arange(data.particles.count)
                 else:
                     msg = "Only Indices and Identifier are possible as list id types."
                     raise NameError(msg)
