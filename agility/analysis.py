@@ -1216,6 +1216,9 @@ class GBStructure:
             # return list(df_atom["Particle Identifier"])
 
         elif self.backend == "lammps":
+            # Note: in parallel (MPI) LAMMPS runs, extract_atom only returns
+            # atoms local to the current rank. Results will be incomplete unless
+            # running in serial or gathering across ranks manually.
             ids = np.concatenate(self.pylmp.lmp.numpy.extract_atom("id"))
             atom_types = np.concatenate(self.pylmp.lmp.numpy.extract_atom("type"))
             if return_type == "Identifier":
