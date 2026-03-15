@@ -72,6 +72,17 @@ class TestGBStructure(TestCase):
         assert isinstance(self.data.pipeline.modifiers[1], GrainSegmentationModifier)
         assert self.data.pipeline.compute().attributes["GrainSegmentation.grain_count"] == 6
 
+    def test_grain_segmentation_orientations(self) -> None:
+        """Test that grain orientations are stored after grain segmentation."""
+        from numpy.testing import assert_allclose  # noqa: PLC0415
+
+        assert self.data.orientations is None
+        self.data.perform_ptm(enabled=("fcc"), output_orientation=True)
+        self.data.get_distinct_grains()
+        assert self.data.orientations is not None
+        assert self.data.orientations.shape == (6, 4)
+        assert_allclose(np.linalg.norm(self.data.orientations, axis=1), np.ones(6), atol=1e-6)
+
 
 @pytest.mark.integration
 @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")

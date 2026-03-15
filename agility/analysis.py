@@ -27,7 +27,14 @@ available_backends = Literal["ovito", "pymatgen", "babel", "pyiron", "ase", "lam
 
 
 class GBStructure:
-    """Fundamental class of a grain boundary object."""
+    """Fundamental class of a grain boundary object.
+
+    Attributes:
+        orientations: ``(N, 4)`` quaternion array of grain orientations populated by
+            :meth:`get_distinct_grains` when ``compute=True``. Each row is a unit quaternion
+            ``[x, y, z, w]`` representing the orientation of one grain. ``None`` until grain
+            segmentation has been computed.
+    """
 
     def __init__(
         self,
@@ -39,6 +46,7 @@ class GBStructure:
         self.backend = backend
         self.filename = filename
         self.data: Any = None
+        self.orientations: np.ndarray | None = None
 
         if self.backend == "lammps":
             # Determine if a jupyter notebook is used
@@ -766,6 +774,10 @@ class GBStructure:
 
         Returns:
             None
+
+        Note:
+            When ``compute=True`` and the ovito backend is used, the grain orientations are
+            stored as an ``(N, 4)`` quaternion array in :attr:`orientations`.
         """
         if self.backend == "ovito":
             from ovito.modifiers import GrainSegmentationModifier  # noqa: PLC0415
@@ -784,8 +796,7 @@ class GBStructure:
             self.pipeline.modifiers.append(gsm)
             if compute:
                 self.set_analysis()
-            # TODO @ab5424: Get misorientation plot
-            # https://github.com/ab5424/agility/issues/172
+                self.orientations = np.asarray(self.data.tables["grains"]["Orientation"])
 
     def set_analysis(self) -> None:
         """Compute results.
