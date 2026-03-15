@@ -8,10 +8,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import numpy as np
 import pandas as pd
 
 if TYPE_CHECKING:
     import seaborn as sns
+    from matplotlib.figure import Figure
     from ovito.data import DataCollection
     from ovito.pipeline import Pipeline
     from PySide6.QtGui import QImage
@@ -77,10 +79,60 @@ def plot_face_order(data: DataCollection, plot_property: str = "Max Face Order")
     return hist_plot.figure
 
 
-# TODO @ab5424: Visualize Misorientation distribution function
-# https://github.com/ab5424/agility/issues/184
-# https://www.osti.gov/pages/servlets/purl/1657149
-# https://mtex-toolbox.github.io/index.html
+def plot_mdf(
+    orientations: np.ndarray,
+    bins: int = 30,
+    density: bool = True,
+) -> Figure:
+    """Plot the Misorientation Distribution Function (MDF).
+
+    Computes all unique pairwise misorientation angles from grain quaternion
+    orientations and visualises the result as a histogram.
+
+    The misorientation angle between two grains is computed as
+    ``2 · arccos(|q₁ · q₂|)``, where the dot product is taken over all four
+    quaternion components.  Because the scalar part of the *relative*
+    quaternion ``q₁⁻¹ · q₂`` equals ``q₁ · q₂`` for unit quaternions, the
+    formula gives the correct rotation angle regardless of whether the
+    quaternions are stored in scalar-first ``(w, x, y, z)`` or scalar-last
+    ``(x, y, z, w)`` convention.  Taking the absolute value handles the
+    double-cover ambiguity (``q`` and ``-q`` represent the same rotation).
+
+    Args:
+        orientations: Grain orientations as unit quaternions, shape ``(N, 4)``.
+            Each row represents one grain orientation.  Non-unit quaternions
+            are normalised automatically.  When using the ovito backend with
+            :class:`~ovito.modifiers.GrainSegmentationModifier`, orientations
+            can be extracted via ``data.tables["grains"]["Orientation"][...]``
+            after calling
+            :meth:`~agility.analysis.GBStructure.get_distinct_grains`.
+        bins: Number of histogram bins.
+        density: If ``True``, normalise the histogram to a probability density.
+
+    Returns:
+        matplotlib Figure containing the MDF histogram.
+
+    """
+    import matplotlib.pyplot as plt  # noqa: PLC0415
+
+    q = np.asarray(orientations, dtype=float)
+    norms = np.linalg.norm(q, axis=1, keepdims=True)
+    q = q / norms
+
+    # Pairwise dot products; clamp to [0, 1] after taking the absolute value so
+    # that antipodal quaternions (q and -q encode the same rotation) give the
+    # same angle.
+    dots = np.clip(np.abs(q @ q.T), 0.0, 1.0)
+    idx_i, idx_j = np.triu_indices(len(q), k=1)
+    angles_deg = np.degrees(2.0 * np.arccos(dots[idx_i, idx_j]))
+
+    fig, ax = plt.subplots()
+    ax.hist(angles_deg, bins=bins, density=density, edgecolor="black", alpha=0.7)
+    ax.set_xlabel("Misorientation Angle (°)")
+    ax.set_ylabel("Probability Density" if density else "Count")
+    ax.set_title("Misorientation Distribution Function")
+    return fig
+
 
 # TODO @ab5424: Implement RDF calculation
 # https://github.com/ab5424/agility/issues/185

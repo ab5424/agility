@@ -784,8 +784,6 @@ class GBStructure:
             self.pipeline.modifiers.append(gsm)
             if compute:
                 self.set_analysis()
-            # TODO @ab5424: Get misorientation plot
-            # https://github.com/ab5424/agility/issues/172
 
     def set_analysis(self) -> None:
         """Compute results.

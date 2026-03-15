@@ -5,9 +5,10 @@ from __future__ import annotations
 from unittest import TestCase
 from unittest.mock import MagicMock
 
+import numpy as np
 import pytest
 
-from agility.plotting import plot_face_order
+from agility.plotting import plot_face_order, plot_mdf
 
 
 @pytest.mark.unit
@@ -52,3 +53,73 @@ class TestPlotFaceOrder(TestCase):
         mock_data = self._make_mock_data([1], [5])
         result = plot_face_order(mock_data)
         assert isinstance(result, matplotlib.figure.Figure)
+
+
+@pytest.mark.unit
+class TestPlotMdf(TestCase):
+    """Test the plot_mdf function with synthetic quaternion data."""
+
+    # Three distinct orientations used in most tests.
+    # q1 = identity, q2 = 90° around x, q3 = 90° around z.
+    _ORIENTATIONS: np.ndarray = np.array(
+        [
+            [1.0, 0.0, 0.0, 0.0],
+            [np.sqrt(2) / 2, np.sqrt(2) / 2, 0.0, 0.0],
+            [np.sqrt(2) / 2, 0.0, 0.0, np.sqrt(2) / 2],
+        ],
+    )
+
+    def test_returns_figure(self) -> None:
+        """Test that plot_mdf returns a matplotlib Figure."""
+        import matplotlib.figure  # noqa: PLC0415
+
+        result = plot_mdf(self._ORIENTATIONS)
+        assert isinstance(result, matplotlib.figure.Figure)
+
+    def test_custom_bins(self) -> None:
+        """Test that the bins parameter is forwarded to the histogram."""
+        import matplotlib.figure  # noqa: PLC0415
+
+        result = plot_mdf(self._ORIENTATIONS, bins=10)
+        assert isinstance(result, matplotlib.figure.Figure)
+        ax = result.axes[0]
+        assert len(ax.patches) == 10
+
+    def test_density_false(self) -> None:
+        """Test that density=False produces a count histogram."""
+        import matplotlib.figure  # noqa: PLC0415
+
+        result = plot_mdf(self._ORIENTATIONS, density=False)
+        assert isinstance(result, matplotlib.figure.Figure)
+
+    def test_known_misorientation_angle(self) -> None:
+        """Verify that a 90° misorientation between two grains is histogrammed correctly."""
+        # q_identity (0°) vs. q_90x (90° rotation around x-axis).
+        q_identity = np.array([1.0, 0.0, 0.0, 0.0])
+        q_90x = np.array([np.sqrt(2) / 2, np.sqrt(2) / 2, 0.0, 0.0])
+        orientations = np.array([q_identity, q_90x])
+
+        fig = plot_mdf(orientations, density=False)
+        ax = fig.axes[0]
+
+        non_empty = [p for p in ax.patches if p.get_height() > 0]
+        assert len(non_empty) == 1
+        bar = non_empty[0]
+        # The single bar must span the 90° misorientation.
+        assert bar.get_x() <= 90.0 <= bar.get_x() + bar.get_width()
+
+    def test_unnormalised_quaternions_accepted(self) -> None:
+        """Test that quaternions that are not already unit-length are normalised."""
+        import matplotlib.figure  # noqa: PLC0415
+
+        # Scale each row by a different factor; the function should still work.
+        orientations = self._ORIENTATIONS * np.array([[2.0], [0.5], [3.0]])
+        result = plot_mdf(orientations)
+        assert isinstance(result, matplotlib.figure.Figure)
+
+    def test_axes_labels(self) -> None:
+        """Test that the returned figure has the expected axis labels."""
+        result = plot_mdf(self._ORIENTATIONS)
+        ax = result.axes[0]
+        assert "Misorientation" in ax.get_title()
+        assert "°" in ax.get_xlabel()
