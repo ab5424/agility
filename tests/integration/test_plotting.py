@@ -1,4 +1,4 @@
-"""Test the plotting functions."""
+"""Integration tests for plotting functions — requires ovito to be installed."""
 
 from __future__ import annotations
 
@@ -12,12 +12,13 @@ from agility.analysis import GBStructure
 from agility.plotting import render_ovito
 
 MODULE_DIR = Path(__file__).absolute().parent
-TEST_FILES_DIR = Path(MODULE_DIR / ".." / ".." / "tests" / "files")
+TEST_FILES_DIR = MODULE_DIR.parent / "files"
 
 
+@pytest.mark.integration
 @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
 class TestPlotting(TestCase):
-    """Test the Plotting class."""
+    """Test ovito rendering via the plotting module."""
 
     def setUp(self) -> None:
         """Set up the test."""
@@ -26,7 +27,7 @@ class TestPlotting(TestCase):
         assert self.data is not None
 
     def test_render_ovito(self) -> None:
-        """Test the render_ovito method."""
+        """Test the render_ovito function returns a QImage with expected dimensions."""
         image = render_ovito(self.data.pipeline)
         from PySide6.QtGui import QImage  # noqa: PLC0415
 

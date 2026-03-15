@@ -102,6 +102,12 @@ ignore-words-list = [
 ]
 check-filenames = true
 
+[tool.pytest.ini_options]
+markers = [
+    "unit: mark test as a unit test (uses mocks, no external backend required)",
+    "integration: mark test as an integration test (requires an external backend)",
+]
+
 [tool.coverage.report]
 exclude_lines = [
     'if TYPE_CHECKING:',

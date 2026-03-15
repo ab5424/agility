@@ -1,85 +1,20 @@
-"""Test LAMMPS backend and minimiser functionality."""
+"""Integration tests for the LAMMPS backend — requires lammps to be installed."""
 
 from __future__ import annotations
 
 from importlib.util import find_spec
 from pathlib import Path
 from unittest import TestCase
-from unittest.mock import MagicMock
 
 import pytest
 
 from agility.analysis import GBStructure
-from agility.minimiser import minimise_lmp
 
 MODULE_DIR = Path(__file__).absolute().parent
 TEST_FILES_DIR = MODULE_DIR.parent / "files"
 
 
-class TestSaveStructureLammps(TestCase):
-    """Test save_structure for the lammps backend using a mock LAMMPS object."""
-
-    def setUp(self) -> None:
-        """Set up a GBStructure with a mocked pylmp."""
-        self.gbs = GBStructure.__new__(GBStructure)
-        self.gbs.backend = "lammps"
-        self.gbs.pylmp = MagicMock()
-
-    def test_save_structure_invalid_file_type_raises_value_error(self) -> None:
-        """Test that save_structure raises ValueError for an unknown file type."""
-        with pytest.raises(ValueError, match="Unrecognised file type"):
-            self.gbs.save_structure("out.xyz", "xyz")
-
-    def test_save_structure_data_delegates_to_pylmp(self) -> None:
-        """Test that save_structure calls write_data for file_type='data'."""
-        self.gbs.save_structure("out.lmp", "data")
-        self.gbs.pylmp.write_data.assert_called_once_with("out.lmp")
-
-    def test_save_structure_dump_delegates_to_pylmp(self) -> None:
-        """Test that save_structure calls write_dump for file_type='dump'."""
-        self.gbs.save_structure("out.dump", "dump")
-        self.gbs.pylmp.write_dump.assert_called_once_with("out.dump")
-
-    def test_save_structure_restart_delegates_to_pylmp(self) -> None:
-        """Test that save_structure calls write_restart for file_type='restart'."""
-        self.gbs.save_structure("out.restart", "restart")
-        self.gbs.pylmp.write_restart.assert_called_once_with("out.restart")
-
-
-class TestMinimiseLmp(TestCase):
-    """Test the minimise_lmp function using mock LAMMPS objects."""
-
-    def test_wrong_min_opt_length_raises_value_error(self) -> None:
-        """Test that a min_opt with wrong length raises ValueError."""
-        mock_lmp = MagicMock()
-        with pytest.raises(ValueError, match="four arguments"):
-            minimise_lmp(mock_lmp, min_opt=(0, 1e-8, 1000))
-
-    def test_minimise_lmp_calls_correct_methods(self) -> None:
-        """Test that minimise_lmp calls the expected LAMMPS methods with default args."""
-        mock_lmp = MagicMock()
-        result = minimise_lmp(mock_lmp)
-        mock_lmp.min_style.assert_called_once_with("fire")
-        # The four default min_opt values are formatted into a single space-separated string
-        default_min_opt = (0, 1e-8, 1000, 100000)
-        mock_lmp.minimize.assert_called_once_with(
-            f"{default_min_opt[0]} {default_min_opt[1]} {default_min_opt[2]} {default_min_opt[3]}",
-        )
-        assert result is mock_lmp
-
-    def test_minimise_lmp_custom_style(self) -> None:
-        """Test that minimise_lmp forwards the requested minimization style."""
-        mock_lmp = MagicMock()
-        minimise_lmp(mock_lmp, style="cg")
-        mock_lmp.min_style.assert_called_once_with("cg")
-
-    def test_minimise_lmp_with_mod(self) -> None:
-        """Test that minimise_lmp applies min_modify commands when mod is given."""
-        mock_lmp = MagicMock()
-        minimise_lmp(mock_lmp, mod=[("line", "quadratic")])
-        mock_lmp.min_modify.assert_called_once_with("line quadratic")
-
-
+@pytest.mark.integration
 @pytest.mark.skipif(not find_spec("lammps"), reason="lammps not installed")
 class TestGBStructureLammps(TestCase):
     """Test the GBStructure class with the LAMMPS backend."""
@@ -118,6 +53,7 @@ class TestGBStructureLammps(TestCase):
             gbs.pylmp.lmp.close()
 
 
+@pytest.mark.integration
 @pytest.mark.skipif(not find_spec("lammps"), reason="lammps not installed")
 class TestGetTypeLammps(TestCase):
     """Test get_type for the lammps backend using the actual PyLAMMPS API."""
