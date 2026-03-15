@@ -7,7 +7,6 @@ from pathlib import Path
 from unittest import TestCase
 from unittest.mock import MagicMock
 
-import numpy as np
 import pytest
 
 from agility.analysis import GBStructure
@@ -119,40 +118,39 @@ class TestGBStructureLammps(TestCase):
             gbs.pylmp.lmp.close()
 
 
+@pytest.mark.skipif(not find_spec("lammps"), reason="lammps not installed")
 class TestGetTypeLammps(TestCase):
-    """Test get_type for the lammps backend using a mock LAMMPS object."""
+    """Test get_type for the lammps backend using the actual PyLAMMPS API."""
 
     def setUp(self) -> None:
-        """Set up a GBStructure with a mocked pylmp and 5 atoms of 3 types."""
-        self.gbs = GBStructure.__new__(GBStructure)
-        self.gbs.backend = "lammps"
-        self.gbs.pylmp = MagicMock()
-        # Atom IDs: [1, 2, 3, 4, 5], types: [1, 2, 1, 3, 2]
-        self.ids = np.array([[1], [2], [3], [4], [5]])
-        self.atom_types = np.array([[1], [2], [1], [3], [2]])
-        self.gbs.pylmp.lmp.numpy.extract_atom.side_effect = lambda name: (
-            self.ids if name == "id" else self.atom_types
-        )
+        """Load a two-type LAMMPS data file for get_type tests."""
+        self.gbs = GBStructure("lammps", f"{TEST_FILES_DIR}/test_two_types.lmp")
 
-    def test_get_type_identifier(self) -> None:
-        """Test that get_type returns correct atom IDs for a given type."""
+    def tearDown(self) -> None:
+        """Close the LAMMPS instance after each test."""
+        lmp = getattr(getattr(self, "gbs", None), "pylmp", None)
+        if lmp is not None:
+            lmp.lmp.close()
+
+    def test_get_type_identifier_type1(self) -> None:
+        """Test that get_type returns the correct atom IDs for type 1."""
         result = self.gbs.get_type(1)
         assert sorted(result) == [1, 3]
 
     def test_get_type_identifier_type2(self) -> None:
-        """Test that get_type returns correct atom IDs for type 2."""
+        """Test that get_type returns the correct atom IDs for type 2."""
         result = self.gbs.get_type(2)
-        assert sorted(result) == [2, 5]
+        assert sorted(result) == [2, 4]
 
-    def test_get_type_indices(self) -> None:
-        """Test that get_type returns correct indices for a given type."""
+    def test_get_type_indices_type1(self) -> None:
+        """Test that get_type returns correct array indices for type 1."""
         result = self.gbs.get_type(1, return_type="Indices")
         assert sorted(result) == [0, 2]
 
-    def test_get_type_indices_type3(self) -> None:
-        """Test that get_type returns correct indices for type 3."""
-        result = self.gbs.get_type(3, return_type="Indices")
-        assert sorted(result) == [3]
+    def test_get_type_indices_type2(self) -> None:
+        """Test that get_type returns correct array indices for type 2."""
+        result = self.gbs.get_type(2, return_type="Indices")
+        assert sorted(result) == [1, 3]
 
     def test_get_type_empty_for_nonexistent_type(self) -> None:
         """Test that get_type returns an empty list for a non-existent type."""
