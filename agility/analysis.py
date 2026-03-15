@@ -1230,7 +1230,7 @@ class GBStructure:
             if return_type == "Identifier":
                 atom_list = ids[atom_types == atom_type].tolist()
             elif return_type == "Indices":
-                atom_list = list(np.where(atom_types == atom_type)[0])
+                atom_list = np.where(atom_types == atom_type)[0].tolist()
             else:
                 msg = "Only Indices and Identifier are possible as return types."
                 raise NameError(msg)
