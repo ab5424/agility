@@ -1180,6 +1180,12 @@ class GBStructure:
 
         Returns:
             List of particles of the specified type.
+
+        Note:
+            For the ``lammps`` backend, results are rank-local in parallel (MPI)
+            runs. In multi-process LAMMPS simulations, only atoms assigned to the
+            current MPI rank are returned; use serial LAMMPS or gather across
+            ranks manually for complete results.
         """
         if self.backend == "ovito":
             # Currently doesn't work!
@@ -1219,12 +1225,12 @@ class GBStructure:
             # Note: in parallel (MPI) LAMMPS runs, extract_atom only returns
             # atoms local to the current rank. Results will be incomplete unless
             # running in serial or gathering across ranks manually.
-            ids = np.concatenate(self.pylmp.lmp.numpy.extract_atom("id"))
-            atom_types = np.concatenate(self.pylmp.lmp.numpy.extract_atom("type"))
+            ids = np.ravel(self.pylmp.lmp.numpy.extract_atom("id"))
+            atom_types = np.ravel(self.pylmp.lmp.numpy.extract_atom("type"))
             if return_type == "Identifier":
-                atom_list = list(ids[atom_types == atom_type])
+                atom_list = ids[atom_types == atom_type].tolist()
             elif return_type == "Indices":
-                atom_list = list(np.where(atom_types == atom_type)[0])
+                atom_list = np.where(atom_types == atom_type)[0].tolist()
             else:
                 msg = "Only Indices and Identifier are possible as return types."
                 raise NameError(msg)

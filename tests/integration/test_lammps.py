@@ -91,7 +91,7 @@ class TestGetTypeLammps(TestCase):
     def test_get_type_empty_for_nonexistent_type(self) -> None:
         """Test that get_type returns an empty list for a non-existent type."""
         result = self.gbs.get_type(99)
-        assert list(result) == []
+        assert result == []
 
     def test_get_type_invalid_return_type_raises(self) -> None:
         """Test that get_type raises NameError for an invalid return_type."""
