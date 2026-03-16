@@ -58,7 +58,7 @@ jobs:
         run: |
           git clone https://github.com/pierrehirel/atomsk.git /tmp/atomsk-src
           git -C /tmp/atomsk-src checkout c76753f62b784a36956f1b436943750458d1516b
-          make -C /tmp/atomsk-src/src
+          make -C /tmp/atomsk-src/src atomsk
           sudo install -m 0755 /tmp/atomsk-src/src/atomsk /usr/local/bin/atomsk
       - name: Verify atomsk availability for integration tests
         if: runner.os == 'Linux'
