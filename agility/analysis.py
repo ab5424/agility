@@ -748,7 +748,7 @@ class GBStructure:
         algorithm: str = "GraphClusteringAuto",
         compute: bool = True,
         **kwargs,
-    ) -> None:
+    ) -> None | np.ndarray:
         """Get distinct grains from the structure.
 
         Args:
@@ -765,7 +765,14 @@ class GBStructure:
                     orphan_adoption = True
 
         Returns:
-            None
+            orientations: ``(N, 4)`` quaternion array of grain orientations populated by
+                :meth:`get_distinct_grains` when ``compute=True``. Each row is a unit quaternion
+                ``[x, y, z, w]`` representing the orientation of one grain. ``None`` until grain
+                segmentation has been computed.
+
+        Note:
+            When ``compute=True`` and the ovito backend is used, the grain orientations are
+            returned as an ``(N, 4)`` quaternion array.
         """
         if self.backend == "ovito":
             from ovito.modifiers import GrainSegmentationModifier  # noqa: PLC0415
@@ -784,6 +791,9 @@ class GBStructure:
             self.pipeline.modifiers.append(gsm)
             if compute:
                 self.set_analysis()
+                return np.asarray(self.data.tables["grains"]["Orientation"])
+            return None
+        raise not_implemented(self.backend)
 
     def set_analysis(self) -> None:
         """Compute results.
