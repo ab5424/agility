@@ -84,6 +84,8 @@ class TestPlotMdf(TestCase):
         assert isinstance(result, matplotlib.figure.Figure)
         ax = result.axes[0]
         assert len(ax.patches) == 10
+        for patch in ax.patches:
+            assert 0.0 <= patch.get_x() <= 180.0
 
     def test_density_false(self) -> None:
         """Test that density=False produces a count histogram."""
@@ -123,3 +125,24 @@ class TestPlotMdf(TestCase):
         ax = result.axes[0]
         assert "Misorientation" in ax.get_title()
         assert "°" in ax.get_xlabel()
+
+    def test_wrong_shape_raises(self) -> None:
+        """Test that a non-(N, 4) array raises ValueError."""
+        with pytest.raises(ValueError, match="orientations must have shape"):
+            plot_mdf(np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]))
+
+    def test_zero_norm_raises(self) -> None:
+        """Test that a zero-norm quaternion raises ValueError."""
+        orientations = np.array(
+            [
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 0.0, 0.0, 0.0],  # zero norm
+            ],
+        )
+        with pytest.raises(ValueError, match="zero-norm"):
+            plot_mdf(orientations)
+
+    def test_single_orientation_raises(self) -> None:
+        """Test that fewer than 2 orientations raises ValueError."""
+        with pytest.raises(ValueError, match="at least 2"):
+            plot_mdf(np.array([[1.0, 0.0, 0.0, 0.0]]))

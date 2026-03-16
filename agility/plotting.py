@@ -90,9 +90,9 @@ def plot_mdf(
     orientations and visualises the result as a histogram.
 
     The misorientation angle between two grains is computed as
-    ``2 · arccos(|q₁ · q₂|)``, where the dot product is taken over all four
+    ``2 * arccos(|q1 * q2|)``, where the dot product is taken over all four
     quaternion components.  Because the scalar part of the *relative*
-    quaternion ``q₁⁻¹ · q₂`` equals ``q₁ · q₂`` for unit quaternions, the
+    quaternion ``q1^-1 * q2`` equals ``q1 * q2`` for unit quaternions, the
     formula gives the correct rotation angle regardless of whether the
     quaternions are stored in scalar-first ``(w, x, y, z)`` or scalar-last
     ``(x, y, z, w)`` convention.  Taking the absolute value handles the
@@ -101,10 +101,9 @@ def plot_mdf(
     Args:
         orientations: Grain orientations as unit quaternions, shape ``(N, 4)``.
             Each row represents one grain orientation.  Non-unit quaternions
-            are normalised automatically.  When using the ovito backend with
-            :class:`~ovito.modifiers.GrainSegmentationModifier`, orientations
-            can be extracted via ``data.tables["grains"]["Orientation"][...]``
-            after calling
+            are normalised automatically.  At least two orientations are
+            required.  When using the ovito backend, orientations are returned
+            directly by
             :meth:`~agility.analysis.GBStructure.get_distinct_grains`.
         bins: Number of histogram bins.
         density: If ``True``, normalise the histogram to a probability density.
@@ -112,19 +111,34 @@ def plot_mdf(
     Returns:
         matplotlib Figure containing the MDF histogram.
 
+    Raises:
+        ValueError: If ``orientations`` does not have shape ``(N, 4)``, if any
+            quaternion has zero norm, or if fewer than two orientations are
+            provided.
+
     """
     import matplotlib.pyplot as plt  # noqa: PLC0415
 
     q = np.asarray(orientations, dtype=float)
+    if q.ndim != 2 or q.shape[1] != 4:
+        msg = f"orientations must have shape (N, 4), got {q.shape}"
+        raise ValueError(msg)
     norms = np.linalg.norm(q, axis=1, keepdims=True)
+    if np.any(norms == 0):
+        msg = "orientations contains a zero-norm quaternion"
+        raise ValueError(msg)
     q = q / norms
 
-    # Pairwise dot products; clamp to [0, 1] after taking the absolute value so
-    # that antipodal quaternions (q and -q encode the same rotation) give the
-    # same angle.
-    dots = np.clip(np.abs(q @ q.T), 0.0, 1.0)
     idx_i, idx_j = np.triu_indices(len(q), k=1)
-    angles_deg = np.degrees(2.0 * np.arccos(dots[idx_i, idx_j]))
+    if len(idx_i) == 0:
+        msg = "at least 2 orientations are required to compute pairwise misorientations"
+        raise ValueError(msg)
+
+    # Memory-efficient pairwise dot products: compute only the upper-triangle
+    # pairs without materialising the full (N, N) matrix.  Antipodal quaternions
+    # (q and -q) are handled by taking the absolute value before arccos.
+    dots = np.clip(np.abs(np.einsum("ij,ij->i", q[idx_i], q[idx_j])), 0.0, 1.0)
+    angles_deg = np.degrees(2.0 * np.arccos(dots))
 
     fig, ax = plt.subplots()
     ax.hist(angles_deg, bins=bins, density=density, edgecolor="black", alpha=0.7)
