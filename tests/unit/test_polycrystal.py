@@ -302,6 +302,21 @@ class TestPolycrystalBuilderBuild(TestCase):
         assert pathlib.Path(cmd[4]).name == "poly"
         assert result.name == "poly.lmp"
 
+    @patch("subprocess.run")
+    def test_build_returns_prefix_path_if_format_output_without_extension(
+        self,
+        mock_run: MagicMock,
+    ) -> None:
+        """Test fallback to output prefix when atomsk writes extensionless output (e.g. vasp)."""
+        mock_run.return_value = MagicMock(returncode=0)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output = pathlib.Path(tmpdir) / "poly.vasp"
+            prefix = pathlib.Path(tmpdir) / "poly"
+            prefix.write_text("dummy", encoding="utf-8")
+            result = self.builder.build(output, output_format="vasp")
+
+        assert result == prefix
+
 
 @pytest.mark.unit
 class TestGrainDefinition(TestCase):

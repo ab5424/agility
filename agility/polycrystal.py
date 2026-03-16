@@ -344,6 +344,20 @@ class PolycrystalBuilder:
             if extra_options is not None:
                 cmd.extend(extra_options)
 
-            subprocess.run(cmd, check=True, capture_output=True, text=True)  # noqa: S603
+            subprocess.run(  # noqa: S603
+                cmd,
+                check=True,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+            )
+
+        # Some atomsk formats (e.g., vasp) can be written to the prefix path
+        # without appending the format extension.
+        if output_format is not None and not actual_output.exists():
+            output_prefix_path = pathlib.Path(output_arg)
+            if output_prefix_path.exists():
+                return output_prefix_path
 
         return actual_output
