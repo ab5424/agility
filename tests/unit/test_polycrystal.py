@@ -291,6 +291,17 @@ class TestPolycrystalBuilderBuild(TestCase):
         result = self.builder.build("poly.cfg", output_format="cfg.gz")
         assert str(result).endswith("poly.cfg.gz")
 
+    @patch("subprocess.run")
+    def test_build_strips_all_suffixes_when_format_given(self, mock_run: MagicMock) -> None:
+        """Test that all existing output_file suffixes are stripped for atomsk output prefix."""
+        mock_run.return_value = MagicMock(returncode=0)
+
+        result = self.builder.build("poly.cfg.gz", output_format="lmp")
+
+        cmd = mock_run.call_args[0][0]
+        assert pathlib.Path(cmd[4]).name == "poly"
+        assert result.name == "poly.lmp"
+
 
 @pytest.mark.unit
 class TestGrainDefinition(TestCase):

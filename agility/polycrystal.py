@@ -314,7 +314,11 @@ class PolycrystalBuilder:
         # Determine both the argument passed to atomsk and the resulting output
         # path it will write.
         if output_format is not None:
-            output_prefix = str(output_path.with_suffix(""))
+            output_prefix_path = output_path
+            while output_prefix_path.suffix:
+                output_prefix_path = output_prefix_path.with_suffix("")
+
+            output_prefix = str(output_prefix_path)
             output_arg = output_prefix
             actual_output = pathlib.Path(f"{output_prefix}.{output_format}")
         else:
