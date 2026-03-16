@@ -772,7 +772,7 @@ class GBStructure:
 
         Note:
             When ``compute=True`` and the ovito backend is used, the grain orientations are
-            stored as an ``(N, 4)`` quaternion array in :attr:`orientations`.
+            returned as an ``(N, 4)`` quaternion array.
         """
         if self.backend == "ovito":
             from ovito.modifiers import GrainSegmentationModifier  # noqa: PLC0415
