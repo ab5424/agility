@@ -75,6 +75,17 @@ class TestPolycrystalBuilderIntegration(TestCase):
             assert isinstance(result, pathlib.Path)
             assert result == output.resolve()
 
+    def test_build_without_output_format_returns_requested_path(self) -> None:
+        """Test that build() returns the requested resolved path when output_format is omitted."""
+        self.builder.set_box(40.0, 40.0, 40.0)
+        self.builder.set_random_grains(2)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output = pathlib.Path(tmpdir) / "poly.lmp"
+            result = self.builder.build(output)
+            assert isinstance(result, pathlib.Path)
+            assert result == output.resolve()
+            assert result.exists()
+
     def test_build_vasp_output_format(self) -> None:
         """Test that build() can write a VASP POSCAR output file."""
         self.builder.set_box(40.0, 40.0, 40.0)

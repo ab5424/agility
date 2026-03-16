@@ -242,13 +242,24 @@ class TestPolycrystalBuilderBuild(TestCase):
     def test_build_without_format_no_format_arg(self, mock_run: MagicMock) -> None:
         """Test that no format keyword is appended when output_format is None.
 
-        Expected command: [atomsk, --polycrystal, <unit_cell>, <param_file>, <prefix>]
+        Expected command: [atomsk, --polycrystal, <unit_cell>, <param_file>, <output_path>]
         — exactly five elements with no trailing format identifier.
         """
         mock_run.return_value = MagicMock(returncode=0)
         self.builder.build("output.lmp")
         cmd = mock_run.call_args[0][0]
         assert len(cmd) == 5
+        assert pathlib.Path(cmd[-1]) == pathlib.Path("output.lmp").resolve()
+
+    @patch("subprocess.run")
+    def test_build_returns_requested_path_when_output_format_omitted(
+        self,
+        mock_run: MagicMock,
+    ) -> None:
+        """Test that build() returns the resolved requested path when output_format is omitted."""
+        mock_run.return_value = MagicMock(returncode=0)
+        result = self.builder.build("output.lmp")
+        assert result == pathlib.Path("output.lmp").resolve()
 
     @patch("subprocess.run")
     def test_build_returns_format_extension_when_output_format_given(
