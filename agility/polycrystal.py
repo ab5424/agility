@@ -313,6 +313,13 @@ class PolycrystalBuilder:
         # atomsk appends the format extension itself; strip it from the prefix
         output_prefix = str(output_path.with_suffix(""))
 
+        # Determine the actual file atomsk will write.  When output_format is
+        # given, atomsk uses that extension regardless of what output_file says.
+        if output_format is not None:
+            actual_output = pathlib.Path(output_prefix).with_suffix(f".{output_format}")
+        else:
+            actual_output = output_path
+
         with tempfile.TemporaryDirectory() as tmpdir:
             param_file = pathlib.Path(tmpdir) / "polycrystal.txt"
             self._write_param_file(param_file)
@@ -333,4 +340,4 @@ class PolycrystalBuilder:
 
             subprocess.run(cmd, check=True, capture_output=True, text=True)  # noqa: S603
 
-        return output_path
+        return actual_output

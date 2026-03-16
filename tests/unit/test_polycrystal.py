@@ -250,6 +250,29 @@ class TestPolycrystalBuilderBuild(TestCase):
         cmd = mock_run.call_args[0][0]
         assert len(cmd) == 5
 
+    @patch("subprocess.run")
+    def test_build_returns_format_extension_when_output_format_given(
+        self,
+        mock_run: MagicMock,
+    ) -> None:
+        """Test that build() returns the path with the output_format extension.
+
+        atomsk writes <prefix>.<output_format>, so the returned Path must reflect that
+        even when output_file carries a different (or no) extension.
+        """
+        mock_run.return_value = MagicMock(returncode=0)
+        # Pass a file with a .cfg extension but request lmp format
+        result = self.builder.build("output.cfg", output_format="lmp")
+        assert result.suffix == ".lmp"
+
+    @patch("subprocess.run")
+    def test_build_returns_correct_path_without_extension(self, mock_run: MagicMock) -> None:
+        """Test that build() appends output_format when output_file has no extension."""
+        mock_run.return_value = MagicMock(returncode=0)
+        result = self.builder.build("poly", output_format="lmp")
+        assert result.suffix == ".lmp"
+        assert result.stem == "poly"
+
 
 @pytest.mark.unit
 class TestGrainDefinition(TestCase):

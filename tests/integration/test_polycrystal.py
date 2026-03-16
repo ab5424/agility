@@ -73,7 +73,7 @@ class TestPolycrystalBuilderIntegration(TestCase):
             output = pathlib.Path(tmpdir) / "poly.lmp"
             result = self.builder.build(output, output_format="lmp")
             assert isinstance(result, pathlib.Path)
-            assert result == output
+            assert result == output.resolve()
 
     def test_build_vasp_output_format(self) -> None:
         """Test that build() can write a VASP POSCAR output file."""
