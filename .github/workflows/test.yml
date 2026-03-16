@@ -46,7 +46,7 @@ jobs:
       - name: Install Linux system dependencies
         if: runner.os == 'Linux'
         run: |
-          sudo apt-get update && sudo apt-get install -y libegl1-mesa-dev lammps python3-lammps gfortran
+          sudo apt-get update && sudo apt-get install -y libegl1-mesa-dev lammps python3-lammps gfortran liblapack-dev
           # Copy only the lammps Python package to an isolated directory so that the
           # system mpi4py (compiled for the system Python, not the test runner) is NOT
           # exposed via PYTHONPATH.  Without a visible mpi4py, lammps sets has_mpi4py=False
