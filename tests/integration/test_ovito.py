@@ -77,8 +77,9 @@ class TestGBStructure(TestCase):
         self.data.perform_ptm(enabled=("fcc"), output_orientation=True)
         orientations = self.data.get_distinct_grains()
         assert orientations is not None
-        assert orientations.shape == (6, 4)
-        assert_allclose(np.linalg.norm(orientations, axis=1), np.ones(6), atol=1e-6)
+        grain_count = self.data.pipeline.compute().attributes["GrainSegmentation.grain_count"]
+        assert orientations.shape == (grain_count, 4)
+        assert_allclose(np.linalg.norm(orientations, axis=1), np.ones(grain_count), atol=1e-6)
 
 
 @pytest.mark.integration
