@@ -27,14 +27,7 @@ available_backends = Literal["ovito", "pymatgen", "babel", "pyiron", "ase", "lam
 
 
 class GBStructure:
-    """Fundamental class of a grain boundary object.
-
-    Attributes:
-        orientations: ``(N, 4)`` quaternion array of grain orientations populated by
-            :meth:`get_distinct_grains` when ``compute=True``. Each row is a unit quaternion
-            ``[x, y, z, w]`` representing the orientation of one grain. ``None`` until grain
-            segmentation has been computed.
-    """
+    """Fundamental class of a grain boundary object."""
 
     def __init__(
         self,
@@ -46,7 +39,6 @@ class GBStructure:
         self.backend = backend
         self.filename = filename
         self.data: Any = None
-        self.orientations: np.ndarray | None = None
 
         if self.backend == "lammps":
             # Determine if a jupyter notebook is used
@@ -756,7 +748,7 @@ class GBStructure:
         algorithm: str = "GraphClusteringAuto",
         compute: bool = True,
         **kwargs,
-    ) -> None:
+    ) -> None | np.ndarray:
         """Get distinct grains from the structure.
 
         Args:
@@ -773,7 +765,10 @@ class GBStructure:
                     orphan_adoption = True
 
         Returns:
-            None
+            orientations: ``(N, 4)`` quaternion array of grain orientations populated by
+                :meth:`get_distinct_grains` when ``compute=True``. Each row is a unit quaternion
+                ``[x, y, z, w]`` representing the orientation of one grain. ``None`` until grain
+                segmentation has been computed.
 
         Note:
             When ``compute=True`` and the ovito backend is used, the grain orientations are
@@ -796,7 +791,9 @@ class GBStructure:
             self.pipeline.modifiers.append(gsm)
             if compute:
                 self.set_analysis()
-                self.orientations = np.asarray(self.data.tables["grains"]["Orientation"])
+                return np.asarray(self.data.tables["grains"]["Orientation"])
+            return None
+        raise not_implemented(self.backend)
 
     def set_analysis(self) -> None:
         """Compute results.

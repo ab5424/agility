@@ -9,6 +9,7 @@ from unittest import TestCase
 
 import numpy as np
 import pytest
+from numpy.testing import assert_allclose
 
 from agility.analysis import GBStructure
 
@@ -59,7 +60,6 @@ class TestGBStructure(TestCase):
         """Test the GB fraction method."""
         self.data.perform_cna(enabled=("fcc"))
         gb_fraction = self.data.get_gb_fraction()
-        from numpy.testing import assert_allclose  # noqa: PLC0415
 
         assert_allclose(gb_fraction, float(3361 / 7681 if BREAKING else 3351 / 7681))
 
@@ -74,14 +74,11 @@ class TestGBStructure(TestCase):
 
     def test_grain_segmentation_orientations(self) -> None:
         """Test that grain orientations are stored after grain segmentation."""
-        from numpy.testing import assert_allclose  # noqa: PLC0415
-
-        assert self.data.orientations is None
         self.data.perform_ptm(enabled=("fcc"), output_orientation=True)
-        self.data.get_distinct_grains()
-        assert self.data.orientations is not None
-        assert self.data.orientations.shape == (6, 4)
-        assert_allclose(np.linalg.norm(self.data.orientations, axis=1), np.ones(6), atol=1e-6)
+        orientations = self.data.get_distinct_grains()
+        assert orientations is not None
+        assert orientations.shape == (6, 4)
+        assert_allclose(np.linalg.norm(orientations, axis=1), np.ones(6), atol=1e-6)
 
 
 @pytest.mark.integration
