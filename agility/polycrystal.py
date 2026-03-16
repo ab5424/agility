@@ -63,6 +63,11 @@ def build_atomsk_from_source(
 
     _install_dir.mkdir(parents=True, exist_ok=True)
 
+    gfortran_cmd = shutil.which("gfortran")
+    if gfortran_cmd is None:
+        msg = "gfortran is required to build atomsk from source but was not found on PATH."
+        raise RuntimeError(msg)
+
     git_cmd = shutil.which("git")
     if git_cmd is None:
         msg = "git is required to build atomsk from source but was not found on PATH."
@@ -185,6 +190,8 @@ class PolycrystalBuilder:
                     "atomsk executable not found. Install atomsk "
                     "(https://atomsk.univ-lille.fr/) or call "
                     "agility.polycrystal.build_atomsk_from_source() to build it locally."
+                    "Note: Building from source requires git, make, and gfortran to be installed " 
+                    "and available on PATH."
                 )
                 raise FileNotFoundError(msg)
             self._atomsk = detected
