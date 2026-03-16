@@ -189,7 +189,7 @@ class PolycrystalBuilder:
                 msg = (
                     "atomsk executable not found. Install atomsk "
                     "(https://atomsk.univ-lille.fr/) or call "
-                    "agility.polycrystal.build_atomsk_from_source() to build it locally."
+                    "agility.polycrystal.build_atomsk_from_source() to build it locally. "
                     "Note: Building from source requires git, make, and gfortran to be installed "
                     "and available on PATH."
                 )
@@ -316,7 +316,7 @@ class PolycrystalBuilder:
         if output_format is not None:
             output_prefix = str(output_path.with_suffix(""))
             output_arg = output_prefix
-            actual_output = pathlib.Path(output_prefix).with_suffix(f".{output_format}")
+            actual_output = pathlib.Path(f"{output_prefix}.{output_format}")
         else:
             output_arg = str(output_path)
             actual_output = output_path

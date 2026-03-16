@@ -284,6 +284,13 @@ class TestPolycrystalBuilderBuild(TestCase):
         assert result.suffix == ".lmp"
         assert result.stem == "poly"
 
+    @patch("subprocess.run")
+    def test_build_allows_compound_output_format(self, mock_run: MagicMock) -> None:
+        """Test that build() supports compound output formats such as cfg.gz."""
+        mock_run.return_value = MagicMock(returncode=0)
+        result = self.builder.build("poly.cfg", output_format="cfg.gz")
+        assert str(result).endswith("poly.cfg.gz")
+
 
 @pytest.mark.unit
 class TestGrainDefinition(TestCase):

@@ -123,7 +123,7 @@ class TestPolycrystalBuilderIntegration(TestCase):
         self.builder.add_grain((37.5, 25.0, 25.0), (45.0, 0.0, 0.0))
         with tempfile.TemporaryDirectory() as tmpdir:
             output = pathlib.Path(tmpdir) / "poly.lmp"
-            self.builder.build(output, output_format="lmp")
-            content = output.read_text(encoding="utf-8")
+            result = self.builder.build(output, output_format="lmp")
+            content = result.read_text(encoding="utf-8")
             # A valid LAMMPS data file must declare the atom count
             assert "atoms" in content
