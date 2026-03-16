@@ -51,8 +51,9 @@ def build_atomsk_from_source(
         Absolute path to the installed atomsk binary.
 
     Raises:
-        RuntimeError: If a required build tool (``git`` or ``make``) is not
-            found on ``PATH``, or if any build step fails.
+        RuntimeError: If a required build tool (``git``, ``make``, or
+            ``gfortran``) is not found on ``PATH``, or if any build step
+            fails.
         FileNotFoundError: If the compiled binary is not found after a
             successful build.
     """
