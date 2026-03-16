@@ -190,7 +190,7 @@ class PolycrystalBuilder:
                     "atomsk executable not found. Install atomsk "
                     "(https://atomsk.univ-lille.fr/) or call "
                     "agility.polycrystal.build_atomsk_from_source() to build it locally."
-                    "Note: Building from source requires git, make, and gfortran to be installed " 
+                    "Note: Building from source requires git, make, and gfortran to be installed "
                     "and available on PATH."
                 )
                 raise FileNotFoundError(msg)
