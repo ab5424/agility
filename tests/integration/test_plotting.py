@@ -82,7 +82,7 @@ class TestMdfLargePolycrystal(TestCase):
                 check=True,
                 cwd=work_dir,
                 capture_output=True,
-                text=True,
+                text=False,
             )
             grains.write_text("box 100 100 100\nrandom 10\n", encoding="utf-8")
             subprocess.run(  # noqa: S603
@@ -90,7 +90,7 @@ class TestMdfLargePolycrystal(TestCase):
                 check=True,
                 cwd=work_dir,
                 capture_output=True,
-                text=True,
+                text=False,
             )
             if poly_lmp.exists():
                 output_path.write_bytes(poly_lmp.read_bytes())
