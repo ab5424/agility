@@ -111,6 +111,12 @@ def plot_mdf(
     Returns:
         matplotlib Figure containing the MDF histogram.
 
+    Note:
+        This function computes the *raw* pairwise misorientation angle and does
+        not apply crystal-symmetry reduction (disorientation). For crystal
+        systems such as cubic/FCC, the resulting distribution therefore is not
+        reduced to the crystal fundamental zone and may span up to 180°.
+
     Raises:
         ValueError: If ``orientations`` does not have shape ``(N, 4)``, if any
             quaternion has zero norm, or if fewer than two orientations are
@@ -144,7 +150,7 @@ def plot_mdf(
     ax.hist(angles_deg, bins=bins, density=density, edgecolor="black", alpha=0.7)
     ax.set_xlabel("Misorientation Angle (°)")
     ax.set_ylabel("Probability Density" if density else "Count")
-    ax.set_title("Misorientation Distribution Function")
+    ax.set_title("Misorientation Distribution Function (raw, no symmetry reduction)")
     return fig
 
 
