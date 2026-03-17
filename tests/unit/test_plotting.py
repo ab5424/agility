@@ -146,3 +146,28 @@ class TestPlotMdf(TestCase):
         """Test that fewer than 2 orientations raises ValueError."""
         with pytest.raises(ValueError, match="at least 2"):
             plot_mdf(np.array([[1.0, 0.0, 0.0, 0.0]]))
+
+    def test_unsupported_symmetry_raises(self) -> None:
+        """Test that unsupported symmetry names raise ValueError."""
+        with pytest.raises(ValueError, match="unsupported symmetry"):
+            plot_mdf(self._ORIENTATIONS, symmetry="hexagonal")
+
+    def test_cubic_symmetry_reduces_misorientation(self) -> None:
+        """Test cubic symmetry reduction changes 90° misorientation to 0° disorientation."""
+        sqrt2_over_2 = 1.0 / np.sqrt(2.0)
+        q_identity = np.array([0.0, 0.0, 0.0, 1.0])
+        q_90z = np.array([0.0, 0.0, sqrt2_over_2, sqrt2_over_2])
+        orientations = np.array([q_identity, q_90z])
+
+        fig_raw = plot_mdf(orientations, bins=30, density=False)
+        raw_ax = fig_raw.axes[0]
+        raw_bar = next(p for p in raw_ax.patches if p.get_height() > 0)
+        raw_center = raw_bar.get_x() + raw_bar.get_width() / 2
+
+        fig_sym = plot_mdf(orientations, bins=30, density=False, symmetry="cubic")
+        sym_ax = fig_sym.axes[0]
+        sym_bar = next(p for p in sym_ax.patches if p.get_height() > 0)
+        sym_center = sym_bar.get_x() + sym_bar.get_width() / 2
+
+        assert raw_center > 80.0
+        assert sym_center < 5.0

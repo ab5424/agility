@@ -6,6 +6,8 @@
 
 from __future__ import annotations
 
+import itertools
+from functools import lru_cache
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -17,6 +19,73 @@ if TYPE_CHECKING:
     from ovito.data import DataCollection
     from ovito.pipeline import Pipeline
     from PySide6.QtGui import QImage
+
+
+def _quat_mul(a: np.ndarray, b: np.ndarray) -> np.ndarray:
+    """Multiply two scalar-last quaternion arrays row-by-row.
+
+    Args:
+        a: Quaternion array with shape ``(N, 4)`` in ``(x, y, z, w)`` order.
+        b: Quaternion array with shape ``(N, 4)`` in ``(x, y, z, w)`` order.
+
+    Returns:
+        Quaternion array with shape ``(N, 4)`` where row ``i`` equals
+        ``a[i] * b[i]``.
+
+    """
+    av, aw = a[:, :3], a[:, 3:4]
+    bv, bw = b[:, :3], b[:, 3:4]
+    xyz = aw * bv + bw * av + np.cross(av, bv)
+    w = aw * bw - np.sum(av * bv, axis=1, keepdims=True)
+    return np.concatenate((xyz, w), axis=1)
+
+
+@lru_cache(maxsize=1)
+def _cubic_symmetry_quaternions() -> np.ndarray:
+    """Return the 24 proper rotations of cubic ``m-3m`` as scalar-last quaternions."""
+    from scipy.spatial.transform import Rotation  # noqa: PLC0415
+
+    cubic_rot_mats = []
+    for perm in itertools.permutations((0, 1, 2)):
+        for signs in itertools.product((-1.0, 1.0), repeat=3):
+            mat = np.zeros((3, 3), dtype=float)
+            for row, col in enumerate(perm):
+                mat[row, col] = signs[row]
+            if np.isclose(np.linalg.det(mat), 1.0):
+                cubic_rot_mats.append(mat)
+    return Rotation.from_matrix(np.array(cubic_rot_mats)).as_quat()
+
+
+def _cubic_disorientation_angles(q_i: np.ndarray, q_j: np.ndarray) -> np.ndarray:
+    """Return cubic disorientation angles for paired scalar-last unit quaternions.
+
+    Args:
+        q_i: Unit quaternion array with shape ``(N, 4)`` in ``(x, y, z, w)`` order.
+        q_j: Unit quaternion array with shape ``(N, 4)`` in ``(x, y, z, w)`` order.
+
+    Returns:
+        Array of shape ``(N,)`` with cubic disorientation angles in degrees.
+
+    Note:
+        This reduction evaluates all ``24 x 24`` left/right cubic symmetry
+        combinations for each pair, with overall cost ``O(576 * N)``.
+
+    """
+    cubic_sym = _cubic_symmetry_quaternions()
+
+    v_i = q_i[:, :3]
+    w_i = q_i[:, 3:4]
+    q_i_conj = np.concatenate((-v_i, w_i), axis=1)
+    q_rel = _quat_mul(q_i_conj, q_j)
+
+    max_abs_w = np.zeros(len(q_rel))
+    for left in cubic_sym:
+        q_left = _quat_mul(np.broadcast_to(left, q_rel.shape), q_rel)
+        for right in cubic_sym:
+            q_equiv = _quat_mul(q_left, np.broadcast_to(right, q_left.shape))
+            max_abs_w = np.maximum(max_abs_w, np.abs(q_equiv[:, 3]))
+
+    return np.degrees(2.0 * np.arccos(np.clip(max_abs_w, 0.0, 1.0)))
 
 
 def render_ovito(pipeline: Pipeline, res_factor: int = 1) -> QImage:
@@ -83,11 +152,12 @@ def plot_mdf(
     orientations: np.ndarray,
     bins: int = 30,
     density: bool = True,
+    symmetry: str | None = None,
 ) -> Figure:
     """Plot the Misorientation Distribution Function (MDF).
 
-    Computes all unique pairwise misorientation angles from grain quaternion
-    orientations and visualises the result as a histogram.
+    Computes all unique pairwise misorientation (or disorientation) angles from
+    grain quaternion orientations and visualises the result as a histogram.
 
     The misorientation angle between two grains is computed as
     ``2 * arccos(|q1 * q2|)``, where the dot product is taken over all four
@@ -107,20 +177,22 @@ def plot_mdf(
             :meth:`~agility.analysis.GBStructure.get_distinct_grains`.
         bins: Number of histogram bins.
         density: If ``True``, normalise the histogram to a probability density.
+        symmetry: Optional crystal symmetry used to reduce misorientations to
+            disorientations. Supported values:
+            - ``None``: raw misorientation (no symmetry reduction)
+            - ``"cubic"``: cubic ``m-3m`` disorientation reduction
+            Symmetry reduction assumes scalar-last quaternion convention
+            ``(x, y, z, w)`` (as returned by the ovito backend).
+            The cubic reduction path is more expensive than raw mode because it
+            evaluates equivalent orientations under 24x24 symmetry combinations.
 
     Returns:
         matplotlib Figure containing the MDF histogram.
 
-    Note:
-        This function computes the *raw* pairwise misorientation angle and does
-        not apply crystal-symmetry reduction (disorientation). For crystal
-        systems such as cubic/FCC, the resulting distribution therefore is not
-        reduced to the crystal fundamental zone and may span up to 180°.
-
     Raises:
         ValueError: If ``orientations`` does not have shape ``(N, 4)``, if any
-            quaternion has zero norm, or if fewer than two orientations are
-            provided.
+            quaternion has zero norm, if fewer than two orientations are
+            provided, or if ``symmetry`` is unsupported.
 
     """
     import matplotlib.pyplot as plt  # noqa: PLC0415
@@ -140,17 +212,29 @@ def plot_mdf(
         msg = "at least 2 orientations are required to compute pairwise misorientations"
         raise ValueError(msg)
 
-    # Memory-efficient pairwise dot products: compute only the upper-triangle
-    # pairs without materialising the full (N, N) matrix.  Antipodal quaternions
-    # (q and -q) are handled by taking the absolute value before arccos.
-    dots = np.clip(np.abs(np.einsum("ij,ij->i", q[idx_i], q[idx_j])), 0.0, 1.0)
-    angles_deg = np.degrees(2.0 * np.arccos(dots))
+    if symmetry is None:
+        # Memory-efficient pairwise dot products: compute only the
+        # upper-triangle pairs without materialising the full (N, N) matrix.
+        # Antipodal quaternions (q and -q) are handled by taking the absolute
+        # value before arccos.
+        dots = np.clip(np.abs(np.einsum("ij,ij->i", q[idx_i], q[idx_j])), 0.0, 1.0)
+        angles_deg = np.degrees(2.0 * np.arccos(dots))
+        title = "Misorientation Distribution Function (raw, no symmetry reduction)"
+    elif symmetry == "cubic":
+        angles_deg = _cubic_disorientation_angles(q[idx_i], q[idx_j])
+        title = "Misorientation Distribution Function (cubic disorientation)"
+    else:
+        msg = (
+            f"unsupported symmetry '{symmetry}'. "
+            'Supported values: None (no symmetry reduction) or "cubic"'
+        )
+        raise ValueError(msg)
 
     fig, ax = plt.subplots()
     ax.hist(angles_deg, bins=bins, density=density, edgecolor="black", alpha=0.7)
     ax.set_xlabel("Misorientation Angle (°)")
     ax.set_ylabel("Probability Density" if density else "Count")
-    ax.set_title("Misorientation Distribution Function (raw, no symmetry reduction)")
+    ax.set_title(title)
     return fig
 
 
