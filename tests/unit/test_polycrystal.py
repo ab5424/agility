@@ -45,7 +45,7 @@ class TestPolycrystalBuilderInit(TestCase):
         """Test construction succeeds when an explicit atomsk path is supplied."""
         builder = PolycrystalBuilder("unit.lmp", atomsk_path="/usr/bin/atomsk")
         assert builder._atomsk == "/usr/bin/atomsk"  # noqa: SLF001
-        assert builder.unit_cell == pathlib.Path("unit.lmp")
+        assert builder.unit_cell == pathlib.Path("unit.lmp").resolve()
 
     @patch("agility.polycrystal.find_atomsk", return_value=None)
     def test_raises_when_atomsk_not_found(self, mock_find: MagicMock) -> None:
@@ -211,15 +211,26 @@ class TestPolycrystalBuilderBuild(TestCase):
     def test_build_includes_unit_cell_in_command(self, mock_run: MagicMock) -> None:
         """Test that the unit cell path appears in the atomsk command."""
         mock_run.return_value = MagicMock(returncode=0)
-        self.builder.build("output.lmp")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            unit_cell = pathlib.Path(tmpdir) / "unit.lmp"
+            unit_cell.write_text("dummy", encoding="utf-8")
+            builder = PolycrystalBuilder(unit_cell, atomsk_path="/usr/bin/atomsk")
+            builder.set_box(100.0, 100.0, 100.0)
+            builder.set_random_grains(2)
+            builder.build(pathlib.Path(tmpdir) / "output.lmp")
+
         cmd = mock_run.call_args[0][0]
-        assert "unit.lmp" in cmd
+        assert pathlib.Path(cmd[2]).name == "unit.lmp"
+        assert pathlib.Path(cmd[2]).is_absolute()
 
     @patch("subprocess.run")
     def test_build_passes_output_format(self, mock_run: MagicMock) -> None:
         """Test that the output_format argument is appended to the command."""
         mock_run.return_value = MagicMock(returncode=0)
-        self.builder.build("output.lmp", output_format="lmp")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output = pathlib.Path(tmpdir) / "output.lmp"
+            output.write_text("dummy", encoding="utf-8")
+            self.builder.build(output, output_format="lmp")
         cmd = mock_run.call_args[0][0]
         assert "lmp" in cmd
 
@@ -272,15 +283,22 @@ class TestPolycrystalBuilderBuild(TestCase):
         even when output_file carries a different (or no) extension.
         """
         mock_run.return_value = MagicMock(returncode=0)
-        # Pass a file with a .cfg extension but request lmp format
-        result = self.builder.build("output.cfg", output_format="lmp")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output = pathlib.Path(tmpdir) / "output.cfg"
+            formatted_output = pathlib.Path(tmpdir) / "output.lmp"
+            formatted_output.write_text("dummy", encoding="utf-8")
+            result = self.builder.build(output, output_format="lmp")
         assert result.suffix == ".lmp"
 
     @patch("subprocess.run")
     def test_build_returns_correct_path_without_extension(self, mock_run: MagicMock) -> None:
         """Test that build() appends output_format when output_file has no extension."""
         mock_run.return_value = MagicMock(returncode=0)
-        result = self.builder.build("poly", output_format="lmp")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output = pathlib.Path(tmpdir) / "poly"
+            formatted_output = pathlib.Path(tmpdir) / "poly.lmp"
+            formatted_output.write_text("dummy", encoding="utf-8")
+            result = self.builder.build(output, output_format="lmp")
         assert result.suffix == ".lmp"
         assert result.stem == "poly"
 
@@ -288,15 +306,22 @@ class TestPolycrystalBuilderBuild(TestCase):
     def test_build_allows_compound_output_format(self, mock_run: MagicMock) -> None:
         """Test that build() supports compound output formats such as cfg.gz."""
         mock_run.return_value = MagicMock(returncode=0)
-        result = self.builder.build("poly.cfg", output_format="cfg.gz")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output = pathlib.Path(tmpdir) / "poly.cfg"
+            formatted_output = pathlib.Path(tmpdir) / "poly.cfg.gz"
+            formatted_output.write_text("dummy", encoding="utf-8")
+            result = self.builder.build(output, output_format="cfg.gz")
         assert str(result).endswith("poly.cfg.gz")
 
     @patch("subprocess.run")
     def test_build_strips_all_suffixes_when_format_given(self, mock_run: MagicMock) -> None:
         """Test that all existing output_file suffixes are stripped for atomsk output prefix."""
         mock_run.return_value = MagicMock(returncode=0)
-
-        result = self.builder.build("poly.cfg.gz", output_format="lmp")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output = pathlib.Path(tmpdir) / "poly.cfg.gz"
+            formatted_output = pathlib.Path(tmpdir) / "poly.lmp"
+            formatted_output.write_text("dummy", encoding="utf-8")
+            result = self.builder.build(output, output_format="lmp")
 
         cmd = mock_run.call_args[0][0]
         assert pathlib.Path(cmd[4]).name == "poly"
@@ -361,6 +386,16 @@ class TestPolycrystalBuilderBuild(TestCase):
             self.builder.build(output)
 
         assert mock_run.call_args.kwargs["cwd"] == str(output.resolve().parent)
+
+    @patch("subprocess.run")
+    def test_build_raises_if_formatted_output_file_not_found(self, mock_run: MagicMock) -> None:
+        """Test that build() raises when no expected output file exists."""
+        mock_run.return_value = MagicMock(returncode=0)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output = pathlib.Path(tmpdir) / "poly.vasp"
+            with pytest.raises(FileNotFoundError, match="output file was not found"):
+                self.builder.build(output, output_format="vasp")
 
 
 @pytest.mark.unit

@@ -177,7 +177,7 @@ class PolycrystalBuilder:
         If *atomsk_path* is ``None``, :func:`find_atomsk` is called to search
         the system PATH and ``~/.local/bin``.
         """
-        self.unit_cell = pathlib.Path(unit_cell)
+        self.unit_cell = pathlib.Path(unit_cell).resolve()
         self._box: tuple[float, float, float] | None = None
         self._grains: list[GrainDefinition] = []
         self._random_grains: int | None = None
@@ -309,6 +309,8 @@ class PolycrystalBuilder:
                 set.
             subprocess.CalledProcessError: If atomsk exits with a non-zero
                 return code.
+            FileNotFoundError: If atomsk exits successfully but the expected
+                output file cannot be located.
         """
         output_path = pathlib.Path(output_file).resolve()
 
@@ -368,5 +370,11 @@ class PolycrystalBuilder:
             for candidate in fallback_candidates:
                 if candidate.exists():
                     return candidate.resolve()
+
+            msg = (
+                "atomsk exited successfully but output file was not found. "
+                f"Expected {actual_output} or one of {fallback_candidates}."
+            )
+            raise FileNotFoundError(msg)
 
         return actual_output
