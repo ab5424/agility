@@ -351,13 +351,22 @@ class PolycrystalBuilder:
                 text=True,
                 encoding="utf-8",
                 errors="replace",
+                cwd=str(output_path.parent),
             )
 
         # Some atomsk formats (e.g., vasp) can be written to the prefix path
         # without appending the format extension.
         if output_format is not None and not actual_output.exists():
             output_prefix_path = pathlib.Path(output_arg)
-            if output_prefix_path.exists():
-                return output_prefix_path
+            # atomsk's VASP writer may emit extensionless names (prefix) or
+            # default VASP-style filenames instead of <prefix>.<format>.
+            fallback_candidates = [
+                output_prefix_path,
+                output_prefix_path.parent / "POSCAR",
+                output_prefix_path.parent / "CONTCAR",
+            ]
+            for candidate in fallback_candidates:
+                if candidate.exists():
+                    return candidate.resolve()
 
         return actual_output

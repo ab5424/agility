@@ -315,7 +315,52 @@ class TestPolycrystalBuilderBuild(TestCase):
             prefix.write_text("dummy", encoding="utf-8")
             result = self.builder.build(output, output_format="vasp")
 
-        assert result == prefix
+        assert result == prefix.resolve()
+
+    @patch("subprocess.run")
+    def test_build_returns_poscar_if_vasp_output_is_poscar(self, mock_run: MagicMock) -> None:
+        """Test fallback to POSCAR when atomsk writes VASP output to POSCAR."""
+        mock_run.return_value = MagicMock(returncode=0)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output = pathlib.Path(tmpdir) / "poly.vasp"
+            prefix = pathlib.Path(tmpdir) / "poly"
+            poscar = pathlib.Path(tmpdir) / "POSCAR"
+            poscar.write_text("dummy", encoding="utf-8")
+            result = self.builder.build(output, output_format="vasp")
+
+            cmd = mock_run.call_args[0][0]
+            assert cmd[-1] == "vasp"
+            assert not output.exists()
+            assert not prefix.exists()
+            assert result == poscar.resolve()
+
+    @patch("subprocess.run")
+    def test_build_returns_contcar_if_vasp_output_is_contcar(self, mock_run: MagicMock) -> None:
+        """Test fallback to CONTCAR when atomsk writes VASP output to CONTCAR."""
+        mock_run.return_value = MagicMock(returncode=0)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output = pathlib.Path(tmpdir) / "poly.vasp"
+            prefix = pathlib.Path(tmpdir) / "poly"
+            contcar = pathlib.Path(tmpdir) / "CONTCAR"
+            contcar.write_text("dummy", encoding="utf-8")
+            result = self.builder.build(output, output_format="vasp")
+
+            cmd = mock_run.call_args[0][0]
+            assert cmd[-1] == "vasp"
+            assert not output.exists()
+            assert not prefix.exists()
+            assert not (pathlib.Path(tmpdir) / "POSCAR").exists()
+            assert result == contcar.resolve()
+
+    @patch("subprocess.run")
+    def test_build_sets_cwd_to_output_directory(self, mock_run: MagicMock) -> None:
+        """Test that atomsk is executed in the output file directory."""
+        mock_run.return_value = MagicMock(returncode=0)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output = pathlib.Path(tmpdir) / "poly.lmp"
+            self.builder.build(output)
+
+        assert mock_run.call_args.kwargs["cwd"] == str(output.resolve().parent)
 
 
 @pytest.mark.unit
