@@ -124,7 +124,7 @@ def plot_mdf(
         msg = f"orientations must have shape (N, 4), got {q.shape}"
         raise ValueError(msg)
     norms = np.linalg.norm(q, axis=1, keepdims=True)
-    if np.any(norms == 0):
+    if np.any(norms < np.finfo(float).tiny):
         msg = "orientations contains a zero-norm quaternion"
         raise ValueError(msg)
     q = q / norms
