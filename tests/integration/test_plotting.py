@@ -127,16 +127,27 @@ class TestMdfLargePolycrystal(TestCase):
         """Create or download a large polycrystalline Al structure for tests."""
         cls._work_dir = Path(tempfile.gettempdir()) / "agility_integration_assets"
         cls._work_dir.mkdir(parents=True, exist_ok=True)
-        cls._poly_path = cls._work_dir / "large_al_polycrystal.pdb"
+        lmp_path = cls._work_dir / "large_al_polycrystal.lmp"
+        pdb_path = cls._work_dir / "large_al_polycrystal.pdb"
 
-        if not cls._poly_path.exists():
-            created = cls._make_polycrystal_with_atomsk(cls._poly_path)
-            if not created:
-                try:
-                    cls._download_polycrystal(cls._poly_path)
-                except (urllib.error.URLError, TimeoutError, ValueError) as exc:
-                    msg = f"could not create or download large polycrystal: {exc}"
-                    raise SkipTest(msg) from exc
+        if lmp_path.exists():
+            cls._poly_path = lmp_path
+            return
+        if pdb_path.exists():
+            cls._poly_path = pdb_path
+            return
+
+        created = cls._make_polycrystal_with_atomsk(lmp_path)
+        if created:
+            cls._poly_path = lmp_path
+            return
+
+        try:
+            cls._download_polycrystal(pdb_path)
+            cls._poly_path = pdb_path
+        except (urllib.error.URLError, TimeoutError, ValueError) as exc:
+            msg = f"could not create or download large polycrystal: {exc}"
+            raise SkipTest(msg) from exc
 
     def setUp(self) -> None:
         """Load the large polycrystal structure for analysis."""

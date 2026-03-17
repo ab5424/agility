@@ -60,12 +60,12 @@ class TestPlotMdf(TestCase):
     """Test the plot_mdf function with synthetic quaternion data."""
 
     # Three distinct orientations used in most tests.
-    # q1 = identity, q2 = 90° around x, q3 = 90° around z.
+    # q1 = identity, q2 = 90° around x, q3 = 90° around z in scalar-last (x, y, z, w).
     _ORIENTATIONS: np.ndarray = np.array(
         [
-            [1.0, 0.0, 0.0, 0.0],
-            [np.sqrt(2) / 2, np.sqrt(2) / 2, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0],
             [np.sqrt(2) / 2, 0.0, 0.0, np.sqrt(2) / 2],
+            [0.0, 0.0, np.sqrt(2) / 2, np.sqrt(2) / 2],
         ],
     )
 
@@ -96,9 +96,9 @@ class TestPlotMdf(TestCase):
 
     def test_known_misorientation_angle(self) -> None:
         """Verify that a 90° misorientation between two grains is histogrammed correctly."""
-        # q_identity (0°) vs. q_90x (90° rotation around x-axis).
-        q_identity = np.array([1.0, 0.0, 0.0, 0.0])
-        q_90x = np.array([np.sqrt(2) / 2, np.sqrt(2) / 2, 0.0, 0.0])
+        # q_identity (0°) vs. q_90x (90° rotation around x-axis), scalar-last.
+        q_identity = np.array([0.0, 0.0, 0.0, 1.0])
+        q_90x = np.array([np.sqrt(2) / 2, 0.0, 0.0, np.sqrt(2) / 2])
         orientations = np.array([q_identity, q_90x])
 
         fig = plot_mdf(orientations, density=False)

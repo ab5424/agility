@@ -44,7 +44,12 @@ def _cubic_symmetry_quaternions() -> np.ndarray:
                 mat[row, col] = signs[row]
             if np.isclose(np.linalg.det(mat), 1.0):
                 cubic_rot_mats.append(mat)
-    return Rotation.from_matrix(np.array(cubic_rot_mats)).as_quat()
+    result = Rotation.from_matrix(np.array(cubic_rot_mats)).as_quat()
+    if len(result) != 24:
+        msg = f"expected 24 cubic symmetry operators, got {len(result)}"
+        raise RuntimeError(msg)
+    result.flags.writeable = False
+    return result
 
 
 def cubic_disorientation_angles(q_i: np.ndarray, q_j: np.ndarray) -> np.ndarray:
