@@ -167,7 +167,7 @@ def plot_mdf(
     ax.hist(angles_deg, bins=bins, density=density, edgecolor="black", alpha=0.7)
     ax.set_xlabel("Misorientation Angle (°)")
     ax.set_xlabel(
-        "Disorientation Angle (°)" if symmetry is not None else "Misorientation Angle (°)"
+        "Disorientation Angle (°)" if symmetry is not None else "Misorientation Angle (°)",
     )
     ax.set_title(title)
     return fig
