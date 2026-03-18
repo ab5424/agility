@@ -54,6 +54,7 @@ ase = [
 pymatgen = [
     "pymatgen>=2024",
 ]
+all = ["agility[tests,ovito,ase,pymatgen]"]
 
 [tool.setuptools.dynamic]
 version = {"attr" = "agility.__version__"}
