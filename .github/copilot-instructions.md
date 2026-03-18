@@ -13,9 +13,10 @@ agility/          # Main package source
   minimiser.py    # LAMMPS minimisation helpers
   plotting.py     # Plotting utilities (seaborn/matplotlib)
 tests/            # Test suite
-  analysis/       # Tests for analysis.py
-  files/          # Test fixture files (e.g. aluminium.lmp)
-  plotting/       # Tests for plotting.py
+  unit/           # Unit tests (no optional backends required)
+  integration/    # Integration tests (require optional backends)
+  files/          # Test fixture files (e.g. aluminium.lmp, STO_polycrystal.lmp)
+  conftest.py     # Shared pytest configuration (sets matplotlib backend to Agg)
 docs/             # Sphinx documentation source
 examples/         # Jupyter notebook examples
 ```
@@ -75,8 +76,10 @@ pre-commit run --all-files
 
 ## Testing Conventions
 
-- Tests use `pytest` and `unittest.TestCase` (see `tests/analysis/test_analysis.py` for the pattern).
+- Tests use `pytest` and `unittest.TestCase`.
 - Test files begin with `from __future__ import annotations`.
+- Unit tests live under `tests/unit/` and must not require optional backends.
+- Integration tests live under `tests/integration/` and are skipped when optional backends are absent.
 - Test fixture files live under `tests/files/`.
 - Skip tests for optional backends using:
 
