@@ -97,3 +97,72 @@ class TestGetTypeLammps(TestCase):
         """Test that get_type raises NameError for an invalid return_type."""
         with pytest.raises(NameError, match="Only Indices and Identifier"):
             self.gbs.get_type(1, return_type="Invalid")
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(not find_spec("lammps"), reason="lammps not installed")
+class TestGetCrystallineAtomsLammps(TestCase):
+    """Test get_crystalline_atoms for the lammps backend."""
+
+    def setUp(self) -> None:
+        """Set up a GBStructure with the lammps backend (no file loaded)."""
+        self.gbs = GBStructure("lammps", "")
+
+    def tearDown(self) -> None:
+        """Close the LAMMPS instance after each test."""
+        lmp = getattr(getattr(self, "gbs", None), "pylmp", None)
+        if lmp is not None:
+            lmp.lmp.close()
+
+    def _setup_fcc_lattice(self) -> None:
+        """Create a perfect FCC Al lattice for structural analysis tests."""
+        lmp = self.gbs.pylmp
+        lmp.units("metal")
+        lmp.atom_style("atomic")
+        lmp.lattice("fcc 4.05")
+        lmp.region("box block 0 3 0 3 0 3")
+        lmp.create_box("1 box")
+        lmp.create_atoms("1 box")
+        lmp.mass("1 26.982")
+        lmp.pair_style("zero 6.0")
+        lmp.pair_coeff("* *")
+        lmp.run("0")
+
+    def test_invalid_mode_raises_value_error(self) -> None:
+        """Test that an unrecognised mode raises ValueError."""
+        with pytest.raises(ValueError, match="Incorrect mode"):
+            self.gbs.get_crystalline_atoms(mode="invalid")
+
+    def test_unimplemented_mode_raises_not_implemented(self) -> None:
+        """Test that voronoi mode raises NotImplementedError."""
+        with pytest.raises(NotImplementedError):
+            self.gbs.get_crystalline_atoms(mode="voronoi")
+
+    def test_invalid_return_type_raises_not_implemented(self) -> None:
+        """Test that an invalid return_type raises NotImplementedError after CNA."""
+        self._setup_fcc_lattice()
+        self.gbs.perform_cna(cutoff=3.3)
+        self.gbs.pylmp.run("0")
+        with pytest.raises(NotImplementedError):
+            self.gbs.get_crystalline_atoms(mode="cna", return_type="Invalid")
+
+    def test_cna_perfect_fcc_all_crystalline_identifier(self) -> None:
+        """All atoms in a perfect FCC lattice should be crystalline (CNA, Identifier)."""
+        self._setup_fcc_lattice()
+        self.gbs.perform_cna(cutoff=3.3)
+        self.gbs.pylmp.run("0")
+        n_atoms = self.gbs.pylmp.system.natoms
+        result = self.gbs.get_crystalline_atoms(mode="cna")
+        assert len(result) == n_atoms
+        # LAMMPS create_atoms assigns sequential IDs starting from 1
+        assert sorted(result) == list(range(1, n_atoms + 1))
+
+    def test_cna_perfect_fcc_all_crystalline_indices(self) -> None:
+        """All atoms in a perfect FCC lattice should be crystalline (CNA, Indices)."""
+        self._setup_fcc_lattice()
+        self.gbs.perform_cna(cutoff=3.3)
+        self.gbs.pylmp.run("0")
+        n_atoms = self.gbs.pylmp.system.natoms
+        result = self.gbs.get_crystalline_atoms(mode="cna", return_type="Indices")
+        assert len(result) == n_atoms
+        assert sorted(result) == list(range(n_atoms))

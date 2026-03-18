@@ -1043,8 +1043,14 @@ class GBStructure:
 
     # TODO @ab5424: Rename to particles
     # https://github.com/ab5424/agility/issues/173
-    def get_crystalline_atoms(self, return_type: str = "Identifier") -> list:
+    def get_crystalline_atoms(self, mode: str = "cna", return_type: str = "Identifier") -> list:
         """Get the atoms in the bulk, as determined by structural analysis.
+
+        For this to work, some sort of structural analysis has to be performed.
+
+        Args:
+            mode: Mode for selection of crystalline atoms. Possible options: cna, ptm, ackland.
+            return_type (str): Identifier or Indices.
 
         Returns:
             List of crystalline particles.
@@ -1066,17 +1072,6 @@ class GBStructure:
                 else:
                     msg = "Indices and Identifier are possible as return types."
                     raise NotImplementedError(msg)
-                # df_temp = pd.DataFrame(
-                #     list(
-                #         zip(
-                #             self.data.particles["Particle Identifier"],
-                #             self.data.particles["Structure Type"],
-                #         )
-                #     ),
-                #     columns=["Particle Identifier", "Structure Type"],
-                # )
-                # df_gb = df_temp[df_temp["Structure Type"] != 0]
-                # return list(df_gb["Particle Identifier"])
             else:
                 warnings.warn(
                     "No structure type information found. Returning empty list.",
@@ -1084,9 +1079,36 @@ class GBStructure:
                 )
                 gb_list = []
         elif self.backend == "lammps":
-            # TODO @ab5424: Implement lammps backend for get_crystalline_atoms
-            # https://github.com/ab5424/agility/issues/174
-            raise not_implemented(self.backend)
+            from lammps import LMP_STYLE_ATOM, LMP_TYPE_VECTOR  # noqa: PLC0415
+
+            if mode == "cna":
+                compute_name = "cna_0"
+                non_crystalline_value = 5
+            elif mode == "ptm":
+                compute_name = "ptm_0"
+                non_crystalline_value = 0
+            elif mode == "ackland":
+                compute_name = "ackland_0"
+                non_crystalline_value = 0
+            elif mode in ("voronoi", "centro"):
+                msg = f"Mode {mode} currently not implemented"
+                raise NotImplementedError(msg)
+            else:
+                msg = f"Incorrect mode {mode} specified"
+                raise ValueError(msg)
+
+            types = np.concatenate(
+                self.pylmp.lmp.numpy.extract_compute(compute_name, LMP_STYLE_ATOM, LMP_TYPE_VECTOR),
+            )
+            ids = np.concatenate(self.pylmp.lmp.numpy.extract_atom("id"))
+
+            if return_type == "Identifier":
+                gb_list = ids[types != non_crystalline_value].tolist()
+            elif return_type == "Indices":
+                gb_list = list(np.where(types != non_crystalline_value)[0])
+            else:
+                msg = "Indices and Identifier are possible as return types."
+                raise NotImplementedError(msg)
         else:
             raise not_implemented(self.backend)
         return gb_list
