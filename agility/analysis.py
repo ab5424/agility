@@ -1067,8 +1067,7 @@ class GBStructure:
                 elif return_type == "Indices":
                     gb_list = list(np.where(self.data.particles["Structure Type"] != 0)[0])
                 else:
-                    msg = "Indices and Identifier are possible as return types."
-                    raise NotImplementedError(msg)
+                    raise invalid_return_type()
             else:
                 warnings.warn(
                     "No structure type information found. Returning empty list.",
@@ -1104,8 +1103,7 @@ class GBStructure:
             elif return_type == "Indices":
                 gb_list = list(np.where(types != non_crystalline_value)[0])
             else:
-                msg = "Indices and Identifier are possible as return types."
-                raise NotImplementedError(msg)
+                raise invalid_return_type()
         else:
             raise not_implemented(self.backend)
         return gb_list
@@ -1390,3 +1388,13 @@ def not_implemented(backend: available_backends) -> NotImplementedError:
 
     """
     return NotImplementedError(f"The backend {backend} doesn't support this function.")
+
+
+def invalid_return_type() -> NotImplementedError:
+    """Return return type validation error.
+
+    Returns:
+        NotImplementedError
+
+    """
+    return NotImplementedError("Indices and Identifier are possible as return types.")
