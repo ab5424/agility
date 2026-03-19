@@ -128,6 +128,21 @@ class TestGetCrystallineAtomsLammps(TestCase):
         lmp.pair_coeff("* *")
         lmp.run("0")
 
+    def _setup_isolated_atoms(self) -> None:
+        """Create two isolated atoms with no FCC-like neighbors (no crystalline structure)."""
+        lmp = self.gbs.pylmp
+        lmp.units("metal")
+        lmp.atom_style("atomic")
+        lmp.region("box block 0 20 0 20 0 20")
+        lmp.create_box("1 box")
+        # Place two atoms far apart so each has no neighbors within CNA cutoff
+        lmp.create_atoms("1 single 5.0 5.0 5.0 units box")
+        lmp.create_atoms("1 single 15.0 15.0 15.0 units box")
+        lmp.mass("1 26.982")
+        lmp.pair_style("zero 6.0")
+        lmp.pair_coeff("* *")
+        lmp.run("0")
+
     def test_invalid_mode_raises_value_error(self) -> None:
         """Test that an unrecognised mode raises ValueError."""
         with pytest.raises(ValueError, match="Incorrect mode"):
@@ -166,3 +181,26 @@ class TestGetCrystallineAtomsLammps(TestCase):
         result = self.gbs.get_crystalline_atoms(mode="cna", return_type="Indices")
         assert len(result) == n_atoms
         assert sorted(result) == list(range(n_atoms))
+
+    def test_cna_isolated_atoms_not_crystalline(self) -> None:
+        """Atoms with no FCC-like neighbors (type 5 in CNA) must be excluded."""
+        self._setup_isolated_atoms()
+        self.gbs.perform_cna(cutoff=3.3)
+        self.gbs.pylmp.run("0")
+        # Two isolated atoms have no FCC-like neighbors → CNA assigns them type 5 ("other")
+        result = self.gbs.get_crystalline_atoms(mode="cna")
+        assert result == []
+        # Verify the inverse: both isolated atoms appear as non-crystalline
+        non_crystalline = self.gbs.get_non_crystalline_atoms(mode="cna")
+        assert len(non_crystalline) == 2
+
+    def test_cna_crystalline_and_non_crystalline_complement(self) -> None:
+        """get_crystalline_atoms and get_non_crystalline_atoms must together cover all atoms."""
+        self._setup_fcc_lattice()
+        self.gbs.perform_cna(cutoff=3.3)
+        self.gbs.pylmp.run("0")
+        n_atoms = self.gbs.pylmp.system.natoms
+        crystalline = self.gbs.get_crystalline_atoms(mode="cna")
+        non_crystalline = self.gbs.get_non_crystalline_atoms(mode="cna")
+        assert len(crystalline) + len(non_crystalline) == n_atoms
+        assert set(crystalline).isdisjoint(set(non_crystalline))

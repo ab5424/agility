@@ -13,7 +13,6 @@ import warnings
 from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
-import pandas as pd
 
 from agility.minimiser import minimise_lmp
 
@@ -1004,39 +1003,37 @@ class GBStructure:
             else:
                 raise not_implemented(self.backend)
         elif self.backend == "lammps":
-            # Supported analysis methods: cna, ptm,
+            # Supported analysis methods: cna, ptm, ackland
             from lammps import LMP_STYLE_ATOM, LMP_TYPE_VECTOR  # noqa: PLC0415
 
-            # ids = []
-            # for i in range(len(self.pylmp.atoms)):
-            #     ids.append(self.pylmp.atoms[i].id)
-            types = np.concatenate(
-                self.pylmp.lmp.numpy.extract_compute("cna_0", LMP_STYLE_ATOM, LMP_TYPE_VECTOR),
-            )
-            # https://docs.lammps.org/Classes_atom.html#_CPPv4N9LAMMPS_NS4Atom7extractEPKc
-            ids = np.concatenate(self.pylmp.lmp.numpy.extract_atom("id"))
-            df_temp = pd.DataFrame(
-                list(
-                    zip(
-                        ids,
-                        types,
-                        strict=True,
-                    ),
-                ),
-                columns=["Particle Identifier", "Structure Type"],
-            )
-            # TDOD: This is only cna, what about others?
             if mode == "cna":
-                df_gb = df_temp[df_temp["Structure Type"] == 5]
-            elif mode in ("ptm", "ackland"):
-                df_gb = df_temp[df_temp["Structure Type"] == 0]
+                compute_name = "cna_0"
+                non_crystalline_value = 5
+            elif mode == "ptm":
+                compute_name = "ptm_0"
+                non_crystalline_value = 0
+            elif mode == "ackland":
+                compute_name = "ackland_0"
+                non_crystalline_value = 0
             elif mode in ("voronoi", "centro"):
                 msg = f"Mode {mode} currently not implemented"
                 raise NotImplementedError(msg)
             else:
                 msg = f"Incorrect mode {mode} specified"
                 raise ValueError(msg)
-            gb_list = list(df_gb["Particle Identifier"])
+
+            # https://docs.lammps.org/Classes_atom.html#_CPPv4N9LAMMPS_NS4Atom7extractEPKc
+            types = np.ravel(
+                self.pylmp.lmp.numpy.extract_compute(compute_name, LMP_STYLE_ATOM, LMP_TYPE_VECTOR),
+            )
+            ids = np.ravel(self.pylmp.lmp.numpy.extract_atom("id"))
+            if return_type == "Identifier":
+                gb_list = ids[types == non_crystalline_value].tolist()
+            elif return_type == "Indices":
+                gb_list = list(np.where(types == non_crystalline_value)[0])
+            else:
+                msg = "Only Indices and Identifier are possible as return types."
+                raise NameError(msg)
         else:
             raise not_implemented(self.backend)
         return gb_list
@@ -1097,10 +1094,10 @@ class GBStructure:
                 msg = f"Incorrect mode {mode} specified"
                 raise ValueError(msg)
 
-            types = np.concatenate(
+            types = np.ravel(
                 self.pylmp.lmp.numpy.extract_compute(compute_name, LMP_STYLE_ATOM, LMP_TYPE_VECTOR),
             )
-            ids = np.concatenate(self.pylmp.lmp.numpy.extract_atom("id"))
+            ids = np.ravel(self.pylmp.lmp.numpy.extract_atom("id"))
 
             if return_type == "Identifier":
                 gb_list = ids[types != non_crystalline_value].tolist()
