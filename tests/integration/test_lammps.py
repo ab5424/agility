@@ -143,6 +143,14 @@ class TestGetCrystallineAtomsLammps(TestCase):
         lmp.pair_coeff("* *")
         lmp.run("0")
 
+    def _setup_fcc_with_isolated_atoms(self) -> None:
+        """Create mostly crystalline FCC lattice with a few isolated non-crystalline atoms."""
+        self._setup_fcc_lattice()
+        lmp = self.gbs.pylmp
+        lmp.create_atoms("1 single 50.0 50.0 50.0 units box")
+        lmp.create_atoms("1 single 80.0 80.0 80.0 units box")
+        lmp.run("0")
+
     def test_invalid_mode_raises_value_error(self) -> None:
         """Test that an unrecognised mode raises ValueError."""
         with pytest.raises(ValueError, match="Incorrect mode"):
@@ -196,11 +204,12 @@ class TestGetCrystallineAtomsLammps(TestCase):
 
     def test_cna_crystalline_and_non_crystalline_complement(self) -> None:
         """get_crystalline_atoms and get_non_crystalline_atoms must together cover all atoms."""
-        self._setup_fcc_lattice()
+        self._setup_fcc_with_isolated_atoms()
         self.gbs.perform_cna(cutoff=3.3)
         self.gbs.pylmp.run("0")
         n_atoms = self.gbs.pylmp.system.natoms
         crystalline = self.gbs.get_crystalline_atoms(mode="cna")
         non_crystalline = self.gbs.get_non_crystalline_atoms(mode="cna")
+        assert 0 < len(non_crystalline) < n_atoms
         assert len(crystalline) + len(non_crystalline) == n_atoms
         assert set(crystalline).isdisjoint(set(non_crystalline))

@@ -1046,7 +1046,8 @@ class GBStructure:
         For this to work, some sort of structural analysis has to be performed.
 
         Args:
-            mode: Mode for selection of crystalline atoms. Possible options: cna, ptm, ackland.
+            mode: Mode for selection of crystalline atoms (LAMMPS backend only). Possible
+                options: cna, ptm, ackland.
             return_type (str): Identifier or Indices.
 
         Returns:
@@ -1079,13 +1080,13 @@ class GBStructure:
 
             if mode == "cna":
                 compute_name = "cna_0"
-                non_crystalline_value = 5
+                non_crystalline_sentinel = 5
             elif mode == "ptm":
                 compute_name = "ptm_0"
-                non_crystalline_value = 0
+                non_crystalline_sentinel = 0
             elif mode == "ackland":
                 compute_name = "ackland_0"
-                non_crystalline_value = 0
+                non_crystalline_sentinel = 0
             elif mode in ("voronoi", "centro"):
                 msg = f"Mode {mode} currently not implemented"
                 raise NotImplementedError(msg)
@@ -1099,9 +1100,9 @@ class GBStructure:
             ids = np.ravel(self.pylmp.lmp.numpy.extract_atom("id"))
 
             if return_type == "Identifier":
-                gb_list = ids[types != non_crystalline_value].tolist()
+                gb_list = ids[types != non_crystalline_sentinel].tolist()
             elif return_type == "Indices":
-                gb_list = list(np.where(types != non_crystalline_value)[0])
+                gb_list = list(np.where(types != non_crystalline_sentinel)[0])
             else:
                 raise invalid_return_type()
         else:
