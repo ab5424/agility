@@ -8,7 +8,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from agility.analysis import GBStructure, not_implemented
+from agility.analysis import GBStructure, GBStructureTimeseries, not_implemented
 
 
 @pytest.mark.unit
@@ -132,3 +132,156 @@ class TestInvertSelectionUnit(TestCase):
         gbs._invert_selection()  # noqa: SLF001
         gbs._invert_selection()  # noqa: SLF001
         assert gbs.data.selection == original
+
+
+@pytest.mark.unit
+class TestGBStructureTimeseriesInheritance(TestCase):
+    """Test that GBStructureTimeseries properly inherits from GBStructure."""
+
+    def test_is_subclass_of_gbstructure(self) -> None:
+        """GBStructureTimeseries must be a subclass of GBStructure."""
+        assert issubclass(GBStructureTimeseries, GBStructure)
+
+    def test_instance_is_gbstructure(self) -> None:
+        """A GBStructureTimeseries instance must also be a GBStructure."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        assert isinstance(ts, GBStructure)
+
+
+@pytest.mark.unit
+class TestGBStructureTimeseriesInit(TestCase):
+    """Test GBStructureTimeseries.__init__ without real backends."""
+
+    def _make_ts(
+        self,
+        backend: str = "ase",
+        frames: int = 3,
+        timestamps: list[int | float] | None = None,
+    ) -> GBStructureTimeseries:
+        """Return a GBStructureTimeseries with mocked frame data."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = backend
+        ts.filename = "dummy.dump"
+        mock_atoms = [MagicMock() for _ in range(frames)]
+        ts.data = types.SimpleNamespace(atoms=mock_atoms, selection=[])
+        ts.timestamps = timestamps
+        return ts
+
+    def test_timestamps_stored_when_provided(self) -> None:
+        """Timestamps passed at init must be accessible as an attribute."""
+        ts = self._make_ts(timestamps=[0, 10, 20])
+        assert ts.timestamps == [0, 10, 20]
+
+    def test_timestamps_none_by_default(self) -> None:
+        """Timestamps must be None when not provided."""
+        ts = self._make_ts()
+        assert ts.timestamps is None
+
+    def test_backend_attribute_preserved(self) -> None:
+        """Backend must be stored as an attribute."""
+        ts = self._make_ts(backend="ase")
+        assert ts.backend == "ase"
+
+
+@pytest.mark.unit
+class TestGBStructureTimeseriesNumFrames(TestCase):
+    """Test the num_frames property without real backends."""
+
+    def _make_ts_ase(self, n: int) -> GBStructureTimeseries:
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "ase"
+        ts.data = types.SimpleNamespace(atoms=[MagicMock() for _ in range(n)], selection=[])
+        return ts
+
+    def test_num_frames_ase(self) -> None:
+        """num_frames must equal the number of ASE Atoms objects stored."""
+        ts = self._make_ts_ase(5)
+        assert ts.num_frames == 5
+
+    def test_num_frames_unsupported_backend_raises(self) -> None:
+        """num_frames must raise NotImplementedError for unsupported backends."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "pymatgen"
+        with pytest.raises(NotImplementedError, match="pymatgen"):
+            _ = ts.num_frames
+
+
+@pytest.mark.unit
+class TestGBStructureTimeseriesGetFrame(TestCase):
+    """Test get_frame without real backends."""
+
+    def _make_ts_ase(self, n: int) -> GBStructureTimeseries:
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "ase"
+        ts.filename = "dummy.dump"
+        mock_atoms = [MagicMock(name=f"frame_{i}") for i in range(n)]
+        ts.data = types.SimpleNamespace(atoms=mock_atoms, selection=[])
+        return ts
+
+    def test_get_frame_returns_gbstructure(self) -> None:
+        """get_frame must return a GBStructure instance."""
+        ts = self._make_ts_ase(3)
+        frame = ts.get_frame(0)
+        assert isinstance(frame, GBStructure)
+
+    def test_get_frame_correct_atoms(self) -> None:
+        """get_frame must set data.atoms to the correct frame's Atoms object."""
+        ts = self._make_ts_ase(3)
+        frame = ts.get_frame(2)
+        assert frame.data.atoms is ts.data.atoms[2]
+
+    def test_get_frame_inherits_backend(self) -> None:
+        """The returned GBStructure must have the same backend as the timeseries."""
+        ts = self._make_ts_ase(3)
+        frame = ts.get_frame(1)
+        assert frame.backend == "ase"
+
+    def test_get_frame_unsupported_backend_raises(self) -> None:
+        """get_frame must raise NotImplementedError for unsupported backends."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "pymatgen"
+        with pytest.raises(NotImplementedError):
+            ts.get_frame(0)
+
+
+@pytest.mark.unit
+class TestGBStructureTimeseriesRemoveTimesteps(TestCase):
+    """Test remove_timesteps without real backends."""
+
+    def _make_ts_ase(
+        self,
+        n: int,
+        timestamps: list[int | float] | None = None,
+    ) -> GBStructureTimeseries:
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "ase"
+        ts.filename = "dummy.dump"
+        ts.data = types.SimpleNamespace(atoms=list(range(n)), selection=[])
+        ts.timestamps = timestamps
+        return ts
+
+    def test_remove_timesteps_trims_frames(self) -> None:
+        """remove_timesteps must discard the first N frames."""
+        ts = self._make_ts_ase(5)
+        ts.remove_timesteps(2)
+        assert ts.data.atoms == [2, 3, 4]
+
+    def test_remove_timesteps_trims_timestamps(self) -> None:
+        """remove_timesteps must trim the timestamps list when it is set."""
+        ts = self._make_ts_ase(5, timestamps=[0, 10, 20, 30, 40])
+        ts.remove_timesteps(2)
+        assert ts.timestamps == [20, 30, 40]
+
+    def test_remove_timesteps_no_timestamps(self) -> None:
+        """remove_timesteps must not fail when timestamps is None."""
+        ts = self._make_ts_ase(4)
+        ts.remove_timesteps(1)
+        assert ts.data.atoms == [1, 2, 3]
+        assert ts.timestamps is None
+
+    def test_remove_timesteps_unsupported_backend_raises(self) -> None:
+        """remove_timesteps must raise NotImplementedError for unsupported backends."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "lammps"
+        with pytest.raises(NotImplementedError):
+            ts.remove_timesteps(1)
