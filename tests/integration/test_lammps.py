@@ -145,10 +145,21 @@ class TestGetCrystallineAtomsLammps(TestCase):
 
     def _setup_fcc_with_isolated_atoms(self) -> None:
         """Create mostly crystalline FCC lattice with a few isolated non-crystalline atoms."""
-        self._setup_fcc_lattice()
         lmp = self.gbs.pylmp
-        lmp.create_atoms("1 single 50.0 50.0 50.0 units box")
-        lmp.create_atoms("1 single 80.0 80.0 80.0 units box")
+        lmp.units("metal")
+        lmp.atom_style("atomic")
+        lmp.region("box block 0 20 0 20 0 20")
+        lmp.create_box("1 box")
+        # Compact FCC cluster that remains crystalline
+        lmp.lattice("fcc 4.05")
+        lmp.region("fcc block 0 2 0 2 0 2")
+        lmp.create_atoms("1 region fcc")
+        # Two isolated atoms far from the FCC cluster and from each other
+        lmp.create_atoms("1 single 15.0 15.0 15.0 units box")
+        lmp.create_atoms("1 single 5.0 15.0 5.0 units box")
+        lmp.mass("1 26.982")
+        lmp.pair_style("zero 6.0")
+        lmp.pair_coeff("* *")
         lmp.run("0")
 
     def test_invalid_mode_raises_value_error(self) -> None:
@@ -161,12 +172,12 @@ class TestGetCrystallineAtomsLammps(TestCase):
         with pytest.raises(NotImplementedError):
             self.gbs.get_crystalline_atoms(mode="voronoi")
 
-    def test_invalid_return_type_raises_not_implemented(self) -> None:
-        """Test that an invalid return_type raises NotImplementedError after CNA."""
+    def test_invalid_return_type_raises_value_error(self) -> None:
+        """Test that an invalid return_type raises ValueError after CNA."""
         self._setup_fcc_lattice()
         self.gbs.perform_cna(cutoff=3.3)
         self.gbs.pylmp.run("0")
-        with pytest.raises(NotImplementedError):
+        with pytest.raises(ValueError, match="Indices and Identifier"):
             self.gbs.get_crystalline_atoms(mode="cna", return_type="Invalid")
 
     def test_cna_perfect_fcc_all_crystalline_identifier(self) -> None:
@@ -208,8 +219,11 @@ class TestGetCrystallineAtomsLammps(TestCase):
         self.gbs.perform_cna(cutoff=3.3)
         self.gbs.pylmp.run("0")
         n_atoms = self.gbs.pylmp.system.natoms
+        isolated_ids = {n_atoms - 1, n_atoms}
         crystalline = self.gbs.get_crystalline_atoms(mode="cna")
         non_crystalline = self.gbs.get_non_crystalline_atoms(mode="cna")
+        assert isolated_ids.issubset(set(non_crystalline))
+        assert isolated_ids.isdisjoint(set(crystalline))
         assert 0 < len(non_crystalline) < n_atoms
         assert len(crystalline) + len(non_crystalline) == n_atoms
         assert set(crystalline).isdisjoint(set(non_crystalline))
