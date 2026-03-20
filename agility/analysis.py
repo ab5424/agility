@@ -1003,7 +1003,7 @@ class GBStructure:
                 raise not_implemented(self.backend)
         elif self.backend == "lammps":
             # Supported analysis methods: cna, ptm, ackland
-            from lammps import LMP_STYLE_ATOM, LMP_TYPE_VECTOR  # noqa: PLC0415
+            from lammps import LMP_STYLE_ATOM, LMP_TYPE_ARRAY, LMP_TYPE_VECTOR  # noqa: PLC0415
 
             if mode == "cna":
                 compute_name = "cna_0"
@@ -1022,9 +1022,22 @@ class GBStructure:
                 raise ValueError(msg)
 
             # https://docs.lammps.org/Classes_atom.html#_CPPv4N9LAMMPS_NS4Atom7extractEPKc
-            types = np.ravel(
-                self.pylmp.lmp.numpy.extract_compute(compute_name, LMP_STYLE_ATOM, LMP_TYPE_VECTOR),
-            )
+            if mode == "ptm":
+                types = np.asarray(
+                    self.pylmp.lmp.numpy.extract_compute(
+                        compute_name,
+                        LMP_STYLE_ATOM,
+                        LMP_TYPE_ARRAY,
+                    ),
+                )[:, 0]
+            else:
+                types = np.ravel(
+                    self.pylmp.lmp.numpy.extract_compute(
+                        compute_name,
+                        LMP_STYLE_ATOM,
+                        LMP_TYPE_VECTOR,
+                    ),
+                )
             ids = np.ravel(self.pylmp.lmp.numpy.extract_atom("id"))
             if return_type == "Identifier":
                 gb_list = ids[types == non_crystalline_value].tolist()
@@ -1074,7 +1087,7 @@ class GBStructure:
                 )
                 gb_list = []
         elif self.backend == "lammps":
-            from lammps import LMP_STYLE_ATOM, LMP_TYPE_VECTOR  # noqa: PLC0415
+            from lammps import LMP_STYLE_ATOM, LMP_TYPE_ARRAY, LMP_TYPE_VECTOR  # noqa: PLC0415
 
             if mode == "cna":
                 compute_name = "cna_0"
@@ -1092,9 +1105,22 @@ class GBStructure:
                 msg = f"Incorrect mode {mode} specified"
                 raise ValueError(msg)
 
-            types = np.ravel(
-                self.pylmp.lmp.numpy.extract_compute(compute_name, LMP_STYLE_ATOM, LMP_TYPE_VECTOR),
-            )
+            if mode == "ptm":
+                types = np.asarray(
+                    self.pylmp.lmp.numpy.extract_compute(
+                        compute_name,
+                        LMP_STYLE_ATOM,
+                        LMP_TYPE_ARRAY,
+                    ),
+                )[:, 0]
+            else:
+                types = np.ravel(
+                    self.pylmp.lmp.numpy.extract_compute(
+                        compute_name,
+                        LMP_STYLE_ATOM,
+                        LMP_TYPE_VECTOR,
+                    ),
+                )
             ids = np.ravel(self.pylmp.lmp.numpy.extract_atom("id"))
 
             if return_type == "Identifier":
