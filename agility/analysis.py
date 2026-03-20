@@ -1052,13 +1052,13 @@ class GBStructure:
             else:
                 raise not_implemented(self.backend)
         elif self.backend == "lammps":
+            if return_type not in ("Identifier", "Indices"):
+                raise invalid_return_type()
             ids, types, non_crystalline_value = self._extract_lammps_structure_ids_and_types(mode)
             if return_type == "Identifier":
                 gb_list = ids[types == non_crystalline_value].tolist()
-            elif return_type == "Indices":
-                gb_list = list(np.where(types == non_crystalline_value)[0])
             else:
-                raise invalid_return_type()
+                gb_list = list(np.where(types == non_crystalline_value)[0])
         else:
             raise not_implemented(self.backend)
         return gb_list
@@ -1101,16 +1101,16 @@ class GBStructure:
                 )
                 gb_list = []
         elif self.backend == "lammps":
+            if return_type not in ("Identifier", "Indices"):
+                raise invalid_return_type()
             ids, types, non_crystalline_sentinel = self._extract_lammps_structure_ids_and_types(
                 mode,
             )
 
             if return_type == "Identifier":
                 gb_list = ids[types != non_crystalline_sentinel].tolist()
-            elif return_type == "Indices":
-                gb_list = list(np.where(types != non_crystalline_sentinel)[0])
             else:
-                raise invalid_return_type()
+                gb_list = list(np.where(types != non_crystalline_sentinel)[0])
         else:
             raise not_implemented(self.backend)
         return gb_list

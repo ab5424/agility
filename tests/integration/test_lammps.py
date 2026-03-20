@@ -162,6 +162,22 @@ class TestGetCrystallineAtomsLammps(TestCase):
         lmp.pair_coeff("* *")
         lmp.run("0")
 
+    def _isolated_atom_ids_by_position(self) -> set[int]:
+        """Find isolated atom IDs via exact coordinates used during setup."""
+        ids = self.gbs.pylmp.lmp.numpy.extract_atom("id")
+        positions = self.gbs.pylmp.lmp.numpy.extract_atom("x")
+        isolated_positions = {
+            (15.0, 15.0, 15.0),
+            (5.0, 15.0, 5.0),
+        }
+        isolated_ids = {
+            int(atom_id)
+            for atom_id, xyz in zip(ids, positions, strict=True)
+            if tuple(float(coord) for coord in xyz[:3]) in isolated_positions
+        }
+        assert len(isolated_ids) == 2
+        return isolated_ids
+
     def test_invalid_mode_raises_value_error(self) -> None:
         """Test that an unrecognised mode raises ValueError."""
         with pytest.raises(ValueError, match="Incorrect mode"):
@@ -217,7 +233,7 @@ class TestGetCrystallineAtomsLammps(TestCase):
         self._setup_fcc_with_isolated_atoms()
         self.gbs.perform_cna(cutoff=3.3)
         n_atoms = self.gbs.pylmp.system.natoms
-        isolated_ids = {n_atoms - 1, n_atoms}
+        isolated_ids = self._isolated_atom_ids_by_position()
         crystalline = self.gbs.get_crystalline_atoms(mode="cna")
         non_crystalline = self.gbs.get_non_crystalline_atoms(mode="cna")
         assert isolated_ids.issubset(set(non_crystalline))
