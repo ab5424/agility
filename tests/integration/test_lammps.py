@@ -120,7 +120,7 @@ class TestGetCrystallineAtomsLammps(TestCase):
         lmp.units("metal")
         lmp.atom_style("atomic")
         lmp.lattice("fcc 4.05")
-        lmp.region("box block 0 3 0 3 0 3")
+        lmp.region("box block 0 3 0 3 0 3 units lattice")
         lmp.create_box("1 box")
         lmp.create_atoms("1 box")
         lmp.mass("1 26.982")
@@ -152,7 +152,7 @@ class TestGetCrystallineAtomsLammps(TestCase):
         lmp.create_box("1 box")
         # Compact FCC cluster that remains crystalline
         lmp.lattice("fcc 4.05")
-        lmp.region("fcc block 0 2 0 2 0 2")
+        lmp.region("fcc block 0 2 0 2 0 2 units lattice")
         lmp.create_atoms("1 region fcc")
         # Two isolated atoms far from the FCC cluster and from each other
         lmp.create_atoms("1 single 15.0 15.0 15.0 units box")
