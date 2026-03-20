@@ -176,7 +176,6 @@ class TestGetCrystallineAtomsLammps(TestCase):
         """Test that an invalid return_type raises ValueError after CNA."""
         self._setup_fcc_lattice()
         self.gbs.perform_cna(cutoff=3.3)
-        self.gbs.pylmp.run("0")
         with pytest.raises(ValueError, match="Indices and Identifier"):
             self.gbs.get_crystalline_atoms(mode="cna", return_type="Invalid")
 
@@ -184,7 +183,6 @@ class TestGetCrystallineAtomsLammps(TestCase):
         """All atoms in a perfect FCC lattice should be crystalline (CNA, Identifier)."""
         self._setup_fcc_lattice()
         self.gbs.perform_cna(cutoff=3.3)
-        self.gbs.pylmp.run("0")
         n_atoms = self.gbs.pylmp.system.natoms
         result = self.gbs.get_crystalline_atoms(mode="cna")
         assert len(result) == n_atoms
@@ -195,7 +193,6 @@ class TestGetCrystallineAtomsLammps(TestCase):
         """All atoms in a perfect FCC lattice should be crystalline (CNA, Indices)."""
         self._setup_fcc_lattice()
         self.gbs.perform_cna(cutoff=3.3)
-        self.gbs.pylmp.run("0")
         n_atoms = self.gbs.pylmp.system.natoms
         result = self.gbs.get_crystalline_atoms(mode="cna", return_type="Indices")
         assert len(result) == n_atoms
@@ -205,7 +202,6 @@ class TestGetCrystallineAtomsLammps(TestCase):
         """Atoms with no FCC-like neighbors (type 5 in CNA) must be excluded."""
         self._setup_isolated_atoms()
         self.gbs.perform_cna(cutoff=3.3)
-        self.gbs.pylmp.run("0")
         # Two isolated atoms have no FCC-like neighbors → CNA assigns them type 5 ("other")
         result = self.gbs.get_crystalline_atoms(mode="cna")
         assert result == []
@@ -214,10 +210,12 @@ class TestGetCrystallineAtomsLammps(TestCase):
         assert len(non_crystalline) == 2
 
     def test_cna_crystalline_and_non_crystalline_complement(self) -> None:
-        """get_crystalline_atoms and get_non_crystalline_atoms must together cover all atoms."""
+        """get_crystalline_atoms and get_non_crystalline_atoms must together cover all atoms.
+
+        NOTE: The finite FCC cluster has surface atoms, which CNA classifies as non-crystalline.
+        """
         self._setup_fcc_with_isolated_atoms()
         self.gbs.perform_cna(cutoff=3.3)
-        self.gbs.pylmp.run("0")
         n_atoms = self.gbs.pylmp.system.natoms
         isolated_ids = {n_atoms - 1, n_atoms}
         crystalline = self.gbs.get_crystalline_atoms(mode="cna")

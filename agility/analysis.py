@@ -966,6 +966,56 @@ class GBStructure:
 
         return groups_non_selected
 
+    def _extract_lammps_structure_ids_and_types(
+        self,
+        mode: str,
+    ) -> tuple[np.ndarray, np.ndarray, int]:
+        """Extract LAMMPS atom IDs and structure types for a structural-analysis mode.
+
+        Args:
+            mode: Structural-analysis mode.
+
+        Returns:
+            Tuple containing atom ids, structure types and non-crystalline sentinel value.
+        """
+        from lammps import LMP_STYLE_ATOM, LMP_TYPE_ARRAY, LMP_TYPE_VECTOR  # noqa: PLC0415
+
+        if mode == "cna":
+            compute_name = "cna_0"
+            non_crystalline_sentinel = 5
+        elif mode == "ptm":
+            compute_name = "ptm_0"
+            non_crystalline_sentinel = 0
+        elif mode == "ackland":
+            compute_name = "ackland_0"
+            non_crystalline_sentinel = 0
+        elif mode in ("voronoi", "centro"):
+            msg = f"Mode {mode} currently not implemented"
+            raise NotImplementedError(msg)
+        else:
+            msg = f"Incorrect mode {mode} specified"
+            raise ValueError(msg)
+
+        # https://docs.lammps.org/Classes_atom.html#_CPPv4N9LAMMPS_NS4Atom7extractEPKc
+        if mode == "ptm":
+            types = np.asarray(
+                self.pylmp.lmp.numpy.extract_compute(
+                    compute_name,
+                    LMP_STYLE_ATOM,
+                    LMP_TYPE_ARRAY,
+                ),
+            )[:, 0]
+        else:
+            types = np.ravel(
+                self.pylmp.lmp.numpy.extract_compute(
+                    compute_name,
+                    LMP_STYLE_ATOM,
+                    LMP_TYPE_VECTOR,
+                ),
+            )
+        ids = np.ravel(self.pylmp.lmp.numpy.extract_atom("id"))
+        return ids, types, non_crystalline_sentinel
+
     # TODO @ab5424: Rename to particles
     # https://github.com/ab5424/agility/issues/173
     def get_non_crystalline_atoms(self, mode: str = "cna", return_type: str = "Identifier") -> list:
@@ -1002,43 +1052,7 @@ class GBStructure:
             else:
                 raise not_implemented(self.backend)
         elif self.backend == "lammps":
-            # Supported analysis methods: cna, ptm, ackland
-            from lammps import LMP_STYLE_ATOM, LMP_TYPE_ARRAY, LMP_TYPE_VECTOR  # noqa: PLC0415
-
-            if mode == "cna":
-                compute_name = "cna_0"
-                non_crystalline_value = 5
-            elif mode == "ptm":
-                compute_name = "ptm_0"
-                non_crystalline_value = 0
-            elif mode == "ackland":
-                compute_name = "ackland_0"
-                non_crystalline_value = 0
-            elif mode in ("voronoi", "centro"):
-                msg = f"Mode {mode} currently not implemented"
-                raise NotImplementedError(msg)
-            else:
-                msg = f"Incorrect mode {mode} specified"
-                raise ValueError(msg)
-
-            # https://docs.lammps.org/Classes_atom.html#_CPPv4N9LAMMPS_NS4Atom7extractEPKc
-            if mode == "ptm":
-                types = np.asarray(
-                    self.pylmp.lmp.numpy.extract_compute(
-                        compute_name,
-                        LMP_STYLE_ATOM,
-                        LMP_TYPE_ARRAY,
-                    ),
-                )[:, 0]
-            else:
-                types = np.ravel(
-                    self.pylmp.lmp.numpy.extract_compute(
-                        compute_name,
-                        LMP_STYLE_ATOM,
-                        LMP_TYPE_VECTOR,
-                    ),
-                )
-            ids = np.ravel(self.pylmp.lmp.numpy.extract_atom("id"))
+            ids, types, non_crystalline_value = self._extract_lammps_structure_ids_and_types(mode)
             if return_type == "Identifier":
                 gb_list = ids[types == non_crystalline_value].tolist()
             elif return_type == "Indices":
@@ -1087,41 +1101,9 @@ class GBStructure:
                 )
                 gb_list = []
         elif self.backend == "lammps":
-            from lammps import LMP_STYLE_ATOM, LMP_TYPE_ARRAY, LMP_TYPE_VECTOR  # noqa: PLC0415
-
-            if mode == "cna":
-                compute_name = "cna_0"
-                non_crystalline_sentinel = 5
-            elif mode == "ptm":
-                compute_name = "ptm_0"
-                non_crystalline_sentinel = 0
-            elif mode == "ackland":
-                compute_name = "ackland_0"
-                non_crystalline_sentinel = 0
-            elif mode in ("voronoi", "centro"):
-                msg = f"Mode {mode} currently not implemented"
-                raise NotImplementedError(msg)
-            else:
-                msg = f"Incorrect mode {mode} specified"
-                raise ValueError(msg)
-
-            if mode == "ptm":
-                types = np.asarray(
-                    self.pylmp.lmp.numpy.extract_compute(
-                        compute_name,
-                        LMP_STYLE_ATOM,
-                        LMP_TYPE_ARRAY,
-                    ),
-                )[:, 0]
-            else:
-                types = np.ravel(
-                    self.pylmp.lmp.numpy.extract_compute(
-                        compute_name,
-                        LMP_STYLE_ATOM,
-                        LMP_TYPE_VECTOR,
-                    ),
-                )
-            ids = np.ravel(self.pylmp.lmp.numpy.extract_atom("id"))
+            ids, types, non_crystalline_sentinel = self._extract_lammps_structure_ids_and_types(
+                mode,
+            )
 
             if return_type == "Identifier":
                 gb_list = ids[types != non_crystalline_sentinel].tolist()
