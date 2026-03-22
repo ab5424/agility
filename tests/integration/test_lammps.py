@@ -94,8 +94,8 @@ class TestGetTypeLammps(TestCase):
         assert result == []
 
     def test_get_type_invalid_return_type_raises(self) -> None:
-        """Test that get_type raises NameError for an invalid return_type."""
-        with pytest.raises(NameError, match="Only Indices and Identifier"):
+        """Test that get_type raises ValueError for an invalid return_type."""
+        with pytest.raises(ValueError, match="Invalid return type"):
             self.gbs.get_type(1, return_type="Invalid")
 
 
