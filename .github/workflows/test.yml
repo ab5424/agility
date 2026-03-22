@@ -46,7 +46,14 @@ jobs:
       - name: Install Linux system dependencies
         if: runner.os == 'Linux'
         run: |
-          sudo apt-get update && sudo apt-get install -y libegl1-mesa-dev lammps python3-lammps gfortran liblapack-dev
+          sudo apt-get update && sudo apt-get install -y libegl1-mesa-dev gfortran liblapack-dev
+      # The apt-installed LAMMPS Python bindings are compiled for the system Python.
+      # Loading them under older Python versions (< 3.12) causes a segfault,
+      # so only install and expose them on Python >= 3.12.
+      - name: Install LAMMPS and Python bindings
+        if: runner.os == 'Linux' && fromJSON(matrix.version.python) >= 3.12
+        run: |
+          sudo apt-get install -y lammps python3-lammps
           # Copy only the lammps Python package to an isolated directory so that the
           # system mpi4py (compiled for the system Python, not the test runner) is NOT
           # exposed via PYTHONPATH.  Without a visible mpi4py, lammps sets has_mpi4py=False
@@ -67,8 +74,9 @@ jobs:
           python -c "from agility.polycrystal import find_atomsk; assert find_atomsk() is not None, 'atomsk not available on PATH'"
       # Expose the apt-installed LAMMPS Python bindings (pure-Python ctypes module)
       # to the test runner regardless of the Python version used by setup-python.
+      # Skipped on Python < 3.12 where the system bindings can segfault.
       - name: Add LAMMPS Python bindings to PYTHONPATH
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && fromJSON(matrix.version.python) >= 3.12
         run: echo "PYTHONPATH=/tmp/lammps-bindings${PYTHONPATH:+:$PYTHONPATH}" >> "$GITHUB_ENV"
       - name: pytest
         run: |

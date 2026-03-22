@@ -13,7 +13,6 @@ import warnings
 from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
-import pandas as pd
 
 from agility.minimiser import minimise_lmp
 
@@ -364,8 +363,7 @@ class GBStructure:
                 elif list_ids_type == "Indices":
                     ids = list(np.where(self.data.particles["Structure Type"] != 10000)[0])
                 else:
-                    msg = "Only Indices and Identifier are possible as list id types."
-                    raise NameError(msg)
+                    raise invalid_return_type(list_ids_type)
                 l_ids = np.isin(ids, list_ids, assume_unique=True, invert=False)
                 selection = data.particles_.create_property(  # noqa: F841
                     "Selection",
@@ -841,8 +839,7 @@ class GBStructure:
             raise ValueError(msg)
         if self.backend == "ovito":
             if return_type not in ["Identifier", "Indices"]:
-                msg = "Only Indices and Identifier are possible as return types."
-                raise NameError(msg)
+                raise invalid_return_type(return_type)
 
             self._invert_selection()
             self.set_analysis()
@@ -923,8 +920,7 @@ class GBStructure:
         """
         if self.backend == "ovito":
             if return_type not in ["Identifier", "Indices"]:
-                msg = "Only Indices and Identifier are possible as return types."
-                raise NameError(msg)
+                raise invalid_return_type(return_type)
 
             self._invert_selection()
             self.set_analysis()
@@ -967,6 +963,56 @@ class GBStructure:
 
         return groups_non_selected
 
+    def _extract_lammps_structure_ids_and_types(
+        self,
+        mode: str,
+    ) -> tuple[np.ndarray, np.ndarray, int]:
+        """Extract LAMMPS atom IDs and structure types for a structural-analysis mode.
+
+        Args:
+            mode: Structural-analysis mode.
+
+        Returns:
+            Tuple containing atom ids, structure types and non-crystalline sentinel value.
+        """
+        from lammps import LMP_STYLE_ATOM, LMP_TYPE_ARRAY, LMP_TYPE_VECTOR  # noqa: PLC0415
+
+        if mode == "cna":
+            compute_name = "cna_0"
+            non_crystalline_sentinel = 5
+        elif mode == "ptm":
+            compute_name = "ptm_0"
+            non_crystalline_sentinel = 0
+        elif mode == "ackland":
+            compute_name = "ackland_0"
+            non_crystalline_sentinel = 0
+        elif mode in ("voronoi", "centro"):
+            msg = f"Mode {mode} currently not implemented"
+            raise NotImplementedError(msg)
+        else:
+            msg = f"Incorrect mode {mode} specified"
+            raise ValueError(msg)
+
+        # https://docs.lammps.org/Classes_atom.html#_CPPv4N9LAMMPS_NS4Atom7extractEPKc
+        if mode == "ptm":
+            types = np.asarray(
+                self.pylmp.lmp.numpy.extract_compute(
+                    compute_name,
+                    LMP_STYLE_ATOM,
+                    LMP_TYPE_ARRAY,
+                ),
+            )[:, 0]
+        else:
+            types = np.ravel(
+                self.pylmp.lmp.numpy.extract_compute(
+                    compute_name,
+                    LMP_STYLE_ATOM,
+                    LMP_TYPE_VECTOR,
+                ),
+            )
+        ids = np.ravel(self.pylmp.lmp.numpy.extract_atom("id"))
+        return ids, types, non_crystalline_sentinel
+
     # TODO @ab5424: Rename to particles
     # https://github.com/ab5424/agility/issues/173
     def get_non_crystalline_atoms(self, mode: str = "cna", return_type: str = "Identifier") -> list:
@@ -996,55 +1042,35 @@ class GBStructure:
                 elif return_type == "Indices":
                     gb_list = list(np.where(self.data.particles["Structure Type"] == 0)[0])
                 else:
-                    msg = "Only Indices and Identifier are possible as return types."
-                    raise NameError(msg)
+                    raise invalid_return_type(return_type)
             elif "Centrosymmetry" in self.data.particles:
                 msg = "Implementation in progress."
                 raise NotImplementedError(msg)
             else:
                 raise not_implemented(self.backend)
         elif self.backend == "lammps":
-            # Supported analysis methods: cna, ptm,
-            from lammps import LMP_STYLE_ATOM, LMP_TYPE_VECTOR  # noqa: PLC0415
-
-            # ids = []
-            # for i in range(len(self.pylmp.atoms)):
-            #     ids.append(self.pylmp.atoms[i].id)
-            types = np.concatenate(
-                self.pylmp.lmp.numpy.extract_compute("cna_0", LMP_STYLE_ATOM, LMP_TYPE_VECTOR),
-            )
-            # https://docs.lammps.org/Classes_atom.html#_CPPv4N9LAMMPS_NS4Atom7extractEPKc
-            ids = np.concatenate(self.pylmp.lmp.numpy.extract_atom("id"))
-            df_temp = pd.DataFrame(
-                list(
-                    zip(
-                        ids,
-                        types,
-                        strict=True,
-                    ),
-                ),
-                columns=["Particle Identifier", "Structure Type"],
-            )
-            # TDOD: This is only cna, what about others?
-            if mode == "cna":
-                df_gb = df_temp[df_temp["Structure Type"] == 5]
-            elif mode in ("ptm", "ackland"):
-                df_gb = df_temp[df_temp["Structure Type"] == 0]
-            elif mode in ("voronoi", "centro"):
-                msg = f"Mode {mode} currently not implemented"
-                raise NotImplementedError(msg)
+            if return_type not in ("Identifier", "Indices"):
+                raise invalid_return_type(return_type)
+            ids, types, non_crystalline_value = self._extract_lammps_structure_ids_and_types(mode)
+            if return_type == "Identifier":
+                gb_list = ids[types == non_crystalline_value].tolist()
             else:
-                msg = f"Incorrect mode {mode} specified"
-                raise ValueError(msg)
-            gb_list = list(df_gb["Particle Identifier"])
+                gb_list = list(np.where(types == non_crystalline_value)[0])
         else:
             raise not_implemented(self.backend)
         return gb_list
 
     # TODO @ab5424: Rename to particles
     # https://github.com/ab5424/agility/issues/173
-    def get_crystalline_atoms(self, return_type: str = "Identifier") -> list:
+    def get_crystalline_atoms(self, mode: str = "cna", return_type: str = "Identifier") -> list:
         """Get the atoms in the bulk, as determined by structural analysis.
+
+        For this to work, some sort of structural analysis has to be performed.
+
+        Args:
+            mode: Mode for selection of crystalline atoms (LAMMPS backend only). Possible
+                options: cna, ptm, ackland.
+            return_type (str): Identifier or Indices.
 
         Returns:
             List of crystalline particles.
@@ -1064,19 +1090,7 @@ class GBStructure:
                 elif return_type == "Indices":
                     gb_list = list(np.where(self.data.particles["Structure Type"] != 0)[0])
                 else:
-                    msg = "Indices and Identifier are possible as return types."
-                    raise NotImplementedError(msg)
-                # df_temp = pd.DataFrame(
-                #     list(
-                #         zip(
-                #             self.data.particles["Particle Identifier"],
-                #             self.data.particles["Structure Type"],
-                #         )
-                #     ),
-                #     columns=["Particle Identifier", "Structure Type"],
-                # )
-                # df_gb = df_temp[df_temp["Structure Type"] != 0]
-                # return list(df_gb["Particle Identifier"])
+                    raise invalid_return_type(return_type)
             else:
                 warnings.warn(
                     "No structure type information found. Returning empty list.",
@@ -1084,9 +1098,16 @@ class GBStructure:
                 )
                 gb_list = []
         elif self.backend == "lammps":
-            # TODO @ab5424: Implement lammps backend for get_crystalline_atoms
-            # https://github.com/ab5424/agility/issues/174
-            raise not_implemented(self.backend)
+            if return_type not in ("Identifier", "Indices"):
+                raise invalid_return_type(return_type)
+            ids, types, non_crystalline_sentinel = self._extract_lammps_structure_ids_and_types(
+                mode,
+            )
+
+            if return_type == "Identifier":
+                gb_list = ids[types != non_crystalline_sentinel].tolist()
+            else:
+                gb_list = list(np.where(types != non_crystalline_sentinel)[0])
         else:
             raise not_implemented(self.backend)
         return gb_list
@@ -1215,8 +1236,7 @@ class GBStructure:
             elif return_type == "Indices":
                 atom_list = list(np.where(self.data.particles["Particle Type"] == atom_type)[0])
             else:
-                msg = "Only Indices and Identifier are possible as return types."
-                raise NameError(msg)
+                raise invalid_return_type(return_type)
             # df_temp = pd.DataFrame(
             #     list(
             #         zip(
@@ -1240,8 +1260,7 @@ class GBStructure:
             elif return_type == "Indices":
                 atom_list = np.where(atom_types == atom_type)[0].tolist()
             else:
-                msg = "Only Indices and Identifier are possible as return types."
-                raise NameError(msg)
+                raise invalid_return_type(return_type)
         else:
             raise not_implemented(self.backend)
         return atom_list
@@ -1371,3 +1390,16 @@ def not_implemented(backend: available_backends) -> NotImplementedError:
 
     """
     return NotImplementedError(f"The backend {backend} doesn't support this function.")
+
+
+def invalid_return_type(return_type: str) -> ValueError:
+    """Construct return type validation error.
+
+    Returns:
+        ValueError
+
+    """
+    return ValueError(
+        f"Invalid return type {return_type} specified. Only "
+        "Indices and Identifier are possible as return types.",
+    )
