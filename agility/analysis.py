@@ -363,8 +363,7 @@ class GBStructure:
                 elif list_ids_type == "Indices":
                     ids = list(np.where(self.data.particles["Structure Type"] != 10000)[0])
                 else:
-                    msg = "Only Indices and Identifier are possible as list id types."
-                    raise NameError(msg)
+                    raise invalid_return_type(list_ids_type)
                 l_ids = np.isin(ids, list_ids, assume_unique=True, invert=False)
                 selection = data.particles_.create_property(  # noqa: F841
                     "Selection",
@@ -840,8 +839,7 @@ class GBStructure:
             raise ValueError(msg)
         if self.backend == "ovito":
             if return_type not in ["Identifier", "Indices"]:
-                msg = "Only Indices and Identifier are possible as return types."
-                raise NameError(msg)
+                raise invalid_return_type(return_type)
 
             self._invert_selection()
             self.set_analysis()
@@ -922,8 +920,7 @@ class GBStructure:
         """
         if self.backend == "ovito":
             if return_type not in ["Identifier", "Indices"]:
-                msg = "Only Indices and Identifier are possible as return types."
-                raise NameError(msg)
+                raise invalid_return_type(return_type)
 
             self._invert_selection()
             self.set_analysis()
@@ -1045,7 +1042,7 @@ class GBStructure:
                 elif return_type == "Indices":
                     gb_list = list(np.where(self.data.particles["Structure Type"] == 0)[0])
                 else:
-                    raise invalid_return_type()
+                    raise invalid_return_type(return_type)
             elif "Centrosymmetry" in self.data.particles:
                 msg = "Implementation in progress."
                 raise NotImplementedError(msg)
@@ -1053,7 +1050,7 @@ class GBStructure:
                 raise not_implemented(self.backend)
         elif self.backend == "lammps":
             if return_type not in ("Identifier", "Indices"):
-                raise invalid_return_type()
+                raise invalid_return_type(return_type)
             ids, types, non_crystalline_value = self._extract_lammps_structure_ids_and_types(mode)
             if return_type == "Identifier":
                 gb_list = ids[types == non_crystalline_value].tolist()
@@ -1093,7 +1090,7 @@ class GBStructure:
                 elif return_type == "Indices":
                     gb_list = list(np.where(self.data.particles["Structure Type"] != 0)[0])
                 else:
-                    raise invalid_return_type()
+                    raise invalid_return_type(return_type)
             else:
                 warnings.warn(
                     "No structure type information found. Returning empty list.",
@@ -1102,7 +1099,7 @@ class GBStructure:
                 gb_list = []
         elif self.backend == "lammps":
             if return_type not in ("Identifier", "Indices"):
-                raise invalid_return_type()
+                raise invalid_return_type(return_type)
             ids, types, non_crystalline_sentinel = self._extract_lammps_structure_ids_and_types(
                 mode,
             )
@@ -1239,8 +1236,7 @@ class GBStructure:
             elif return_type == "Indices":
                 atom_list = list(np.where(self.data.particles["Particle Type"] == atom_type)[0])
             else:
-                msg = "Only Indices and Identifier are possible as return types."
-                raise NameError(msg)
+                raise invalid_return_type(return_type)
             # df_temp = pd.DataFrame(
             #     list(
             #         zip(
@@ -1264,8 +1260,7 @@ class GBStructure:
             elif return_type == "Indices":
                 atom_list = np.where(atom_types == atom_type)[0].tolist()
             else:
-                msg = "Only Indices and Identifier are possible as return types."
-                raise NameError(msg)
+                raise invalid_return_type(return_type)
         else:
             raise not_implemented(self.backend)
         return atom_list
@@ -1397,11 +1392,14 @@ def not_implemented(backend: available_backends) -> NotImplementedError:
     return NotImplementedError(f"The backend {backend} doesn't support this function.")
 
 
-def invalid_return_type() -> ValueError:
+def invalid_return_type(return_type: str) -> ValueError:
     """Construct return type validation error.
 
     Returns:
         ValueError
 
     """
-    return ValueError("Indices and Identifier are possible as return types.")
+    return ValueError(
+        f"Invalid return type {return_type} specified. Only "
+        "Indices and Identifier are possible as return types.",
+    )
