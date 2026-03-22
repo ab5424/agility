@@ -48,10 +48,10 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y libegl1-mesa-dev gfortran liblapack-dev
       # The apt-installed LAMMPS Python bindings are compiled for the system Python.
-      # Loading them under older Python versions (e.g. 3.10/3.11) causes a segfault,
+      # Loading them under older Python versions (< 3.12) causes a segfault,
       # so only install and expose them on Python >= 3.12.
       - name: Install LAMMPS and Python bindings
-        if: runner.os == 'Linux' && matrix.version.python != '3.10' && matrix.version.python != '3.11'
+        if: runner.os == 'Linux' && fromJSON(matrix.version.python) >= 3.12
         run: |
           sudo apt-get install -y lammps python3-lammps
           # Copy only the lammps Python package to an isolated directory so that the
@@ -76,7 +76,7 @@ jobs:
       # to the test runner regardless of the Python version used by setup-python.
       # Skipped on Python < 3.12 where the system bindings can segfault.
       - name: Add LAMMPS Python bindings to PYTHONPATH
-        if: runner.os == 'Linux' && matrix.version.python != '3.10' && matrix.version.python != '3.11'
+        if: runner.os == 'Linux' && fromJSON(matrix.version.python) >= 3.12
         run: echo "PYTHONPATH=/tmp/lammps-bindings${PYTHONPATH:+:$PYTHONPATH}" >> "$GITHUB_ENV"
       - name: pytest
         run: |
