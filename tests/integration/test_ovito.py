@@ -6,21 +6,36 @@ from importlib.metadata import version
 from importlib.util import find_spec
 from pathlib import Path
 from unittest import TestCase
+from urllib.error import URLError
+from urllib.request import urlretrieve
 
 import numpy as np
 import pytest
 from numpy.testing import assert_allclose
 
-from agility.analysis import GBStructure
+from agility.analysis import GBStructure, GBStructureTimeseries
 
 MODULE_DIR = Path(__file__).absolute().parent
 TEST_FILES_DIR = MODULE_DIR.parent / "files"
+SHEAR_DUMP_URL = "https://gitlab.com/ovito-org/ovito-sample-data/-/raw/master/tutorial/shear.dump"
 
 # There is a breaking change in ovito 3.11 in the CNA modifier
 if find_spec("ovito"):
     OVITO_VERSION = tuple(int(part) for part in version("ovito").split(".") if part.isdigit())
     BREAKING_VERSION = tuple(map(int, ["3", "11"]))
     BREAKING = OVITO_VERSION < BREAKING_VERSION
+
+
+def _ensure_shear_dump() -> Path:
+    """Ensure the OVITO shear.dump fixture is available locally."""
+    filepath = TEST_FILES_DIR / "shear.dump"
+    if filepath.exists():
+        return filepath
+    try:
+        urlretrieve(SHEAR_DUMP_URL, filepath)  # noqa: S310
+    except (OSError, URLError) as exc:
+        pytest.skip(f"Unable to download shear.dump fixture: {exc}")
+    return filepath
 
 
 @pytest.mark.integration
@@ -113,3 +128,31 @@ class TestGBStructureOxide(TestCase):
         non_cryst_anions = self.data.expand_to_non_selected(nearest_n=12)
         assert len(non_cryst_anions) == 2582
         assert len(o) - len(non_cryst_anions) == 3748
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
+class TestGBStructureTimeseriesOvito(TestCase):
+    """Integration tests for GBStructureTimeseries with ovito."""
+
+    @pytest.mark.filterwarnings("ignore: Using all particles with a particle identifier as the")
+    def test_gb_fraction_over_time(self) -> None:
+        """Test grain-boundary fraction can be evaluated over all trajectory frames."""
+        shear_dump = _ensure_shear_dump()
+        ts = GBStructureTimeseries("ovito", shear_dump)
+
+        assert ts.num_frames > 1
+        ts.timestamps = list(range(ts.num_frames))
+        assert ts.timestamps is not None
+        assert len(ts.timestamps) == ts.num_frames
+
+        ts.perform_cna(enabled=("fcc",), compute=False)
+        gb_fractions: list[float] = []
+        for frame_idx in range(ts.num_frames):
+            ts.data = ts.pipeline.compute(frame=frame_idx)
+            gb_fractions.append(ts.get_gb_fraction())
+
+        assert ts.timestamps == list(range(ts.num_frames))
+        assert len(gb_fractions) == ts.num_frames
+        assert all(0.0 <= fraction <= 1.0 for fraction in gb_fractions)
+        assert any(not np.isclose(gb_fractions[0], fraction) for fraction in gb_fractions[1:])
