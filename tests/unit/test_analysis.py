@@ -182,6 +182,36 @@ class TestGBStructureTimeseriesInit(TestCase):
         ts = self._make_ts(backend="ase")
         assert ts.backend == "ase"
 
+    def test_init_raises_when_timestamps_len_mismatch_num_frames(self) -> None:
+        """__init__ must raise when timestamps length and frame count differ."""
+        with pytest.MonkeyPatch.context() as monkeypatch:
+            monkeypatch.setattr(
+                "agility.analysis.GBStructure.__init__",
+                MagicMock(return_value=None),
+            )
+            monkeypatch.setattr(
+                GBStructureTimeseries,
+                "num_frames",
+                property(lambda _self: 3),
+            )
+            with pytest.raises(ValueError, match=r"len\(timestamps\)=2.*num_frames=3"):
+                GBStructureTimeseries("ase", "dummy.dump", timestamps=[0, 10])
+
+    def test_init_accepts_matching_timestamps_len(self) -> None:
+        """__init__ must allow timestamps length matching frame count."""
+        with pytest.MonkeyPatch.context() as monkeypatch:
+            monkeypatch.setattr(
+                "agility.analysis.GBStructure.__init__",
+                MagicMock(return_value=None),
+            )
+            monkeypatch.setattr(
+                GBStructureTimeseries,
+                "num_frames",
+                property(lambda _self: 3),
+            )
+            ts = GBStructureTimeseries("ase", "dummy.dump", timestamps=[0, 10, 20])
+        assert ts.timestamps == [0, 10, 20]
+
 
 @pytest.mark.unit
 class TestGBStructureTimeseriesNumFrames(TestCase):
@@ -242,6 +272,22 @@ class TestGBStructureTimeseriesGetFrame(TestCase):
         ts.backend = "pymatgen"
         with pytest.raises(NotImplementedError):
             ts.get_frame(0)
+
+    def test_get_frame_ovito_clones_pipeline(self) -> None:
+        """Ovito get_frame must clone the pipeline to avoid shared mutable state."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "ovito"
+        ts.filename = "dummy.dump"
+        ts.pipeline = MagicMock()
+        cloned_pipeline = MagicMock()
+        cloned_pipeline.compute.return_value = MagicMock()
+        ts.pipeline.clone.return_value = cloned_pipeline
+
+        frame = ts.get_frame(1)
+
+        ts.pipeline.clone.assert_called_once_with()
+        cloned_pipeline.compute.assert_called_once_with(frame=1)
+        assert frame.pipeline is cloned_pipeline
 
 
 @pytest.mark.unit

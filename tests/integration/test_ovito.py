@@ -149,8 +149,8 @@ class TestGBStructureTimeseriesOvito(TestCase):
         ts.perform_cna(enabled=("fcc",), compute=False)
         gb_fractions: list[float] = []
         for frame_idx in range(ts.num_frames):
-            ts.data = ts.pipeline.compute(frame=frame_idx)
-            gb_fractions.append(ts.get_gb_fraction())
+            frame = ts.get_frame(frame_idx)
+            gb_fractions.append(frame.get_gb_fraction())
 
         assert ts.timestamps == list(range(ts.num_frames))
         assert len(gb_fractions) == ts.num_frames

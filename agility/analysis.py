@@ -1338,6 +1338,17 @@ class GBStructureTimeseries(GBStructure):
         """
         self.timestamps: list[int | float] | None = timestamps
         super().__init__(backend, filename, **kwargs)
+        if self.timestamps is not None:
+            try:
+                num_frames = self.num_frames
+            except NotImplementedError:
+                num_frames = None
+            if num_frames is not None and len(self.timestamps) != num_frames:
+                msg = (
+                    f"len(timestamps)={len(self.timestamps)} does not match "
+                    f"num_frames={num_frames}."
+                )
+                raise ValueError(msg)
 
     def read_file(self, filename: str | pathlib.Path, **kwargs) -> None:
         """Read a timeseries trajectory from *filename*.
@@ -1400,8 +1411,8 @@ class GBStructureTimeseries(GBStructure):
             frame_gbs: GBStructure = GBStructure.__new__(GBStructure)
             frame_gbs.backend = self.backend
             frame_gbs.filename = self.filename
-            frame_gbs.pipeline = self.pipeline
-            frame_gbs.data = self.pipeline.compute(frame=frame_idx)
+            frame_gbs.pipeline = self.pipeline.clone()
+            frame_gbs.data = frame_gbs.pipeline.compute(frame=frame_idx)
             return frame_gbs
         if self.backend == "ase":
             frame_gbs = GBStructure.__new__(GBStructure)
