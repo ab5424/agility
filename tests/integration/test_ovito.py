@@ -158,6 +158,6 @@ class TestGBStructureTimeseriesOvito(TestCase):
         assert any(not np.isclose(gb_fractions[0], fraction) for fraction in gb_fractions[1:])
         assert_allclose(
             [gb_fractions[0], gb_fractions[-1]],
-            [0.18828451882845187, 0.2834728033472803],
+            [0.1882845, 0.421025 if BREAKING else 0.2834728],
             rtol=1e-6,
         )
