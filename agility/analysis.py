@@ -1421,9 +1421,12 @@ class GBStructureTimeseries(GBStructure):
                 beginning of the timeseries.
 
         Raises:
+            ValueError: When ``timesteps_to_exclude`` is negative.
             NotImplementedError: When the current backend does not support
                 in-place frame removal.
         """
+        if timesteps_to_exclude < 0:
+            raise ValueError("timesteps_to_exclude must be a non-negative integer.")
         if self.backend == "ase":
             self.data.atoms = self.data.atoms[timesteps_to_exclude:]
             if self.timestamps is not None:

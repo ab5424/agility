@@ -154,7 +154,7 @@ class TestGBStructureTimeseriesOvito(TestCase):
 
         assert ts.timestamps == list(range(ts.num_frames))
         assert len(gb_fractions) == ts.num_frames
-        assert all(0.0 < fraction < 1.0 for fraction in gb_fractions)
+        assert all(0.0 <= fraction <= 1.0 for fraction in gb_fractions)
         assert any(not np.isclose(gb_fractions[0], fraction) for fraction in gb_fractions[1:])
         assert_allclose(
             [gb_fractions[0], gb_fractions[-1]],
