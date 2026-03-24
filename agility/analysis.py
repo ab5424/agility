@@ -44,7 +44,7 @@ class GBStructure:
             # Determine if a jupyter notebook is used
             # Taken from shorturl.at/aikzP
             try:
-                shell = get_ipython().__class__.__name__  # type: ignore[name-defined]
+                shell = get_ipython().__class__.__name__  # ty: ignore[unresolved-reference]
                 if shell == "ZMQInteractiveShell":
                     ipy = True  # Jupyter notebook or qtconsole
                 elif shell == "TerminalInteractiveShell":
@@ -1298,7 +1298,7 @@ class GBStructure:
             self.save_structure("filename", file_type="data")
             if convert_to == "ovito":
                 try:
-                    return GBStructure(backend=convert_to, filename=filename)  # type: ignore[return-value]
+                    return GBStructure(backend=convert_to, filename=filename)  # ty: ignore[invalid-return-type]
                 finally:
                     tempfile = pathlib.Path(filename)
                     tempfile.unlink()
