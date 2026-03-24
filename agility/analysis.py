@@ -20,6 +20,8 @@ from agility.minimiser import minimise_lmp
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    from typing_extensions import Self
+
 available_backends = Literal["ovito", "pymatgen", "babel", "pyiron", "ase", "lammps"]
 # https://github.com/pyiron/pylammpsmpi
 
@@ -42,15 +44,15 @@ class GBStructure:
             # Determine if a jupyter notebook is used
             # Taken from shorturl.at/aikzP
             try:
-                from IPython import get_ipython  # noqa: PLC0415
-            except ImportError:
-                ipy = False  # Probably standard Python interpreter
-            else:
-                shell = get_ipython()
-                if shell is not None and shell.__class__.__name__ == "ZMQInteractiveShell":
+                shell = get_ipython().__class__.__name__  # type: ignore[name-defined]
+                if shell == "ZMQInteractiveShell":
                     ipy = True  # Jupyter notebook or qtconsole
+                elif shell == "TerminalInteractiveShell":
+                    ipy = False  # Terminal running IPython
                 else:
-                    ipy = False  # Terminal IPython or standard Python interpreter
+                    ipy = False  # Other type (?)
+            except NameError:
+                ipy = False  # Probably standard Python interpreter
 
             if ipy:
                 from lammps import IPyLammps  # noqa: PLC0415
@@ -1281,7 +1283,7 @@ class GBStructure:
             # Only works with IPython integration
             self.pylmp.image(filename=filename)
 
-    def convert_backend(self, convert_to: available_backends) -> GBStructure:
+    def convert_backend(self, convert_to: available_backends) -> Self:
         """Convert the current backend.
 
         Args:
@@ -1296,7 +1298,7 @@ class GBStructure:
             self.save_structure("filename", file_type="data")
             if convert_to == "ovito":
                 try:
-                    return GBStructure(backend=convert_to, filename=filename)
+                    return GBStructure(backend=convert_to, filename=filename)  # type: ignore[return-value]
                 finally:
                     tempfile = pathlib.Path(filename)
                     tempfile.unlink()
@@ -1413,7 +1415,9 @@ class GBStructureTimeseries(GBStructure):
             frame_gbs: GBStructure = GBStructure.__new__(GBStructure)
             frame_gbs.backend = self.backend
             frame_gbs.filename = self.filename
-            frame_gbs.pipeline = self.pipeline.clone()
+            frame_gbs.pipeline = (
+                self.pipeline.clone() if hasattr(self.pipeline, "clone") else self.pipeline
+            )
             frame_gbs.data = frame_gbs.pipeline.compute(frame=frame_idx)
             return frame_gbs
         if self.backend == "ase":
