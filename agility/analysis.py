@@ -20,8 +20,6 @@ from agility.minimiser import minimise_lmp
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from typing_extensions import Self
-
 available_backends = Literal["ovito", "pymatgen", "babel", "pyiron", "ase", "lammps"]
 # https://github.com/pyiron/pylammpsmpi
 
@@ -44,15 +42,15 @@ class GBStructure:
             # Determine if a jupyter notebook is used
             # Taken from shorturl.at/aikzP
             try:
-                shell = get_ipython().__class__.__name__  # type: ignore[name-defined]
-                if shell == "ZMQInteractiveShell":
-                    ipy = True  # Jupyter notebook or qtconsole
-                elif shell == "TerminalInteractiveShell":
-                    ipy = False  # Terminal running IPython
-                else:
-                    ipy = False  # Other type (?)
-            except NameError:
+                from IPython import get_ipython  # noqa: PLC0415
+            except ImportError:
                 ipy = False  # Probably standard Python interpreter
+            else:
+                shell = get_ipython()
+                if shell is not None and shell.__class__.__name__ == "ZMQInteractiveShell":
+                    ipy = True  # Jupyter notebook or qtconsole
+                else:
+                    ipy = False  # Terminal IPython or standard Python interpreter
 
             if ipy:
                 from lammps import IPyLammps  # noqa: PLC0415
@@ -1283,7 +1281,7 @@ class GBStructure:
             # Only works with IPython integration
             self.pylmp.image(filename=filename)
 
-    def convert_backend(self, convert_to: available_backends) -> Self:
+    def convert_backend(self, convert_to: available_backends) -> GBStructure:
         """Convert the current backend.
 
         Args:
@@ -1298,7 +1296,7 @@ class GBStructure:
             self.save_structure("filename", file_type="data")
             if convert_to == "ovito":
                 try:
-                    return GBStructure(backend=convert_to, filename=filename)  # type: ignore[return-value]
+                    return GBStructure(backend=convert_to, filename=filename)
                 finally:
                     tempfile = pathlib.Path(filename)
                     tempfile.unlink()
@@ -1443,14 +1441,13 @@ class GBStructureTimeseries(GBStructure):
         if timesteps_to_exclude < 0:
             msg = "timesteps_to_exclude must be a non-negative integer."
             raise ValueError(msg)
-        if timesteps_to_exclude > len(self.data.atoms):
-            msg = (
-                f"timesteps_to_exclude={timesteps_to_exclude} exceeds the "
-                f"number of available frames ({len(self.data.atoms)})."
-            )
-            raise ValueError(msg)
-
         if self.backend == "ase":
+            if timesteps_to_exclude > len(self.data.atoms):
+                msg = (
+                    f"timesteps_to_exclude={timesteps_to_exclude} exceeds the "
+                    f"number of available frames ({len(self.data.atoms)})."
+                )
+                raise ValueError(msg)
             self.data.atoms = self.data.atoms[timesteps_to_exclude:]
             if self.timestamps is not None:
                 self.timestamps = self.timestamps[timesteps_to_exclude:]
