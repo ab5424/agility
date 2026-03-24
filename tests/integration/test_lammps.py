@@ -6,6 +6,7 @@ from importlib.util import find_spec
 from pathlib import Path
 from unittest import TestCase
 
+import numpy as np
 import pytest
 
 from agility.analysis import GBStructure
@@ -241,3 +242,126 @@ class TestGetCrystallineAtomsLammps(TestCase):
         assert 0 < len(non_crystalline) < n_atoms
         assert len(crystalline) + len(non_crystalline) == n_atoms
         assert set(crystalline).isdisjoint(set(non_crystalline))
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(not find_spec("lammps"), reason="lammps not installed")
+class TestGetGrainEdgeIonsLammps(TestCase):
+    """Test get_grain_edge_ions for the LAMMPS backend."""
+
+    def setUp(self) -> None:
+        """Set up a GBStructure with the lammps backend (no file loaded)."""
+        self.gbs = GBStructure("lammps", "")
+
+    def tearDown(self) -> None:
+        """Close the LAMMPS instance after each test."""
+        lmp = getattr(getattr(self, "gbs", None), "pylmp", None)
+        if lmp is not None:
+            lmp.lmp.close()
+
+    def _setup_fcc_lattice(self) -> None:
+        """Create a perfect periodic FCC Al lattice for grain-edge-ion tests."""
+        lmp = self.gbs.pylmp
+        lmp.units("metal")
+        lmp.atom_style("atomic")
+        lmp.lattice("fcc 4.05")
+        lmp.region("box block 0 3 0 3 0 3 units lattice")
+        lmp.create_box("1 box")
+        lmp.create_atoms("1 box")
+        lmp.mass("1 26.982")
+        lmp.pair_style("zero 6.0")
+        lmp.pair_coeff("* *")
+        lmp.run("0")
+
+    def test_invalid_return_type_raises(self) -> None:
+        """Test that an invalid return_type raises ValueError."""
+        self._setup_fcc_lattice()
+        n_atoms = self.gbs.pylmp.system.natoms
+        with pytest.raises(ValueError, match="Indices and Identifier"):
+            self.gbs.get_grain_edge_ions(
+                cutoff=3.5,
+                gb_ions={0},
+                bulk_ions=list(range(1, n_atoms)),
+                return_type="Invalid",
+            )
+
+    def test_empty_gb_ions_returns_empty(self) -> None:
+        """No grain edge ions when there are no GB ions."""
+        self._setup_fcc_lattice()
+        n_atoms = self.gbs.pylmp.system.natoms
+        result = self.gbs.get_grain_edge_ions(
+            cutoff=3.5,
+            gb_ions=set(),
+            bulk_ions=list(range(n_atoms)),
+            return_type="Indices",
+        )
+        assert result == []
+
+    def test_empty_bulk_ions_returns_empty(self) -> None:
+        """No grain edge ions when there are no bulk ions."""
+        self._setup_fcc_lattice()
+        result = self.gbs.get_grain_edge_ions(
+            cutoff=3.5,
+            gb_ions={0},
+            bulk_ions=[],
+            return_type="Indices",
+        )
+        assert result == []
+
+    def test_grain_edge_ions_cutoff_returns_neighbors(self) -> None:
+        """Bulk atoms within cutoff of a designated GB atom are returned as grain-edge ions."""
+        self._setup_fcc_lattice()
+        n_atoms = self.gbs.pylmp.system.natoms
+        gb_idx = 0
+        bulk_indices = list(range(1, n_atoms))
+        result = self.gbs.get_grain_edge_ions(
+            cutoff=3.5,
+            gb_ions={gb_idx},
+            bulk_ions=bulk_indices,
+            return_type="Indices",
+        )
+        # In a periodic FCC lattice each atom has 12 nearest neighbors
+        assert len(result) == 12
+        assert gb_idx not in result
+
+    def test_grain_edge_ions_nearest_n_returns_neighbors(self) -> None:
+        """nearest_n mode returns the same neighbors as the equivalent cutoff mode."""
+        self._setup_fcc_lattice()
+        n_atoms = self.gbs.pylmp.system.natoms
+        gb_idx = 0
+        bulk_indices = list(range(1, n_atoms))
+        result_cutoff = self.gbs.get_grain_edge_ions(
+            cutoff=3.5,
+            gb_ions={gb_idx},
+            bulk_ions=bulk_indices,
+            return_type="Indices",
+        )
+        result_nn = self.gbs.get_grain_edge_ions(
+            nearest_n=12,
+            gb_ions={gb_idx},
+            bulk_ions=bulk_indices,
+            return_type="Indices",
+        )
+        assert sorted(result_cutoff) == sorted(result_nn)
+
+    def test_grain_edge_ions_identifier_consistent_with_indices(self) -> None:
+        """Identifier and Indices return types refer to the same atoms."""
+        self._setup_fcc_lattice()
+        n_atoms = self.gbs.pylmp.system.natoms
+        gb_idx = 0
+        bulk_indices = list(range(1, n_atoms))
+        ids = np.ravel(self.gbs.pylmp.lmp.numpy.extract_atom("id"))
+        indices_result = self.gbs.get_grain_edge_ions(
+            cutoff=3.5,
+            gb_ions={gb_idx},
+            bulk_ions=bulk_indices,
+            return_type="Indices",
+        )
+        identifiers_result = self.gbs.get_grain_edge_ions(
+            cutoff=3.5,
+            gb_ions={gb_idx},
+            bulk_ions=bulk_indices,
+            return_type="Identifier",
+        )
+        expected_ids = sorted(int(ids[i]) for i in indices_result)
+        assert sorted(identifiers_result) == expected_ids
