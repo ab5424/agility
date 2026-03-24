@@ -450,7 +450,7 @@ class GBStructure:
             "FixedCutoff",
             "BondBased",
         ] = "IntervalCutoff",
-        enabled: Sequence[str] = ("fcc", "hpc", "bcc"),
+        enabled: Sequence[str] = ("fcc", "hcp", "bcc"),
         cutoff: float = 3.2,
         color_by_type: bool = True,
         only_selected: bool = False,
@@ -460,7 +460,7 @@ class GBStructure:
 
         Args:
             mode: Mode of common neighbor analysis. The lammps backend uses "FixedCutoff".
-            enabled: Enabled structures for identifier.
+            enabled: Enabled structures for identifier. Possible values: fcc, hcp, bcc, ico.
             cutoff: Cutoff for the FixedCutoff mode.
             color_by_type: Color by structure type.
             only_selected: Only selected particles.
@@ -469,9 +469,13 @@ class GBStructure:
         Returns:
             None
         """
+        if isinstance(enabled, str):
+            enabled = [enabled]
+        for i in enabled:
+            if i not in ("fcc", "hcp", "bcc", "ico"):
+                msg = f"Enabled structure type {i!r} unknown. Valid types: fcc, hcp, bcc, ico."
+                raise ValueError(msg)
         if self.backend == "ovito":
-            # TODO @ab5424: Enable/disable structure types
-            # https://github.com/ab5424/agility/issues/171
             from ovito.modifiers import CommonNeighborAnalysisModifier  # noqa: PLC0415
 
             cna_modes = {
@@ -593,7 +597,7 @@ class GBStructure:
 
     def perform_ptm(
         self,
-        enabled: Sequence[str] = ("fcc", "hpc", "bcc"),
+        enabled: Sequence[str] = ("fcc", "hcp", "bcc"),
         rmsd_threshold: float = 0.1,
         only_selected: bool = False,
         compute: bool = True,
