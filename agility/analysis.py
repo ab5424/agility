@@ -43,7 +43,7 @@ class GBStructure:
             # Determine if a jupyter notebook is used
             # Taken from shorturl.at/aikzP
             try:
-                shell = get_ipython().__class__.__name__  # type: ignore[name-defined]
+                shell = get_ipython().__class__.__name__  # ty: ignore[unresolved-reference]
                 if shell == "ZMQInteractiveShell":
                     ipy = True  # Jupyter notebook or qtconsole
                 elif shell == "TerminalInteractiveShell":
@@ -1317,7 +1317,7 @@ class GBStructure:
             self.save_structure("filename", file_type="data")
             if convert_to == "ovito":
                 try:
-                    return GBStructure(backend=convert_to, filename=filename)  # type: ignore[return-value]
+                    return GBStructure(backend=convert_to, filename=filename)  # ty: ignore[invalid-return-type]
                 finally:
                     tempfile = pathlib.Path(filename)
                     tempfile.unlink()
@@ -1328,23 +1328,162 @@ class GBStructure:
 
 
 class GBStructureTimeseries(GBStructure):
-    """This is a class containing multiple snapshots from a time series."""
+    """Class containing multiple GB structure snapshots from a time series.
 
-    # TODO @ab5424: Enable class inheritance in GBStructureTimeseries
-    # https://github.com/ab5424/agility/issues/181
+    This class inherits from :class:`GBStructure` and extends it to handle
+    multi-frame trajectory files. Each frame optionally has a corresponding
+    timestamp stored in :attr:`timestamps`.
+    """
+
     # TODO @ab5424: Implement diffusion data retrieval
     # https://github.com/ab5424/agility/issues/182
+
+    def __init__(
+        self,
+        backend: available_backends,
+        filename: str | pathlib.Path,
+        timestamps: list[int | float] | None = None,
+        **kwargs,
+    ) -> None:
+        """Initialize.
+
+        Args:
+            backend: Backend to use.
+            filename: Trajectory file to read.
+            timestamps: Timestamps corresponding to each frame.  When
+                ``None`` frames are identified by their zero-based index.
+            **kwargs: Additional keyword arguments forwarded to
+                :meth:`GBStructure.read_file`.
+        """
+        self.timestamps: list[int | float] | None = timestamps
+        super().__init__(backend, filename, **kwargs)
+        if self.timestamps is not None:
+            try:
+                num_frames = self.num_frames
+            except NotImplementedError:
+                num_frames = None
+            if num_frames is not None and len(self.timestamps) != num_frames:
+                msg = (
+                    f"len(timestamps)={len(self.timestamps)} does not match "
+                    f"num_frames={num_frames}."
+                )
+                raise ValueError(msg)
+
+    def read_file(self, filename: str | pathlib.Path, **kwargs) -> None:
+        """Read a timeseries trajectory from *filename*.
+
+        For the ``ase`` backend all frames are read via ``index=':'`` so
+        that :attr:`GBStructure.data`.atoms becomes a list of
+        :class:`ase.Atoms` objects.  For all other backends the behaviour
+        is inherited from :meth:`GBStructure.read_file`.
+
+        Args:
+            filename: Trajectory file to read.
+            **kwargs: Additional keyword arguments forwarded to the
+                backend reader.
+        """
+        if self.backend == "ase":
+            from ase.io import read  # noqa: PLC0415
+
+            self.data = types.SimpleNamespace()
+            kwargs.setdefault("index", ":")
+            frames = read(str(filename), **kwargs)
+            # When index=':' is used, ase.io.read returns a list. Wrap in a
+            # list as a defensive fallback for unusual format readers.
+            self.data.atoms = frames if isinstance(frames, list) else [frames]
+            self.data.selection = []
+        else:
+            super().read_file(filename, **kwargs)
+
+    @property
+    def num_frames(self) -> int:
+        """Number of frames available in the timeseries.
+
+        Returns:
+            Number of frames.
+
+        Raises:
+            NotImplementedError: When the current backend does not support
+                this property.
+        """
+        if self.backend == "ovito":
+            return self.pipeline.source.num_frames
+        if self.backend == "ase":
+            return len(self.data.atoms)
+        msg = f"num_frames is not supported for the '{self.backend}' backend."
+        raise NotImplementedError(msg)
+
+    def get_frame(self, frame_idx: int) -> GBStructure:
+        """Return a single frame as a :class:`GBStructure` instance.
+
+        Args:
+            frame_idx: Zero-based index of the frame to retrieve.
+
+        Returns:
+            A :class:`GBStructure` for the requested frame.
+
+        Raises:
+            NotImplementedError: When the current backend does not support
+                random frame access.
+        """
+        if frame_idx < 0:
+            msg = (
+                "frame_idx must be a non-negative integer to ensure consistent indexing "
+                "across backends."
+            )
+            raise ValueError(msg)
+        if self.backend == "ovito":
+            frame_gbs: GBStructure = GBStructure.__new__(GBStructure)
+            frame_gbs.backend = self.backend
+            frame_gbs.filename = self.filename
+            frame_gbs.pipeline = (
+                self.pipeline.clone() if hasattr(self.pipeline, "clone") else self.pipeline
+            )
+            frame_gbs.data = frame_gbs.pipeline.compute(frame=frame_idx)
+            return frame_gbs
+        if self.backend == "ase":
+            if frame_idx >= len(self.data.atoms):
+                msg = (
+                    f"frame_idx={frame_idx} is out of range for a timeseries "
+                    f"with {len(self.data.atoms)} frame(s)."
+                )
+                raise ValueError(msg)
+            frame_gbs = GBStructure.__new__(GBStructure)
+            frame_gbs.backend = self.backend
+            frame_gbs.filename = self.filename
+            frame_gbs.data = types.SimpleNamespace()
+            frame_gbs.data.atoms = self.data.atoms[frame_idx]
+            frame_gbs.data.selection = []
+            return frame_gbs
+        raise not_implemented(self.backend)
 
     def remove_timesteps(self, timesteps_to_exclude: int) -> None:
         """Remove timesteps from the beginning of a simulation.
 
         Args:
-            timesteps_to_exclude (int): Number of timesteps to exclude
+            timesteps_to_exclude: Number of timesteps to exclude from the
+                beginning of the timeseries.
 
-        Returns:
-            new_trajectory (:py:class:`polypy.read.Trajectory`):
-            Trajectory object.
+        Raises:
+            ValueError: When ``timesteps_to_exclude`` is negative.
+            NotImplementedError: When the current backend does not support
+                in-place frame removal.
         """
+        if timesteps_to_exclude < 0:
+            msg = "timesteps_to_exclude must be a non-negative integer."
+            raise ValueError(msg)
+        if self.backend == "ase":
+            if timesteps_to_exclude > len(self.data.atoms):
+                msg = (
+                    f"timesteps_to_exclude={timesteps_to_exclude} exceeds the "
+                    f"number of available frames ({len(self.data.atoms)})."
+                )
+                raise ValueError(msg)
+            self.data.atoms = self.data.atoms[timesteps_to_exclude:]
+            if self.timestamps is not None:
+                self.timestamps = self.timestamps[timesteps_to_exclude:]
+        else:
+            raise not_implemented(self.backend)
 
     # TODO @ab5424: Differentiate between diffusion along GB, transverse to GB, and between grains
     # https://github.com/ab5424/agility/issues/183
