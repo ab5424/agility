@@ -1408,12 +1408,10 @@ class GBStructureTimeseries(GBStructure):
                 random frame access.
         """
         if frame_idx < 0:
-        if frame_idx < 0:
             msg = (
                 "frame_idx must be a non-negative integer to ensure consistent indexing "
                 "across backends."
             )
-            raise ValueError(msg)
             raise ValueError(msg)
         if self.backend == "ovito":
             frame_gbs: GBStructure = GBStructure.__new__(GBStructure)
