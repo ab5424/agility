@@ -1407,6 +1407,10 @@ class GBStructureTimeseries(GBStructure):
             NotImplementedError: When the current backend does not support
                 random frame access.
         """
+        if frame_idx < 0:
+            msg = "frame_idx must be a non-negative integer to ensure consistent indexing "
+            "across backends."
+            raise ValueError(msg)
         if self.backend == "ovito":
             frame_gbs: GBStructure = GBStructure.__new__(GBStructure)
             frame_gbs.backend = self.backend
@@ -1439,6 +1443,13 @@ class GBStructureTimeseries(GBStructure):
         if timesteps_to_exclude < 0:
             msg = "timesteps_to_exclude must be a non-negative integer."
             raise ValueError(msg)
+        if timesteps_to_exclude > len(self.data.atoms):
+            msg = (
+                f"timesteps_to_exclude={timesteps_to_exclude} exceeds the "
+                f"number of available frames ({len(self.data.atoms)})."
+            )
+            raise ValueError(msg)
+
         if self.backend == "ase":
             self.data.atoms = self.data.atoms[timesteps_to_exclude:]
             if self.timestamps is not None:
