@@ -96,6 +96,44 @@ class TestGBStructure(TestCase):
         assert orientations.shape == (grain_count, 4)
         assert_allclose(np.linalg.norm(orientations, axis=1), np.ones(grain_count), atol=1e-6)
 
+    def test_get_tilt_angle(self) -> None:
+        """Test tilt/twist decomposition on real grain orientations from aluminium.lmp.
+
+        Runs PTM + grain segmentation on the aluminium bi-crystal to obtain unit
+        quaternion orientations, then decomposes the misorientation of every unique
+        grain pair into tilt (Verkippungswinkel) and twist components relative to a
+        [001] boundary plane normal.
+        """
+        self.data.perform_ptm(enabled=("fcc"), output_orientation=True)
+        orientations = self.data.get_distinct_grains()
+        assert orientations is not None
+        n_grains = len(orientations)
+        assert n_grains >= 2
+
+        boundary_normal = np.array([0.0, 0.0, 1.0])
+
+        # Test every unique pair of grains
+        for i in range(n_grains):
+            for j in range(i + 1, n_grains):
+                q_i = orientations[[i]]
+                q_j = orientations[[j]]
+                tilt, twist = self.data.get_tilt_angle(q_i, q_j, boundary_normal)
+
+                assert tilt.shape == (1,)
+                assert twist.shape == (1,)
+                # Angles must lie in [0°, 180°]
+                assert 0.0 <= float(tilt[0]) <= 180.0
+                assert 0.0 <= float(twist[0]) <= 180.0
+
+        # Batch call: pass all consecutive pairs at once
+        q_i_batch = orientations[:-1]
+        q_j_batch = orientations[1:]
+        tilt_batch, twist_batch = self.data.get_tilt_angle(q_i_batch, q_j_batch, boundary_normal)
+        assert tilt_batch.shape == (n_grains - 1,)
+        assert twist_batch.shape == (n_grains - 1,)
+        assert np.all((tilt_batch >= 0.0) & (tilt_batch <= 180.0))
+        assert np.all((twist_batch >= 0.0) & (twist_batch <= 180.0))
+
 
 @pytest.mark.integration
 @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
