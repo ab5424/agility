@@ -461,6 +461,8 @@ class GBStructure:
         Args:
             mode: Mode of common neighbor analysis. The lammps backend uses "FixedCutoff".
             enabled: Enabled structures for identifier. Possible values: fcc, hcp, bcc, ico.
+                Note: the lammps backend always computes all structure types; this parameter
+                is ignored when using lammps.
             cutoff: Cutoff for the FixedCutoff mode.
             color_by_type: Color by structure type.
             only_selected: Only selected particles.
@@ -491,7 +493,7 @@ class GBStructure:
                 color_by_type=color_by_type,
                 only_selected=only_selected,
             )
-            # Enabled by default: FCC, HCP, BCC
+            # Enabled by default: FCC, HCP, BCC; ICO is disabled by default
             if "fcc" not in enabled:
                 _cna.structures[
                     CommonNeighborAnalysisModifier.Type.FCC  # type: ignore[attr-defined]
@@ -504,15 +506,22 @@ class GBStructure:
                 _cna.structures[
                     CommonNeighborAnalysisModifier.Type.BCC  # type: ignore[attr-defined]
                 ].enabled = False  # type: ignore[misc]
-            if "ico" not in enabled:
-                _cna.structures[
-                    CommonNeighborAnalysisModifier.Type.ICO  # type: ignore[attr-defined]
-                ].enabled = False  # type: ignore[misc]
+            _cna.structures[
+                CommonNeighborAnalysisModifier.Type.ICO  # type: ignore[attr-defined]
+            ].enabled = "ico" in enabled  # type: ignore[misc]
 
             self.pipeline.modifiers.append(_cna)
 
         elif self.backend == "lammps":
             # https://docs.lammps.org/compute_cna_atom.html
+            # Note: lammps cna/atom always computes all structure types; enabled is ignored.
+            _all_cna_types = {"fcc", "hcp", "bcc", "ico"}
+            if set(enabled) != _all_cna_types:
+                warnings.warn(
+                    "The lammps cna/atom compute always evaluates all structure types. "
+                    "The enabled parameter is ignored for the lammps backend.",
+                    stacklevel=2,
+                )
             n_compute = len([i["style"] for i in self.pylmp.computes if i["style"] == "cna/atom"])
             self.pylmp.compute(f"cna_{n_compute} all cna/atom {cutoff}")
 
