@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import builtins
 import pathlib
 import random
 import types
@@ -18,8 +19,6 @@ from agility.minimiser import minimise_lmp
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-
-    from typing_extensions import Self
 
 available_backends = Literal["ovito", "pymatgen", "babel", "pyiron", "ase", "lammps"]
 # https://github.com/pyiron/pylammpsmpi
@@ -42,15 +41,16 @@ class GBStructure:
         if self.backend == "lammps":
             # Determine if a jupyter notebook is used
             # Taken from shorturl.at/aikzP
-            try:
-                shell = get_ipython().__class__.__name__  # ty: ignore[unresolved-reference]
+            _get_ipython = getattr(builtins, "get_ipython", None)
+            if callable(_get_ipython):
+                shell = _get_ipython().__class__.__name__
                 if shell == "ZMQInteractiveShell":
                     ipy = True  # Jupyter notebook or qtconsole
                 elif shell == "TerminalInteractiveShell":
                     ipy = False  # Terminal running IPython
                 else:
                     ipy = False  # Other type (?)
-            except NameError:
+            else:
                 ipy = False  # Probably standard Python interpreter
 
             if ipy:
@@ -847,8 +847,6 @@ class GBStructure:
             finder = get_finder(self.data, cutoff=cutoff, nearest_n=nearest_n)
             if nearest_n:
                 from ovito.data import NearestNeighborFinder  # noqa: PLC0415
-            else:
-                NearestNeighborFinder = None  # noqa: N806
 
             gb_non_selected = []
             # edge = []
@@ -866,7 +864,7 @@ class GBStructure:
                 if nearest_n:
                     nearest_n_added = nearest_n
                     while len(neighbors_no_selected) < nearest_n:
-                        finder = NearestNeighborFinder(nearest_n_added, self.data)  # ty: ignore[call-non-callable]
+                        finder = NearestNeighborFinder(nearest_n_added, self.data)
                         neighbors = {neigh.index for neigh in finder.find(index)}
                         neighbors_no_selected = neighbors - non_selected
                         nearest_n_added += 1
@@ -1302,7 +1300,7 @@ class GBStructure:
             # Only works with IPython integration
             self.pylmp.image(filename=filename)
 
-    def convert_backend(self, convert_to: available_backends) -> Self:
+    def convert_backend(self, convert_to: available_backends) -> GBStructure:
         """Convert the current backend.
 
         Args:
@@ -1317,7 +1315,7 @@ class GBStructure:
             self.save_structure("filename", file_type="data")
             if convert_to == "ovito":
                 try:
-                    return GBStructure(backend=convert_to, filename=filename)  # ty: ignore[invalid-return-type]
+                    return GBStructure(backend=convert_to, filename=filename)
                 finally:
                     tempfile = pathlib.Path(filename)
                     tempfile.unlink()
