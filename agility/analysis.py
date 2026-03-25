@@ -845,6 +845,8 @@ class GBStructure:
             self.set_analysis()
 
             finder = get_finder(self.data, cutoff=cutoff, nearest_n=nearest_n)
+            if nearest_n:
+                from ovito.data import NearestNeighborFinder  # noqa: PLC0415
 
             gb_non_selected = []
             # edge = []
@@ -860,8 +862,6 @@ class GBStructure:
                 neighbors_no_selected = neighbors - non_selected
                 # If NN, correct for non-selected atoms
                 if nearest_n:
-                    from ovito.data import NearestNeighborFinder  # noqa: PLC0415
-
                     nearest_n_added = nearest_n
                     while len(neighbors_no_selected) < nearest_n:
                         finder = NearestNeighborFinder(nearest_n_added, self.data)
