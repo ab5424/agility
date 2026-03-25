@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import types
+import warnings
 from unittest import TestCase
 from unittest.mock import MagicMock
 
@@ -331,3 +332,57 @@ class TestGBStructureTimeseriesRemoveTimesteps(TestCase):
         ts.backend = "lammps"
         with pytest.raises(NotImplementedError):
             ts.remove_timesteps(1)
+
+
+@pytest.mark.unit
+class TestPerformCnaValidation(TestCase):
+    """Unit tests for perform_cna enabled-structure validation — no backend required."""
+
+    def _make_gbs(self, backend: str = "lammps") -> GBStructure:
+        """Return a GBStructure with a mocked backend."""
+        gbs = GBStructure.__new__(GBStructure)
+        gbs.backend = backend
+        return gbs
+
+    def test_invalid_structure_type_raises_value_error(self) -> None:
+        """perform_cna must raise ValueError for an unknown structure type."""
+        gbs = self._make_gbs()
+        with pytest.raises(ValueError, match="unknown"):
+            gbs.perform_cna(enabled=("fcc", "diamond"), compute=False)
+
+    def test_all_valid_structure_types_accepted(self) -> None:
+        """perform_cna must accept all valid structure types without error."""
+        gbs = self._make_gbs()
+        gbs.pylmp = MagicMock()
+        # Passing all four types suppresses the lammps warning
+        gbs.perform_cna(enabled=("fcc", "hcp", "bcc", "ico"), compute=False)
+
+    def test_string_enabled_is_normalised(self) -> None:
+        """A plain string passed as enabled must be treated as a single-element list."""
+        gbs = self._make_gbs()
+        gbs.pylmp = MagicMock()
+        # Should not raise even though a bare string is passed (warning expected for lammps)
+        with pytest.warns(UserWarning, match="lammps"):
+            gbs.perform_cna(enabled="fcc", compute=False)
+
+    def test_invalid_string_enabled_raises(self) -> None:
+        """A plain invalid string passed as enabled must raise ValueError."""
+        gbs = self._make_gbs()
+        with pytest.raises(ValueError, match="unknown"):
+            gbs.perform_cna(enabled="diamond", compute=False)
+
+    def test_lammps_warns_when_enabled_not_full_set(self) -> None:
+        """perform_cna must warn on the lammps backend when enabled restricts structure types."""
+        gbs = self._make_gbs()
+        gbs.pylmp = MagicMock()
+        with pytest.warns(UserWarning, match="lammps"):
+            gbs.perform_cna(enabled=("fcc",), compute=False)
+
+    def test_lammps_no_warning_when_all_types_enabled(self) -> None:
+        """perform_cna must not warn on lammps when all four types are enabled."""
+        gbs = self._make_gbs()
+        gbs.pylmp = MagicMock()
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            # No warning should be raised when the full set is passed
+            gbs.perform_cna(enabled=("fcc", "hcp", "bcc", "ico"), compute=False)
