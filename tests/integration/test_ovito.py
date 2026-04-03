@@ -96,6 +96,75 @@ class TestGBStructure(TestCase):
         assert orientations.shape == (grain_count, 4)
         assert_allclose(np.linalg.norm(orientations, axis=1), np.ones(grain_count), atol=1e-6)
 
+    def test_get_tilt_angle(self) -> None:
+        """Test tilt/twist decomposition on real grain orientations from aluminium.lmp.
+
+        Runs PTM + grain segmentation on the aluminium polycrystal to obtain unit
+        quaternion orientations, then decomposes the misorientation of every unique
+        grain pair into tilt (Verkippungswinkel) and twist components relative to a
+        [001] boundary plane normal.
+
+        Expected values were computed from the grain orientations returned by
+        ``GrainSegmentationModifier`` on ``aluminium.lmp``.
+        """
+        self.data.perform_ptm(enabled=("fcc"), output_orientation=True)
+        orientations = self.data.get_distinct_grains()
+        assert orientations is not None
+        n_grains = len(orientations)
+        assert n_grains == 6
+
+        boundary_normal = np.array([0.0, 0.0, 1.0])
+
+        # Expected (tilt_deg, twist_deg) for each unique grain pair (i, j),
+        # relative to the [001] boundary normal.
+        expected_pairwise: dict[tuple[int, int], tuple[float, float]] = {
+            (0, 1): (48.10726876, 54.59075502),
+            (0, 2): (21.62713430, 4.60089324),
+            (0, 3): (50.71799925, 1.65595804),
+            (0, 4): (27.35549143, 55.09193387),
+            (0, 5): (63.96192738, 32.50641962),
+            (1, 2): (69.95747423, 52.77113913),
+            (1, 3): (42.72323838, 36.88942243),
+            (1, 4): (44.25619581, 9.94485960),
+            (1, 5): (30.07837598, 10.80567861),
+            (2, 3): (68.72444263, 9.90248776),
+            (2, 4): (42.36809186, 46.26167853),
+            (2, 5): (84.35797406, 24.65154897),
+            (3, 4): (33.37007453, 57.59625882),
+            (3, 5): (24.50278740, 19.55583331),
+            (4, 5): (49.80791529, 32.83230093),
+        }
+
+        for i in range(n_grains):
+            for j in range(i + 1, n_grains):
+                q_i = orientations[[i]]
+                q_j = orientations[[j]]
+                tilt, twist = self.data.get_tilt_angle(q_i, q_j, boundary_normal)
+
+                assert tilt.shape == (1,)
+                assert twist.shape == (1,)
+
+                exp_tilt, exp_twist = expected_pairwise[(i, j)]
+                assert_allclose(tilt[0], exp_tilt, atol=1e-4, err_msg=f"tilt ({i},{j})")
+                assert_allclose(twist[0], exp_twist, atol=1e-4, err_msg=f"twist ({i},{j})")
+
+        # Batch call: pass all consecutive pairs at once
+        q_i_batch = orientations[:-1]
+        q_j_batch = orientations[1:]
+        tilt_batch, twist_batch = self.data.get_tilt_angle(q_i_batch, q_j_batch, boundary_normal)
+        assert tilt_batch.shape == (n_grains - 1,)
+        assert twist_batch.shape == (n_grains - 1,)
+        assert_allclose(
+            tilt_batch,
+            [48.10726876, 69.95747423, 68.72444263, 33.37007453, 49.80791529],
+            atol=1e-4,
+        )
+        assert_allclose(
+            twist_batch,
+            [54.59075502, 52.77113913, 9.90248776, 57.59625882, 32.83230093],
+            atol=1e-4,
+        )
+
 
 @pytest.mark.integration
 @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")

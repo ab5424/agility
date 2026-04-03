@@ -83,3 +83,87 @@ def cubic_disorientation_angles(q_i: np.ndarray, q_j: np.ndarray) -> np.ndarray:
             max_abs_w = np.maximum(max_abs_w, np.abs(q_equiv[:, 3]))
 
     return np.degrees(2.0 * np.arccos(np.clip(max_abs_w, 0.0, 1.0)))
+
+
+def tilt_twist_decomposition(
+    q_i: np.ndarray,
+    q_j: np.ndarray,
+    boundary_normal: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray]:
+    r"""Decompose misorientations into tilt (Verkippungswinkel) and twist angle components.
+
+    Given two grain orientation quaternions and a grain boundary plane normal, this
+    function decomposes the misorientation into its tilt component (rotation axis lying
+    in the boundary plane) and twist component (rotation axis perpendicular to the
+    boundary plane).
+
+    Args:
+        q_i: Unit quaternion array with shape ``(N, 4)`` in ``(x, y, z, w)`` order
+            representing the orientation of the first grain in each pair.
+        q_j: Unit quaternion array with shape ``(N, 4)`` in ``(x, y, z, w)`` order
+            representing the orientation of the second grain in each pair.
+        boundary_normal: Grain boundary plane normal vector(s). Either a single vector
+            of shape ``(3,)`` applied to all pairs, or an array of shape ``(N, 3)``
+            with one normal per pair. Vectors are normalised internally.
+
+    Returns:
+        Tuple ``(tilt_angles, twist_angles)`` where both arrays have shape ``(N,)``
+        and contain angles in degrees. The tilt angle (Verkippungswinkel) is the
+        rotation component whose axis lies in the boundary plane; the twist angle is
+        the component whose axis is parallel to the boundary plane normal.
+
+    Note:
+        Given the misorientation rotation axis ``n`` and total angle ``θ``, the
+        decomposition satisfies
+
+        .. math::
+
+            \\tan(\\theta_{\\text{tilt}}/2)
+                = |\\mathbf{n}_{\\text{tilt}}| \\tan(\\theta/2)
+
+            \\tan(\\theta_{\\text{twist}}/2)
+                = |\\mathbf{n} \\cdot \\mathbf{m}| \\tan(\\theta/2)
+
+        where ``m`` is the boundary plane normal and
+        ``n_tilt = n - (n · m) m`` is the projection of ``n`` onto the boundary
+        plane.
+
+    """
+    q_i = np.atleast_2d(np.asarray(q_i, dtype=float))
+    q_j = np.atleast_2d(np.asarray(q_j, dtype=float))
+
+    # Misorientation: q_rel = q_i^{-1} * q_j (conjugate of q_i times q_j)
+    v_i = q_i[:, :3]
+    w_i = q_i[:, 3:4]
+    q_i_conj = np.concatenate((-v_i, w_i), axis=1)
+    q_rel = _quat_mul(q_i_conj, q_j)
+
+    # Canonical form: ensure w >= 0 so that θ ∈ [0°, 180°]
+    neg_mask = q_rel[:, 3] < 0
+    q_rel[neg_mask] = -q_rel[neg_mask]
+
+    v_rel = q_rel[:, :3]  # sin(θ/2) * n
+    w_rel = q_rel[:, 3]  # cos(θ/2) >= 0
+
+    # Normalise boundary normal(s)
+    m = np.asarray(boundary_normal, dtype=float)
+    if m.ndim == 1:
+        m = m / np.linalg.norm(m)
+        v_dot_m = v_rel @ m  # (N,)
+        v_twist = v_dot_m[:, None] * m  # (N, 3)
+    else:
+        m = m / np.linalg.norm(m, axis=1, keepdims=True)
+        v_dot_m = np.sum(v_rel * m, axis=1)  # (N,)
+        v_twist = v_dot_m[:, None] * m  # (N, 3)
+
+    v_tilt = v_rel - v_twist  # (N, 3)
+
+    # Component magnitudes: |v_tilt| = |n_tilt| * sin(θ/2), etc.
+    tilt_sin_half = np.linalg.norm(v_tilt, axis=1)  # (N,)
+    twist_sin_half = np.abs(v_dot_m)  # (N,)
+
+    # θ_component = 2 * arctan2(|v_component|, cos(θ/2))
+    tilt_angles = np.degrees(2.0 * np.arctan2(tilt_sin_half, w_rel))
+    twist_angles = np.degrees(2.0 * np.arctan2(twist_sin_half, w_rel))
+
+    return tilt_angles, twist_angles
