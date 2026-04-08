@@ -1,0 +1,5 @@
+toml
+version = 1
+[[analyzers]]
+name = "python"
+enabled = true
