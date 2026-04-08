@@ -101,7 +101,7 @@ class TestGBStructure(TestCase):
 
         Runs PTM + grain segmentation on the aluminium polycrystal to obtain unit
         quaternion orientations, then decomposes the misorientation of every unique
-        grain pair into tilt (Verkippungswinkel) and twist components relative to a
+        grain pair into tilt and twist components relative to a
         [001] boundary plane normal.
 
         Expected values were computed from the grain orientations returned by

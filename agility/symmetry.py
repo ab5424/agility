@@ -90,7 +90,7 @@ def tilt_twist_decomposition(
     q_j: np.ndarray,
     boundary_normal: np.ndarray,
 ) -> tuple[np.ndarray, np.ndarray]:
-    r"""Decompose misorientations into tilt (Verkippungswinkel) and twist angle components.
+    r"""Decompose misorientations into tilt and twist angle components.
 
     Given two grain orientation quaternions and a grain boundary plane normal, this
     function decomposes the misorientation into its tilt component (rotation axis lying
@@ -108,7 +108,7 @@ def tilt_twist_decomposition(
 
     Returns:
         Tuple ``(tilt_angles, twist_angles)`` where both arrays have shape ``(N,)``
-        and contain angles in degrees. The tilt angle (Verkippungswinkel) is the
+        and contain angles in degrees. The tilt angle is the
         rotation component whose axis lies in the boundary plane; the twist angle is
         the component whose axis is parallel to the boundary plane normal.
 

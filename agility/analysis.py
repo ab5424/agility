@@ -1271,7 +1271,7 @@ class GBStructure:
         q_j: np.ndarray,
         boundary_normal: np.ndarray,
     ) -> tuple[np.ndarray, np.ndarray]:
-        """Get tilt (Verkippungswinkel) and twist angles for grain boundary misorientations.
+        """Get tilt and twist angles for grain boundary misorientations.
 
         Decomposes the misorientation between grain pairs into tilt and twist components
         relative to the grain boundary plane normal.
@@ -1287,7 +1287,7 @@ class GBStructure:
 
         Returns:
             Tuple ``(tilt_angles, twist_angles)`` where both arrays have shape ``(N,)``
-            and contain angles in degrees. The tilt angle (Verkippungswinkel) is the
+            and contain angles in degrees. The tilt angle is the
             rotation component whose axis lies in the boundary plane; the twist angle
             is the component whose axis is parallel to the boundary plane normal.
 
