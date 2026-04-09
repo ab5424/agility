@@ -6,6 +6,7 @@ import types
 from unittest import TestCase
 from unittest.mock import MagicMock
 
+import numpy as np
 import pytest
 
 from agility.analysis import GBStructure, GBStructureTimeseries, not_implemented
@@ -331,3 +332,84 @@ class TestGBStructureTimeseriesRemoveTimesteps(TestCase):
         ts.backend = "lammps"
         with pytest.raises(NotImplementedError):
             ts.remove_timesteps(1)
+
+
+@pytest.mark.unit
+class TestGetTiltAngle(TestCase):
+    """Test GBStructure.get_tilt_angle using known quaternion/boundary-normal pairs."""
+
+    def _make_gbs(self, backend: str = "ovito") -> GBStructure:
+        """Return a GBStructure with mocked internals (no real backend needed)."""
+        gbs = GBStructure.__new__(GBStructure)
+        gbs.backend = backend
+        return gbs
+
+    def _rotation_quat(self, axis: list[float], angle_deg: float) -> np.ndarray:
+        """Return a scalar-last unit quaternion for a rotation by *angle_deg* around *axis*."""
+        a = np.asarray(axis, dtype=float)
+        a = a / np.linalg.norm(a)
+        half = np.radians(angle_deg) / 2.0
+        return np.array([*(a * np.sin(half)), np.cos(half)])
+
+    def test_pure_tilt_returns_correct_angles(self) -> None:
+        """30° rotation with axis in boundary plane must give tilt=30°, twist=0°."""
+        gbs = self._make_gbs()
+        q_i = np.array([[0.0, 0.0, 0.0, 1.0]])
+        q_j = np.array([self._rotation_quat([1, 0, 0], 30.0)])
+        tilt, twist = gbs.get_tilt_angle(q_i, q_j, boundary_normal=[0.0, 0.0, 1.0])
+        np.testing.assert_allclose(tilt, [30.0], atol=1e-10)
+        np.testing.assert_allclose(twist, [0.0], atol=1e-10)
+
+    def test_pure_twist_returns_correct_angles(self) -> None:
+        """30° rotation with axis along boundary normal must give tilt=0°, twist=30°."""
+        gbs = self._make_gbs()
+        q_i = np.array([[0.0, 0.0, 0.0, 1.0]])
+        q_j = np.array([self._rotation_quat([0, 0, 1], 30.0)])
+        tilt, twist = gbs.get_tilt_angle(q_i, q_j, boundary_normal=[0.0, 0.0, 1.0])
+        np.testing.assert_allclose(tilt, [0.0], atol=1e-10)
+        np.testing.assert_allclose(twist, [30.0], atol=1e-10)
+
+    def test_identity_misorientation_returns_zero_angles(self) -> None:
+        """q_i == q_j must give tilt=0° and twist=0°."""
+        gbs = self._make_gbs()
+        q = np.array([[0.0, 0.0, 0.0, 1.0]])
+        tilt, twist = gbs.get_tilt_angle(q, q, boundary_normal=[0.0, 0.0, 1.0])
+        np.testing.assert_allclose(tilt, [0.0], atol=1e-10)
+        np.testing.assert_allclose(twist, [0.0], atol=1e-10)
+
+    def test_returns_numpy_arrays(self) -> None:
+        """get_tilt_angle must return numpy arrays."""
+        gbs = self._make_gbs()
+        q_i = np.array([[0.0, 0.0, 0.0, 1.0]])
+        q_j = np.array([self._rotation_quat([1, 0, 0], 45.0)])
+        tilt, twist = gbs.get_tilt_angle(q_i, q_j, boundary_normal=[0.0, 0.0, 1.0])
+        assert isinstance(tilt, np.ndarray)
+        assert isinstance(twist, np.ndarray)
+
+    def test_angles_are_in_degrees(self) -> None:
+        """Returned angles must be in degrees (not radians)."""
+        gbs = self._make_gbs()
+        q_i = np.array([[0.0, 0.0, 0.0, 1.0]])
+        q_j = np.array([self._rotation_quat([1, 0, 0], 90.0)])
+        tilt, _ = gbs.get_tilt_angle(q_i, q_j, boundary_normal=[0.0, 0.0, 1.0])
+        np.testing.assert_allclose(tilt, [90.0], atol=1e-10)
+
+    def test_optional_cubic_symmetry_reduction(self) -> None:
+        """get_tilt_angle should expose optional internal cubic symmetry reduction."""
+        gbs = self._make_gbs()
+        q_i = np.array([[0.0, 0.0, 0.0, 1.0]])
+        q_j = np.array([self._rotation_quat([0, 0, 1], 90.0)])
+        _, twist_raw = gbs.get_tilt_angle(
+            q_i,
+            q_j,
+            boundary_normal=[0.0, 0.0, 1.0],
+            reduce_cubic_symmetry=False,
+        )
+        _, twist_red = gbs.get_tilt_angle(
+            q_i,
+            q_j,
+            boundary_normal=[0.0, 0.0, 1.0],
+            reduce_cubic_symmetry=True,
+        )
+        np.testing.assert_allclose(twist_raw, [90.0], atol=1e-10)
+        np.testing.assert_allclose(twist_red, [0.0], atol=1e-10)
