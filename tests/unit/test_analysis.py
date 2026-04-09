@@ -393,3 +393,23 @@ class TestGetTiltAngle(TestCase):
         q_j = np.array([self._rotation_quat([1, 0, 0], 90.0)])
         tilt, _ = gbs.get_tilt_angle(q_i, q_j, boundary_normal=[0.0, 0.0, 1.0])
         np.testing.assert_allclose(tilt, [90.0], atol=1e-10)
+
+    def test_optional_cubic_symmetry_reduction(self) -> None:
+        """get_tilt_angle should expose optional internal cubic symmetry reduction."""
+        gbs = self._make_gbs()
+        q_i = np.array([[0.0, 0.0, 0.0, 1.0]])
+        q_j = np.array([self._rotation_quat([0, 0, 1], 90.0)])
+        _, twist_raw = gbs.get_tilt_angle(
+            q_i,
+            q_j,
+            boundary_normal=[0.0, 0.0, 1.0],
+            reduce_cubic_symmetry=False,
+        )
+        _, twist_red = gbs.get_tilt_angle(
+            q_i,
+            q_j,
+            boundary_normal=[0.0, 0.0, 1.0],
+            reduce_cubic_symmetry=True,
+        )
+        np.testing.assert_allclose(twist_raw, [90.0], atol=1e-10)
+        np.testing.assert_allclose(twist_red, [0.0], atol=1e-10)

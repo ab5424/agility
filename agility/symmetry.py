@@ -89,6 +89,8 @@ def tilt_twist_decomposition(
     q_i: np.ndarray,
     q_j: np.ndarray,
     boundary_normal: np.ndarray,
+    *,
+    reduce_cubic_symmetry: bool = False,
 ) -> tuple[np.ndarray, np.ndarray]:
     r"""Decompose misorientations into tilt and twist angle components.
 
@@ -105,6 +107,10 @@ def tilt_twist_decomposition(
         boundary_normal: Grain boundary plane normal vector(s). Either a single vector
             of shape ``(3,)`` applied to all pairs, or an array of shape ``(N, 3)``
             with one normal per pair. Vectors are normalised internally.
+        reduce_cubic_symmetry: If ``True``, apply internal cubic symmetry reduction to
+            the misorientation before decomposition by searching ``24 x 24`` left/right
+            symmetry-equivalent representations and selecting the minimum-angle
+            disorientation representative.
 
     Returns:
         Tuple ``(tilt_angles, twist_angles)`` where both arrays have shape ``(N,)``
@@ -138,6 +144,21 @@ def tilt_twist_decomposition(
     q_i_conj = np.concatenate((-v_i, w_i), axis=1)
     q_rel = _quat_mul(q_i_conj, q_j)
 
+    if reduce_cubic_symmetry:
+        cubic_sym = _cubic_symmetry_quaternions()
+        max_abs_w = np.full(len(q_rel), -np.inf)
+        q_best = np.empty_like(q_rel)
+        for left in cubic_sym:
+            q_left = _quat_mul(np.broadcast_to(left, q_rel.shape), q_rel)
+            for right in cubic_sym:
+                q_equiv = _quat_mul(q_left, np.broadcast_to(right, q_left.shape))
+                abs_w = np.abs(q_equiv[:, 3])
+                better = abs_w > max_abs_w
+                if np.any(better):
+                    q_best[better] = q_equiv[better]
+                    max_abs_w[better] = abs_w[better]
+        q_rel = q_best
+
     # Canonical form: ensure w >= 0 so that θ ∈ [0°, 180°]
     neg_mask = q_rel[:, 3] < 0
     q_rel[neg_mask] = -q_rel[neg_mask]
@@ -148,11 +169,19 @@ def tilt_twist_decomposition(
     # Normalise boundary normal(s)
     m = np.asarray(boundary_normal, dtype=float)
     if m.ndim == 1:
-        m = m / np.linalg.norm(m)
+        norm = np.linalg.norm(m)
+        if np.isclose(norm, 0.0):
+            msg = "boundary_normal must be a non-zero vector"
+            raise ValueError(msg)
+        m = m / norm
         v_dot_m = v_rel @ m  # (N,)
         v_twist = v_dot_m[:, None] * m  # (N, 3)
     else:
-        m = m / np.linalg.norm(m, axis=1, keepdims=True)
+        norms = np.linalg.norm(m, axis=1, keepdims=True)
+        if np.any(np.isclose(norms, 0.0)):
+            msg = "boundary_normal rows must be non-zero vectors"
+            raise ValueError(msg)
+        m = m / norms
         v_dot_m = np.sum(v_rel * m, axis=1)  # (N,)
         v_twist = v_dot_m[:, None] * m  # (N, 3)
 

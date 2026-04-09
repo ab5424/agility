@@ -1270,6 +1270,8 @@ class GBStructure:
         q_i: np.ndarray,
         q_j: np.ndarray,
         boundary_normal: np.ndarray,
+        *,
+        reduce_cubic_symmetry: bool = False,
     ) -> tuple[np.ndarray, np.ndarray]:
         """Get tilt and twist angles for grain boundary misorientations.
 
@@ -1284,6 +1286,8 @@ class GBStructure:
             boundary_normal: Grain boundary plane normal vector(s). Either a single
                 vector of shape ``(3,)`` applied to all pairs, or an array of shape
                 ``(N, 3)`` with one normal per pair.
+            reduce_cubic_symmetry: If ``True``, apply internal cubic symmetry reduction
+                to the misorientation before decomposition.
 
         Returns:
             Tuple ``(tilt_angles, twist_angles)`` where both arrays have shape ``(N,)``
@@ -1304,7 +1308,12 @@ class GBStructure:
         """
         from agility.symmetry import tilt_twist_decomposition  # noqa: PLC0415
 
-        return tilt_twist_decomposition(q_i, q_j, boundary_normal)
+        return tilt_twist_decomposition(
+            q_i,
+            q_j,
+            boundary_normal,
+            reduce_cubic_symmetry=reduce_cubic_symmetry,
+        )
 
     # TODO @ab5424: Add Grain Index calculation
     # https://github.com/ab5424/agility/issues/179

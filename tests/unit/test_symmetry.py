@@ -174,3 +174,48 @@ class TestTiltTwistDecomposition(TestCase):
         tilt_scaled, twist_scaled = tilt_twist_decomposition(q_i, q_j, [0.0, 0.0, 5.0])
         np.testing.assert_allclose(tilt_scaled, tilt_unit, atol=1e-10)
         np.testing.assert_allclose(twist_scaled, twist_unit, atol=1e-10)
+
+    def test_zero_boundary_normal_raises(self) -> None:
+        """A zero boundary-normal vector must raise ValueError."""
+        q_i, q_j = self._pair([1, 0, 0], 30.0)
+        with pytest.raises(ValueError, match="non-zero vector"):
+            tilt_twist_decomposition(q_i, q_j, [0.0, 0.0, 0.0])
+
+    def test_zero_row_in_per_pair_boundary_normals_raises(self) -> None:
+        """Any zero row in per-pair boundary normals must raise ValueError."""
+        q_i = np.array(
+            [
+                [0.0, 0.0, 0.0, 1.0],
+                [0.0, 0.0, 0.0, 1.0],
+            ],
+        )
+        q_j = np.array(
+            [
+                _rotation_quat([1, 0, 0], 30.0),
+                _rotation_quat([0, 0, 1], 30.0),
+            ],
+        )
+        normals = np.array(
+            [
+                [0.0, 0.0, 1.0],
+                [0.0, 0.0, 0.0],
+            ],
+        )
+        with pytest.raises(ValueError, match="rows must be non-zero vectors"):
+            tilt_twist_decomposition(q_i, q_j, normals)
+
+    def test_optional_cubic_symmetry_reduction(self) -> None:
+        """Optional internal cubic symmetry reduction can collapse symmetry-equivalent pairs."""
+        q_i = np.array([[0.0, 0.0, 0.0, 1.0]])
+        q_j = np.array([_rotation_quat([0, 0, 1], 90.0)])
+        tilt_raw, twist_raw = tilt_twist_decomposition(q_i, q_j, self._NORMAL_Z)
+        tilt_red, twist_red = tilt_twist_decomposition(
+            q_i,
+            q_j,
+            self._NORMAL_Z,
+            reduce_cubic_symmetry=True,
+        )
+        np.testing.assert_allclose(tilt_raw, [0.0], atol=1e-10)
+        np.testing.assert_allclose(twist_raw, [90.0], atol=1e-10)
+        np.testing.assert_allclose(tilt_red, [0.0], atol=1e-10)
+        np.testing.assert_allclose(twist_red, [0.0], atol=1e-10)
