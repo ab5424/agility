@@ -146,7 +146,7 @@ def tilt_twist_decomposition(
 
     if reduce_cubic_symmetry:
         cubic_sym = _cubic_symmetry_quaternions()
-        max_abs_w = np.full(len(q_rel), -np.inf)
+        max_abs_w = np.full(len(q_rel), -1.0)
         q_best = np.empty_like(q_rel)
         for left in cubic_sym:
             q_left = _quat_mul(np.broadcast_to(left, q_rel.shape), q_rel)
