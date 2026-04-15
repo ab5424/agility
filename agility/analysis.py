@@ -361,7 +361,7 @@ class GBStructure:
                 if list_ids_type == "Identifier":
                     ids = data.particles["Particle Identifier"]
                 elif list_ids_type == "Indices":
-                    ids = list(np.where(self.data.particles["Structure Type"] != 10000)[0])
+                    ids = np.arange(data.particles.count)
                 else:
                     raise invalid_return_type(list_ids_type)
                 l_ids = np.isin(ids, list_ids, assume_unique=True, invert=False)
