@@ -1161,9 +1161,51 @@ class GBStructure:
             if return_type == "Identifier":
                 gb_edge_ions = [self.data.particles["Particle Identifier"][i] for i in gb_edge_ions]
         elif self.backend == "lammps":
-            # TODO @ab5424: Implement lammps backend for get_grain_edge_ions
-            # https://github.com/ab5424/agility/issues/175
-            raise not_implemented(self.backend)
+            from scipy.spatial import KDTree  # noqa: PLC0415
+
+            if return_type not in ("Identifier", "Indices"):
+                raise invalid_return_type(return_type)
+
+            gb_ions_set = (
+                set(gb_ions)
+                if gb_ions is not None
+                else set(self.get_non_crystalline_atoms(return_type="Indices"))
+            )
+            bulk_ions_list = (
+                list(bulk_ions)
+                if bulk_ions is not None
+                else self.get_crystalline_atoms(return_type="Indices")
+            )
+
+            gb_edge_ions = []
+            if gb_ions_set and bulk_ions_list:
+                all_positions = np.asarray(self.pylmp.lmp.numpy.extract_atom("x"))
+                gb_positions = all_positions[sorted(gb_ions_set)]
+                bulk_positions = all_positions[bulk_ions_list]
+
+                if cutoff is not None:
+                    tree = KDTree(gb_positions)
+                    pairs = tree.query_ball_point(bulk_positions, cutoff)
+                    gb_edge_indices = [bulk_ions_list[i] for i, nbrs in enumerate(pairs) if nbrs]
+                else:
+                    n_atoms = len(all_positions)
+                    k = min(nearest_n + 1, n_atoms)
+                    all_tree = KDTree(all_positions)
+                    _, indices = all_tree.query(bulk_positions, k=k)
+                    # Ensure 2-D so that column slicing is uniform
+                    indices = np.atleast_2d(indices)
+                    gb_edge_indices = [
+                        bulk_ions_list[i]
+                        for i, neighbors in enumerate(indices)
+                        # neighbors[0] is the query point itself (distance 0); skip it
+                        if any(n in gb_ions_set for n in neighbors[1:])
+                    ]
+
+                ids = np.ravel(self.pylmp.lmp.numpy.extract_atom("id"))
+                if return_type == "Identifier":
+                    gb_edge_ions = [int(ids[i]) for i in gb_edge_indices]
+                else:
+                    gb_edge_ions = list(gb_edge_indices)
         else:
             raise not_implemented(self.backend)
         return gb_edge_ions
