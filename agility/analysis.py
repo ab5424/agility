@@ -864,7 +864,7 @@ class GBStructure:
                 if nearest_n:
                     nearest_n_added = nearest_n
                     while len(neighbors_no_selected) < nearest_n:
-                        finder = NearestNeighborFinder(nearest_n_added, self.data)
+                        finder = NearestNeighborFinder(nearest_n_added, self.data)  # type: ignore[ty:possibly-unresolved-reference]
                         neighbors = {neigh.index for neigh in finder.find(index)}
                         neighbors_no_selected = neighbors - non_selected
                         nearest_n_added += 1
