@@ -1263,8 +1263,56 @@ class GBStructure:
             raise not_implemented(self.backend)
         return atom_list
 
-    # TODO @ab5424: Add Verkippungswinkel (tilt angle) calculation
-    # https://github.com/ab5424/agility/issues/178
+    def get_tilt_angle(
+        self,
+        q_i: np.ndarray,
+        q_j: np.ndarray,
+        boundary_normal: np.ndarray,
+        *,
+        reduce_cubic_symmetry: bool = False,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Get tilt and twist angles for grain boundary misorientations.
+
+        Decomposes the misorientation between grain pairs into tilt and twist components
+        relative to the grain boundary plane normal.
+
+        Args:
+            q_i: Unit quaternion array with shape ``(N, 4)`` in ``(x, y, z, w)`` order
+                representing the orientation of the first grain in each pair.
+            q_j: Unit quaternion array with shape ``(N, 4)`` in ``(x, y, z, w)`` order
+                representing the orientation of the second grain in each pair.
+            boundary_normal: Grain boundary plane normal vector(s). Either a single
+                vector of shape ``(3,)`` applied to all pairs, or an array of shape
+                ``(N, 3)`` with one normal per pair.
+            reduce_cubic_symmetry: If ``True``, apply internal cubic symmetry reduction
+                to the misorientation before decomposition.
+
+        Returns:
+            Tuple ``(tilt_angles, twist_angles)`` where both arrays have shape ``(N,)``
+            and contain angles in degrees. The tilt angle is the
+            rotation component whose axis lies in the boundary plane; the twist angle
+            is the component whose axis is parallel to the boundary plane normal.
+
+        Example:
+            ::
+
+                orientations = gbs.get_distinct_grains()
+                tilt, twist = gbs.get_tilt_angle(
+                    orientations[[0]],
+                    orientations[[1]],
+                    boundary_normal=[0, 0, 1],
+                )
+
+        """
+        from agility.symmetry import tilt_twist_decomposition  # noqa: PLC0415
+
+        return tilt_twist_decomposition(
+            q_i,
+            q_j,
+            boundary_normal,
+            reduce_cubic_symmetry=reduce_cubic_symmetry,
+        )
+
     # TODO @ab5424: Add Grain Index calculation
     # https://github.com/ab5424/agility/issues/179
 
