@@ -1180,26 +1180,67 @@ class GBStructure:
             gb_edge_ions = []
             if gb_ions_set and bulk_ions_list:
                 all_positions = np.asarray(self.pylmp.lmp.numpy.extract_atom("x"))
+                box = self.pylmp.lmp.extract_box()
+                box_lo = np.asarray(box[0], dtype=float)
+                box_hi = np.asarray(box[1], dtype=float)
+                periodicity = tuple(int(v) for v in box[5])
+                box_lengths = box_hi - box_lo
+
+                shifts_per_axis = [
+                    (-box_lengths[i], 0.0, box_lengths[i]) if periodicity[i] else (0.0,)
+                    for i in range(3)
+                ]
+                periodic_shifts = np.array(
+                    np.meshgrid(*shifts_per_axis, indexing="ij"),
+                ).reshape(3, -1).T
+                n_images = len(periodic_shifts)
+
                 gb_positions = all_positions[sorted(gb_ions_set)]
                 bulk_positions = all_positions[bulk_ions_list]
 
                 if cutoff is not None:
-                    tree = KDTree(gb_positions)
+                    gb_image_positions = (gb_positions[None, :, :] + periodic_shifts[:, None, :]).reshape(
+                        -1,
+                        3,
+                    )
+                    tree = KDTree(gb_image_positions)
                     pairs = tree.query_ball_point(bulk_positions, cutoff)
                     gb_edge_indices = [bulk_ions_list[i] for i, nbrs in enumerate(pairs) if nbrs]
                 else:
                     n_atoms = len(all_positions)
-                    k = min(nearest_n + 1, n_atoms)
-                    all_tree = KDTree(all_positions)
-                    _, indices = all_tree.query(bulk_positions, k=k)
-                    # Ensure 2-D so that column slicing is uniform
-                    indices = np.atleast_2d(indices)
-                    gb_edge_indices = [
-                        bulk_ions_list[i]
-                        for i, neighbors in enumerate(indices)
-                        # neighbors[0] is the query point itself (distance 0); skip it
-                        if any(n in gb_ions_set for n in neighbors[1:])
-                    ]
+                    all_image_positions = (all_positions[None, :, :] + periodic_shifts[:, None, :]).reshape(
+                        -1,
+                        3,
+                    )
+                    all_image_to_index = np.tile(np.arange(n_atoms), n_images)
+                    all_tree = KDTree(all_image_positions)
+                    gb_edge_indices = []
+                    total_image_atoms = len(all_image_positions)
+
+                    for bulk_index in bulk_ions_list:
+                        k = min(total_image_atoms, nearest_n + n_images)
+                        unique_neighbors: list[int] = []
+                        while True:
+                            _, image_neighbor_indices = all_tree.query(all_positions[bulk_index], k=k)
+                            image_neighbor_indices = np.atleast_1d(image_neighbor_indices)
+                            unique_neighbors = []
+                            seen = {bulk_index}
+
+                            for image_neighbor_index in image_neighbor_indices:
+                                neighbor_index = int(all_image_to_index[int(image_neighbor_index)])
+                                if neighbor_index in seen:
+                                    continue
+                                seen.add(neighbor_index)
+                                unique_neighbors.append(neighbor_index)
+                                if len(unique_neighbors) == nearest_n:
+                                    break
+
+                            if len(unique_neighbors) >= nearest_n or k == total_image_atoms:
+                                break
+                            k = min(total_image_atoms, k * 2)
+
+                        if any(neighbor_index in gb_ions_set for neighbor_index in unique_neighbors):
+                            gb_edge_indices.append(bulk_index)
 
                 ids = np.ravel(self.pylmp.lmp.numpy.extract_atom("id"))
                 if return_type == "Identifier":

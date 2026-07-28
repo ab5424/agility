@@ -273,6 +273,20 @@ class TestGetGrainEdgeIonsLammps(TestCase):
         lmp.pair_coeff("* *")
         lmp.run("0")
 
+    def _setup_periodic_boundary_pair(self) -> None:
+        """Create two atoms that are neighbors only through periodic boundaries."""
+        lmp = self.gbs.pylmp
+        lmp.units("metal")
+        lmp.atom_style("atomic")
+        lmp.region("box block 0 10 0 10 0 10 units box")
+        lmp.create_box("1 box")
+        lmp.create_atoms("1 single 0.1 5.0 5.0 units box")
+        lmp.create_atoms("1 single 9.9 5.0 5.0 units box")
+        lmp.mass("1 26.982")
+        lmp.pair_style("zero 6.0")
+        lmp.pair_coeff("* *")
+        lmp.run("0")
+
     def test_invalid_return_type_raises(self) -> None:
         """Test that an invalid return_type raises ValueError."""
         self._setup_fcc_lattice()
@@ -365,3 +379,25 @@ class TestGetGrainEdgeIonsLammps(TestCase):
         )
         expected_ids = sorted(int(ids[i]) for i in indices_result)
         assert sorted(identifiers_result) == expected_ids
+
+    def test_grain_edge_ions_cutoff_finds_periodic_neighbors(self) -> None:
+        """Cutoff mode should detect GB neighbors across a periodic boundary."""
+        self._setup_periodic_boundary_pair()
+        result = self.gbs.get_grain_edge_ions(
+            cutoff=0.3,
+            gb_ions={0},
+            bulk_ions=[1],
+            return_type="Indices",
+        )
+        assert result == [1]
+
+    def test_grain_edge_ions_nearest_n_finds_periodic_neighbors(self) -> None:
+        """Nearest-neighbor mode should detect GB neighbors across a periodic boundary."""
+        self._setup_periodic_boundary_pair()
+        result = self.gbs.get_grain_edge_ions(
+            nearest_n=1,
+            gb_ions={0},
+            bulk_ions=[1],
+            return_type="Indices",
+        )
+        assert result == [1]
