@@ -107,7 +107,7 @@ class TestMdfLargePolycrystal(TestCase):
         if parsed.scheme != "https":
             msg = f"unsupported download URL scheme: {parsed.scheme}"
             raise ValueError(msg)
-        with urllib.request.urlopen(FIGSHARE_AL_POLYCRYSTAL_URL, timeout=120) as response:  # noqa: S310
+        with urllib.request.urlopen(FIGSHARE_AL_POLYCRYSTAL_URL, timeout=120) as response:
             content_type = response.headers.get("Content-Type", "")
             content_length = response.headers.get("Content-Length")
             if content_type and "text/html" in content_type.lower():

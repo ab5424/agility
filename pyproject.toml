@@ -84,8 +84,14 @@ lint.pydocstyle.convention = "google"
 lint.isort.required-imports = ["from __future__ import annotations"]
 
 [tool.ruff.lint.per-file-ignores]
-"*.ipynb" = ["S", "T201"]
-"tests/**" = ["S101"] # Use of assert detected
+"*.ipynb" = ["CPY001", "S", "T201"]
+"docs/**" = [
+    "CPY001", # Missing copyright notice at top of file
+]
+"tests/**" = [
+    "CPY001", # Missing copyright notice at top of file
+    "S101",   # Use of assert detected
+]
 
 [tool.ty.rules]
 unresolved-import = "ignore"

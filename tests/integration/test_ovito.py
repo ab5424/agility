@@ -32,7 +32,7 @@ def _ensure_shear_dump() -> Path:
     if filepath.exists():
         return filepath
     try:
-        urlretrieve(SHEAR_DUMP_URL, filepath)  # noqa: S310
+        urlretrieve(SHEAR_DUMP_URL, filepath)
     except (OSError, URLError) as exc:
         pytest.skip(f"Unable to download shear.dump fixture: {exc}")
     return filepath
