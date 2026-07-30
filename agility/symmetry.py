@@ -1,6 +1,6 @@
 """Symmetry utilities for orientation and misorientation analysis."""
 
-# Copyright (c) Alexander Bonkowski
+# Copyright (c) 2021 Alexander Bonkowski
 # Distributed under the terms of the MIT License
 # author: Alexander Bonkowski
 

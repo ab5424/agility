@@ -1,6 +1,6 @@
 """Plotting and rendering functions."""
 
-# Copyright (c) Alexander Bonkowski
+# Copyright (c) 2021 Alexander Bonkowski
 # Distributed under the terms of the MIT License
 # author: Alexander Bonkowski
 

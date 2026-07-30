@@ -1,4 +1,4 @@
-# Copyright (c) Alexander Bonkowski.
+# Copyright (c) 2021 Alexander Bonkowski.
 # Distributed under the terms of the MIT License.
 
 """Minimiser for lammps, vasp, gulp."""

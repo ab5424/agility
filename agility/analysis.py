@@ -1,4 +1,4 @@
-# Copyright (c) Alexander Bonkowski
+# Copyright (c) 2021 Alexander Bonkowski
 # Distributed under the terms of the MIT License
 # author: Alexander Bonkowski
 
@@ -746,7 +746,7 @@ class GBStructure:
         algorithm: str = "GraphClusteringAuto",
         compute: bool = True,
         **kwargs,
-    ) -> None | np.ndarray:
+    ) -> np.ndarray | None:
         """Get distinct grains from the structure.
 
         Args:

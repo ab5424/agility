@@ -77,6 +77,7 @@ lint.ignore = [
   "FBT002",  # Boolean default positional argument in function definition
   "PLR0912", # too-many-branches
   "PLR0913", # too-many-arguments
+  "PLR0917", # Too many positional arguments
   "PLR2004", # magic-value-comparison
 ]
 lint.pydocstyle.convention = "google"
