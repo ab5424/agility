@@ -334,6 +334,7 @@ class TestGBStructureTimeseriesRemoveTimesteps(TestCase):
         with pytest.raises(NotImplementedError):
             ts.remove_timesteps(1)
 
+
 @pytest.mark.unit
 class TestPerformCnaValidation(TestCase):
     """Unit tests for perform_cna enabled-structure validation — no backend required."""
