@@ -149,12 +149,9 @@ def tilt_twist_decomposition(
         max_abs_w = np.full(len(q_rel), -1.0)
         q_best = np.empty_like(q_rel)
         for left in cubic_sym:
-            q_left_conj = np.array([-left[0], -left[1], -left[2], left[3]], dtype=float)
-            q_i_sym = _quat_mul(q_i, np.broadcast_to(q_left_conj, q_i.shape))
-            q_i_sym_conj = np.concatenate((-q_i_sym[:, :3], q_i_sym[:, 3:4]), axis=1)
+            q_left = _quat_mul(np.broadcast_to(left, q_rel.shape), q_rel)
             for right in cubic_sym:
-                q_j_sym = _quat_mul(q_j, np.broadcast_to(right, q_j.shape))
-                q_equiv = _quat_mul(q_j_sym, q_i_sym_conj)
+                q_equiv = _quat_mul(q_left, np.broadcast_to(right, q_left.shape))
                 abs_w = np.abs(q_equiv[:, 3])
                 better = abs_w > max_abs_w
                 if np.any(better):

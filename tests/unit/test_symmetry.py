@@ -11,7 +11,7 @@ from unittest import TestCase
 import numpy as np
 import pytest
 
-from agility.symmetry import tilt_twist_decomposition
+from agility.symmetry import _cubic_symmetry_quaternions, _quat_mul, tilt_twist_decomposition
 
 
 def _rotation_quat(axis: np.ndarray, angle_deg: float) -> np.ndarray:
@@ -20,15 +20,6 @@ def _rotation_quat(axis: np.ndarray, angle_deg: float) -> np.ndarray:
     axis = axis / np.linalg.norm(axis)
     half = np.radians(angle_deg) / 2.0
     return np.array([*(axis * np.sin(half)), np.cos(half)])
-
-
-def _quat_mul_single(a: np.ndarray, b: np.ndarray) -> np.ndarray:
-    """Multiply two scalar-last quaternions."""
-    av, aw = a[:3], a[3]
-    bv, bw = b[:3], b[3]
-    xyz = aw * bv + bw * av + np.cross(av, bv)
-    w = aw * bw - np.dot(av, bv)
-    return np.array([*xyz, w])
 
 
 @pytest.mark.unit
@@ -229,28 +220,39 @@ class TestTiltTwistDecomposition(TestCase):
         np.testing.assert_allclose(tilt_red, [0.0], atol=1e-10)
         np.testing.assert_allclose(twist_red, [0.0], atol=1e-10)
 
-    def test_cubic_reduction_invariant_under_cubic_relabeling(self) -> None:
-        """Cubic symmetry reduction should preserve tilt/twist under cubic relabeling."""
-        q_i = np.array([[0.18651688, -0.19597346, 0.9500471, 0.15561606]])
-        q_j = np.array([[-0.30849493, 0.20824458, 0.75098079, 0.54542913]])
+    def test_cubic_reduction_matches_full_24x24_search(self) -> None:
+        """Cubic reduction should match explicit 24x24 symmetry search decomposition."""
+        q_i = np.array([[0.61000618, -0.76385755, 0.12496472, -0.16969951]])
+        q_j = np.array([[-0.21614828, -0.10295157, -0.96458017, -0.11075193]])
         normal = np.array([0.3, 0.4, 0.5])
         normal /= np.linalg.norm(normal)
-        cubic_relabel = _rotation_quat([1, 0, 0], 90.0)
 
-        tilt_ref, twist_ref = tilt_twist_decomposition(
-            q_i,
-            q_j,
-            normal,
-            reduce_cubic_symmetry=True,
-        )
-        q_i_relabeled = np.array([_quat_mul_single(q_i[0], cubic_relabel)])
-        q_j_relabeled = np.array([_quat_mul_single(q_j[0], cubic_relabel)])
-        tilt_relabeled, twist_relabeled = tilt_twist_decomposition(
-            q_i_relabeled,
-            q_j_relabeled,
-            normal,
-            reduce_cubic_symmetry=True,
-        )
+        tilt, twist = tilt_twist_decomposition(q_i, q_j, normal, reduce_cubic_symmetry=True)
 
-        np.testing.assert_allclose(tilt_relabeled, tilt_ref, atol=1e-10)
-        np.testing.assert_allclose(twist_relabeled, twist_ref, atol=1e-10)
+        q_i_conj = np.concatenate((-q_i[:, :3], q_i[:, 3:4]), axis=1)
+        q_rel = _quat_mul(q_i_conj, q_j)
+        q_best = None
+        max_abs_w = -1.0
+        for left in _cubic_symmetry_quaternions():
+            q_left = _quat_mul(np.broadcast_to(left, q_rel.shape), q_rel)
+            for right in _cubic_symmetry_quaternions():
+                q_equiv = _quat_mul(q_left, np.broadcast_to(right, q_left.shape))
+                abs_w = float(np.abs(q_equiv[0, 3]))
+                if abs_w > max_abs_w:
+                    max_abs_w = abs_w
+                    q_best = q_equiv
+        assert q_best is not None
+
+        q_best = q_best.copy()
+        if q_best[0, 3] < 0:
+            q_best = -q_best
+        v_rel = q_best[:, :3]
+        w_rel = q_best[:, 3]
+        v_dot_m = v_rel @ normal
+        v_twist = v_dot_m[:, None] * normal
+        v_tilt = v_rel - v_twist
+        tilt_ref = np.degrees(2.0 * np.arctan2(np.linalg.norm(v_tilt, axis=1), w_rel))
+        twist_ref = np.degrees(2.0 * np.arctan2(np.abs(v_dot_m), w_rel))
+
+        np.testing.assert_allclose(tilt, tilt_ref, atol=1e-10)
+        np.testing.assert_allclose(twist, twist_ref, atol=1e-10)
