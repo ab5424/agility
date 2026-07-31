@@ -22,6 +22,15 @@ def _rotation_quat(axis: np.ndarray, angle_deg: float) -> np.ndarray:
     return np.array([*(axis * np.sin(half)), np.cos(half)])
 
 
+def _quat_mul_single(a: np.ndarray, b: np.ndarray) -> np.ndarray:
+    """Multiply two scalar-last quaternions."""
+    av, aw = a[:3], a[3]
+    bv, bw = b[:3], b[3]
+    xyz = aw * bv + bw * av + np.cross(av, bv)
+    w = aw * bw - np.dot(av, bv)
+    return np.array([*xyz, w])
+
+
 @pytest.mark.unit
 class TestTiltTwistDecomposition(TestCase):
     """Test tilt_twist_decomposition with analytically verifiable cases."""
@@ -219,3 +228,29 @@ class TestTiltTwistDecomposition(TestCase):
         np.testing.assert_allclose(twist_raw, [90.0], atol=1e-10)
         np.testing.assert_allclose(tilt_red, [0.0], atol=1e-10)
         np.testing.assert_allclose(twist_red, [0.0], atol=1e-10)
+
+    def test_cubic_reduction_invariant_under_cubic_relabeling(self) -> None:
+        """Cubic symmetry reduction should preserve tilt/twist under cubic relabeling."""
+        q_i = np.array([[0.18651688, -0.19597346, 0.9500471, 0.15561606]])
+        q_j = np.array([[-0.30849493, 0.20824458, 0.75098079, 0.54542913]])
+        normal = np.array([0.3, 0.4, 0.5])
+        normal /= np.linalg.norm(normal)
+        cubic_relabel = _rotation_quat([1, 0, 0], 90.0)
+
+        tilt_ref, twist_ref = tilt_twist_decomposition(
+            q_i,
+            q_j,
+            normal,
+            reduce_cubic_symmetry=True,
+        )
+        q_i_relabeled = np.array([_quat_mul_single(q_i[0], cubic_relabel)])
+        q_j_relabeled = np.array([_quat_mul_single(q_j[0], cubic_relabel)])
+        tilt_relabeled, twist_relabeled = tilt_twist_decomposition(
+            q_i_relabeled,
+            q_j_relabeled,
+            normal,
+            reduce_cubic_symmetry=True,
+        )
+
+        np.testing.assert_allclose(tilt_relabeled, tilt_ref, atol=1e-10)
+        np.testing.assert_allclose(twist_relabeled, twist_ref, atol=1e-10)
