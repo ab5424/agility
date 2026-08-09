@@ -11,7 +11,12 @@ from unittest import TestCase
 import numpy as np
 import pytest
 
-from agility.symmetry import _cubic_symmetry_quaternions, _quat_mul, tilt_twist_decomposition
+from agility.symmetry import (
+    _cubic_symmetry_quaternions,
+    _quat_mul,
+    cubic_disorientation_angles,
+    tilt_twist_decomposition,
+)
 
 
 def _rotation_quat(axis: np.ndarray, angle_deg: float) -> np.ndarray:
@@ -22,9 +27,191 @@ def _rotation_quat(axis: np.ndarray, angle_deg: float) -> np.ndarray:
     return np.array([*(axis * np.sin(half)), np.cos(half)])
 
 
+# ---------------------------------------------------------------------------
+# _quat_mul
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+class TestQuatMul(TestCase):
+    """Test the ``_quat_mul`` helper for scalar-last quaternion multiplication."""
+
+    def test_identity_times_identity(self) -> None:
+        """Multiplying two identity quaternions must yield the identity."""
+        q = np.array([[0.0, 0.0, 0.0, 1.0]])
+        result = _quat_mul(q, q)
+        np.testing.assert_allclose(result, q, atol=1e-10)
+
+    def test_identity_times_rotation(self) -> None:
+        """Multiplying the identity by a rotation quaternion must yield the rotation."""
+        q_id = np.array([[0.0, 0.0, 0.0, 1.0]])
+        q_rot = np.array([_rotation_quat([0, 0, 1], 90.0)])
+        result = _quat_mul(q_id, q_rot)
+        np.testing.assert_allclose(result, q_rot, atol=1e-10)
+
+    def test_rotation_times_identity(self) -> None:
+        """Multiplying a rotation by the identity must yield the rotation."""
+        q_id = np.array([[0.0, 0.0, 0.0, 1.0]])
+        q_rot = np.array([_rotation_quat([1, 0, 0], 45.0)])
+        result = _quat_mul(q_rot, q_id)
+        np.testing.assert_allclose(result, q_rot, atol=1e-10)
+
+    def test_inverse_cancels_rotation(self) -> None:
+        """``Q * q_conj`` must yield the identity quaternion."""
+        q = np.array([_rotation_quat([1, 0, 0], 30.0)])
+        q_conj = np.array([[-q[0, 0], -q[0, 1], -q[0, 2], q[0, 3]]])
+        result = _quat_mul(q, q_conj)
+        np.testing.assert_allclose(result, [[0.0, 0.0, 0.0, 1.0]], atol=1e-10)
+
+    def test_batch_multiplication(self) -> None:
+        """``_quat_mul`` must handle batched ``(N, 4)`` inputs."""
+        q_a = np.array(
+            [
+                [0.0, 0.0, 0.0, 1.0],
+                _rotation_quat([0, 0, 1], 90.0),
+            ],
+        )
+        q_b = np.array(
+            [
+                _rotation_quat([1, 0, 0], 30.0),
+                [0.0, 0.0, 0.0, 1.0],
+            ],
+        )
+        result = _quat_mul(q_a, q_b)
+        assert result.shape == (2, 4)
+
+    def test_output_shape(self) -> None:
+        """The output must have the same shape as the inputs."""
+        q = np.array([_rotation_quat([1, 0, 0], 45.0)])
+        result = _quat_mul(q, q)
+        assert result.shape == (1, 4)
+
+
+# ---------------------------------------------------------------------------
+# _cubic_symmetry_quaternions
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+class TestCubicSymmetryQuaternions(TestCase):
+    """Test the ``_cubic_symmetry_quaternions`` helper."""
+
+    def test_returns_24_quaternions(self) -> None:
+        """The cubic m-3m group must contain exactly 24 proper rotations."""
+        result = _cubic_symmetry_quaternions()
+        assert result.shape == (24, 4)
+
+    def test_all_unit_quaternions(self) -> None:
+        """Every returned quaternion must be a unit quaternion."""
+        result = _cubic_symmetry_quaternions()
+        norms = np.linalg.norm(result, axis=1)
+        np.testing.assert_allclose(norms, np.ones(24), atol=1e-10)
+
+    def test_result_is_cached(self) -> None:
+        """The function must use ``lru_cache`` so repeated calls return the same object."""
+        result1 = _cubic_symmetry_quaternions()
+        result2 = _cubic_symmetry_quaternions()
+        assert result1 is result2
+
+    def test_result_is_not_writeable(self) -> None:
+        """The cached result must be marked read-only to prevent accidental mutation."""
+        result = _cubic_symmetry_quaternions()
+        assert not result.flags.writeable
+
+    def test_identity_is_present(self) -> None:
+        """The identity quaternion ``[0, 0, 0, 1]`` must be among the symmetry operators."""
+        result = _cubic_symmetry_quaternions()
+        identity = np.array([0.0, 0.0, 0.0, 1.0])
+        distances = np.linalg.norm(result - identity, axis=1)
+        assert np.min(distances) < 1e-10
+
+
+# ---------------------------------------------------------------------------
+# cubic_disorientation_angles
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+class TestCubicDisorientationAngles(TestCase):
+    """Test the ``cubic_disorientation_angles`` function."""
+
+    def test_identical_orientations_zero_angle(self) -> None:
+        """Identical orientations must yield a 0° disorientation angle."""
+        q = np.array([[0.0, 0.0, 0.0, 1.0]])
+        result = cubic_disorientation_angles(q, q)
+        np.testing.assert_allclose(result, [0.0], atol=1e-10)
+
+    def test_90deg_z_rotation_collapses_to_zero(self) -> None:
+        """A 90° rotation about z is a cubic symmetry operation → 0° disorientation."""
+        q_i = np.array([[0.0, 0.0, 0.0, 1.0]])
+        q_j = np.array([_rotation_quat([0, 0, 1], 90.0)])
+        result = cubic_disorientation_angles(q_i, q_j)
+        np.testing.assert_allclose(result, [0.0], atol=1e-10)
+
+    def test_180deg_z_rotation_collapses_to_zero(self) -> None:
+        """A 180° rotation about z is a cubic symmetry operation → 0° disorientation."""
+        q_i = np.array([[0.0, 0.0, 0.0, 1.0]])
+        q_j = np.array([_rotation_quat([0, 0, 1], 180.0)])
+        result = cubic_disorientation_angles(q_i, q_j)
+        np.testing.assert_allclose(result, [0.0], atol=1e-10)
+
+    def test_90deg_x_rotation_collapses_to_zero(self) -> None:
+        """A 90° rotation about x is a cubic symmetry operation → 0° disorientation."""
+        q_i = np.array([[0.0, 0.0, 0.0, 1.0]])
+        q_j = np.array([_rotation_quat([1, 0, 0], 90.0)])
+        result = cubic_disorientation_angles(q_i, q_j)
+        np.testing.assert_allclose(result, [0.0], atol=1e-10)
+
+    def test_non_symmetry_rotation_nonzero(self) -> None:
+        """A 45° rotation about z is not a cubic symmetry operation → non-zero angle."""
+        q_i = np.array([[0.0, 0.0, 0.0, 1.0]])
+        q_j = np.array([_rotation_quat([0, 0, 1], 45.0)])
+        result = cubic_disorientation_angles(q_i, q_j)
+        assert result[0] > 0.0
+
+    def test_output_shape_matches_input(self) -> None:
+        """The output shape must match the number of input pairs."""
+        q_i = np.array(
+            [
+                [0.0, 0.0, 0.0, 1.0],
+                _rotation_quat([0, 0, 1], 90.0),
+                _rotation_quat([1, 0, 0], 45.0),
+            ],
+        )
+        q_j = np.array(
+            [
+                [0.0, 0.0, 0.0, 1.0],
+                _rotation_quat([0, 0, 1], 90.0),
+                _rotation_quat([1, 0, 0], 45.0),
+            ],
+        )
+        result = cubic_disorientation_angles(q_i, q_j)
+        assert result.shape == (3,)
+
+    def test_angles_in_degrees(self) -> None:
+        """Returned angles must be in degrees, not radians."""
+        q_i = np.array([[0.0, 0.0, 0.0, 1.0]])
+        q_j = np.array([_rotation_quat([0, 0, 1], 45.0)])
+        result = cubic_disorientation_angles(q_i, q_j)
+        # 45° is not a cubic symmetry operation, so the result should be 45°
+        np.testing.assert_allclose(result, [45.0], atol=1e-10)
+
+    def test_antipodal_quaternions_same_angle(self) -> None:
+        """``Q`` and ``-Q`` represent the same rotation, so the disorientation must be 0°."""
+        q = np.array([_rotation_quat([1, 0, 0], 30.0)])
+        q_neg = -q
+        result = cubic_disorientation_angles(q, q_neg)
+        np.testing.assert_allclose(result, [0.0], atol=1e-10)
+
+
+# ---------------------------------------------------------------------------
+# tilt_twist_decomposition
+# ---------------------------------------------------------------------------
+
+
 @pytest.mark.unit
 class TestTiltTwistDecomposition(TestCase):
-    """Test tilt_twist_decomposition with analytically verifiable cases."""
+    """Test ``tilt_twist_decomposition`` with analytically verifiable cases."""
 
     # Identity quaternion [x, y, z, w] = [0, 0, 0, 1]
     _Q_IDENTITY = np.array([[0.0, 0.0, 0.0, 1.0]])
@@ -176,13 +363,13 @@ class TestTiltTwistDecomposition(TestCase):
         np.testing.assert_allclose(twist_scaled, twist_unit, atol=1e-10)
 
     def test_zero_boundary_normal_raises(self) -> None:
-        """A zero boundary-normal vector must raise ValueError."""
+        """A zero boundary-normal vector must raise ``ValueError``."""
         q_i, q_j = self._pair([1, 0, 0], 30.0)
         with pytest.raises(ValueError, match="non-zero vector"):
             tilt_twist_decomposition(q_i, q_j, [0.0, 0.0, 0.0])
 
     def test_zero_row_in_per_pair_boundary_normals_raises(self) -> None:
-        """Any zero row in per-pair boundary normals must raise ValueError."""
+        """Any zero row in per-pair boundary normals must raise ``ValueError``."""
         q_i = np.array(
             [
                 [0.0, 0.0, 0.0, 1.0],
