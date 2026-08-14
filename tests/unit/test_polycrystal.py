@@ -182,13 +182,13 @@ class TestBuildAtomskFromSource(TestCase):
             pathlib.Path(dst).write_text("dummy", encoding="utf-8")
 
         mock_copy2.side_effect = _copy2_side_effect
-        try:
+        with (
+            tempfile.TemporaryDirectory() as tmpdir,
+            patch.object(pathlib.Path, "home", return_value=pathlib.Path(tmpdir)),
+        ):
             result = build_atomsk_from_source()
-            assert result.endswith(".local/bin/atomsk")
-        finally:
-            # Clean up the file created in ~/.local/bin to avoid interfering
-            # with other tests that call find_atomsk.
-            pathlib.Path(result).unlink(missing_ok=True)
+            expected = pathlib.Path(tmpdir) / ".local" / "bin" / "atomsk"
+            assert pathlib.Path(result) == expected
 
 
 # ---------------------------------------------------------------------------
