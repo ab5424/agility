@@ -115,6 +115,7 @@ class TestGetFinder(TestCase):
             assert result == "nn_finder"
             mock_nn.assert_called_once()
 
+    @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
     def test_no_arguments_raises(self) -> None:
         """``get_finder`` must raise when neither cutoff nor nearest_n is given."""
         with pytest.raises(NameError, match="Either cutoff or nearest_n"):
@@ -429,6 +430,7 @@ class TestMinimise(TestCase):
         gbs.minimise()
         assert gbs.data.structure is mock_relaxed
 
+    @pytest.mark.skipif(not find_spec("ase"), reason="ase not installed")
     def test_minimise_ase_no_calculator_raises(self) -> None:
         """The ase backend must raise ``ValueError`` when no calculator is set."""
         gbs = GBStructure.__new__(GBStructure)
@@ -439,6 +441,7 @@ class TestMinimise(TestCase):
         with pytest.raises(ValueError, match="No ASE calculator"):
             gbs.minimise()
 
+    @pytest.mark.skipif(not find_spec("ase"), reason="ase not installed")
     def test_minimise_ase_unknown_optimizer_raises(self) -> None:
         """The ase backend must raise ``ValueError`` for an unknown optimizer string."""
         gbs = GBStructure.__new__(GBStructure)
@@ -523,6 +526,7 @@ class TestDeleteParticles(TestCase):
 class TestSelectParticlesByType(TestCase):
     """Test ``GBStructure.select_particles_by_type``."""
 
+    @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
     def test_select_particles_by_type_ovito_appends_modifier(self) -> None:
         """The ovito backend must append modifiers to the pipeline."""
         gbs = GBStructure.__new__(GBStructure)
@@ -609,6 +613,7 @@ class TestClearSelectionUnit(TestCase):
         gbs._clear_selection()  # noqa: SLF001
         assert gbs.data.selection == []
 
+    @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
     def test_clear_selection_ovito_appends_modifier(self) -> None:
         """The ovito backend must append a ``ClearSelectionModifier``."""
         gbs = GBStructure.__new__(GBStructure)
@@ -658,6 +663,7 @@ class TestInvertSelectionUnit(TestCase):
         gbs._invert_selection()  # noqa: SLF001
         assert gbs.data.selection == original
 
+    @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
     def test_invert_selection_ovito_appends_modifier(self) -> None:
         """The ovito backend must append an ``InvertSelectionModifier``."""
         gbs = GBStructure.__new__(GBStructure)
@@ -700,6 +706,7 @@ class TestDeleteSelectionUnit(TestCase):
         gbs._delete_selection()  # noqa: SLF001
         assert gbs.data.selection == []
 
+    @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
     def test_delete_selection_ovito_appends_modifier(self) -> None:
         """The ovito backend must append a ``DeleteSelectedModifier``."""
         gbs = GBStructure.__new__(GBStructure)
@@ -767,6 +774,7 @@ class TestPerformCnaValidation(TestCase):
             # No warning should be raised when the full set is passed
             gbs.perform_cna(enabled=("fcc", "hcp", "bcc", "ico"), compute=False)
 
+    @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
     def test_cna_ovito_appends_modifier(self) -> None:
         """The ovito backend must append a ``CommonNeighborAnalysisModifier``."""
         gbs = GBStructure.__new__(GBStructure)
@@ -876,6 +884,7 @@ class TestPerformPtmValidation(TestCase):
         gbs.perform_ptm(enabled=("fcc",), compute=False)
         gbs.pylmp.compute.assert_called_once()
 
+    @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
     def test_ptm_ovito_appends_modifier(self) -> None:
         """The ovito backend must append a ``PolyhedralTemplateMatchingModifier``."""
         gbs = GBStructure.__new__(GBStructure)
@@ -976,6 +985,7 @@ class TestPerformCsp(TestCase):
 class TestGetDistinctGrains(TestCase):
     """Test ``GBStructure.get_distinct_grains``."""
 
+    @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
     def test_get_distinct_grains_ovito_returns_orientations(self) -> None:
         """The ovito backend must return an ``(N, 4)`` quaternion array when ``compute=True``."""
         gbs = GBStructure.__new__(GBStructure)
@@ -991,6 +1001,7 @@ class TestGetDistinctGrains(TestCase):
         assert orientations is not None
         assert orientations.shape == (2, 4)
 
+    @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
     def test_get_distinct_grains_ovito_compute_false_returns_none(self) -> None:
         """The ovito backend must return ``None`` when ``compute=False``."""
         gbs = GBStructure.__new__(GBStructure)
@@ -999,6 +1010,7 @@ class TestGetDistinctGrains(TestCase):
         result = gbs.get_distinct_grains(compute=False)
         assert result is None
 
+    @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
     def test_get_distinct_grains_invalid_algorithm_raises(self) -> None:
         """An invalid algorithm name must raise ``ValueError``."""
         gbs = GBStructure.__new__(GBStructure)
