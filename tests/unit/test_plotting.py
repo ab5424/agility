@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from importlib.util import find_spec
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
 
@@ -19,6 +20,7 @@ from agility.plotting import plot_face_order, plot_mdf, render_ovito
 class TestRenderOvito(TestCase):
     """Test the ``render_ovito`` function with a mock pipeline."""
 
+    @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
     def test_render_ovito_calls_viewport_render(self) -> None:
         """``render_ovito`` must call ``viewport.render_image`` and return the result."""
         mock_pipeline = MagicMock()
@@ -35,6 +37,7 @@ class TestRenderOvito(TestCase):
             mock_pipeline.add_to_scene.assert_called_once()
             mock_viewport.render_image.assert_called_once()
 
+    @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
     def test_render_ovito_default_res_factor(self) -> None:
         """``render_ovito`` must use the default ``res_factor=1`` when not specified."""
         mock_pipeline = MagicMock()
@@ -49,6 +52,7 @@ class TestRenderOvito(TestCase):
             call_kwargs = mock_viewport.render_image.call_args.kwargs
             assert call_kwargs["size"] == (640, 480)
 
+    @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
     def test_render_ovito_custom_res_factor(self) -> None:
         """``render_ovito`` must scale the render size by ``res_factor``."""
         mock_pipeline = MagicMock()

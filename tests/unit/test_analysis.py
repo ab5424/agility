@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import types
 import warnings
+from importlib.util import find_spec
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
 
@@ -96,6 +97,7 @@ class TestInvalidReturnType(TestCase):
 class TestGetFinder(TestCase):
     """Test the ``get_finder`` helper function (ovito-only, mocked)."""
 
+    @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
     def test_cutoff_finder(self) -> None:
         """``get_finder`` must return a ``CutoffNeighborFinder`` when cutoff is given."""
         with patch("ovito.data.CutoffNeighborFinder") as mock_cutoff:
@@ -104,6 +106,7 @@ class TestGetFinder(TestCase):
             assert result == "cutoff_finder"
             mock_cutoff.assert_called_once()
 
+    @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
     def test_nearest_n_finder(self) -> None:
         """``get_finder`` must return a ``NearestNeighborFinder`` when nearest_n is given."""
         with patch("ovito.data.NearestNeighborFinder") as mock_nn:
@@ -125,44 +128,77 @@ class TestGetFinder(TestCase):
 
 @pytest.mark.unit
 class TestGBStructureInit(TestCase):
-    """Test ``GBStructure.__init__``."""
+    """Test ``GBStructure.__init__`` through the real constructor."""
 
     def test_init_stores_backend_and_filename(self) -> None:
         """``__init__`` must store the backend and filename attributes."""
-        gbs = GBStructure.__new__(GBStructure)
-        gbs.backend = "ase"
-        gbs.filename = "dummy.vasp"
-        gbs.data = None
+        gbs = GBStructure("ase", None)
         assert gbs.backend == "ase"
-        assert gbs.filename == "dummy.vasp"
+        assert gbs.filename is None
         assert gbs.data is None
 
     def test_init_no_filename_skips_read(self) -> None:
         """When ``filename`` is falsy, ``read_file`` must not be called."""
         with patch.object(GBStructure, "read_file") as mock_read:
-            gbs = GBStructure.__new__(GBStructure)
-            gbs.backend = "ase"
-            gbs.filename = None
-            gbs.data = None
-            # Simulate the __init__ logic for the no-filename case
-            if gbs.filename:
-                gbs.read_file(gbs.filename)
+            GBStructure("ase", None)
             mock_read.assert_not_called()
+
+    def test_init_with_filename_calls_read_file(self) -> None:
+        """When ``filename`` is given, ``read_file`` must be called with it."""
+        with patch.object(GBStructure, "read_file") as mock_read:
+            GBStructure("ase", "dummy.vasp")
+            mock_read.assert_called_once_with("dummy.vasp")
 
     def test_init_unsupported_backend_raises(self) -> None:
         """An unsupported backend must raise ``NotImplementedError`` during ``read_file``."""
-        gbs = GBStructure.__new__(GBStructure)
-        gbs.backend = "unsupported"
-        gbs.filename = "dummy.lmp"
-        gbs.data = None
         with pytest.raises(NotImplementedError, match="unsupported"):
-            gbs.read_file("dummy.lmp")
+            GBStructure("unsupported", "dummy.lmp")
+
+    @pytest.mark.skipif(not find_spec("ase"), reason="ase not installed")
+    def test_init_ase_reads_file(self) -> None:
+        """Constructing with the ase backend must read the structure from file."""
+        with patch("ase.io.read") as mock_read:
+            mock_atoms = MagicMock()
+            mock_read.return_value = mock_atoms
+            gbs = GBStructure("ase", "test.vasp")
+            mock_read.assert_called_once_with("test.vasp")
+            assert gbs.data.atoms is mock_atoms
+            assert gbs.data.selection == []
+
+    @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
+    def test_init_ovito_reads_file(self) -> None:
+        """Constructing with the ovito backend must create a pipeline."""
+        with patch("ovito.io.import_file") as mock_import:
+            mock_pipeline = MagicMock()
+            mock_import.return_value = mock_pipeline
+            gbs = GBStructure("ovito", "test.lmp")
+            mock_import.assert_called_once_with("test.lmp")
+            assert gbs.pipeline is mock_pipeline
+
+    @pytest.mark.skipif(not find_spec("pymatgen"), reason="pymatgen not installed")
+    def test_init_pymatgen_reads_file(self) -> None:
+        """Constructing with the pymatgen backend must read the structure from file."""
+        with patch("pymatgen.core.Structure") as mock_structure_cls:
+            mock_structure = MagicMock()
+            mock_structure_cls.from_file.return_value = mock_structure
+            gbs = GBStructure("pymatgen", "test.vasp")
+            mock_structure_cls.from_file.assert_called_once_with("test.vasp")
+            assert gbs.data.structure is mock_structure
+            assert gbs.data.selection == []
+
+    def test_init_lammps_creates_pylmp(self) -> None:
+        """The lammps backend must create a ``PyLammps`` instance (mocked module)."""
+        mock_lammps_module = MagicMock()
+        with patch.dict("sys.modules", {"lammps": mock_lammps_module}):
+            gbs = GBStructure("lammps", None)
+            assert gbs.pylmp is mock_lammps_module.PyLammps.return_value
 
 
 @pytest.mark.unit
 class TestReadFile(TestCase):
     """Test ``GBStructure.read_file`` for each backend (mocked imports)."""
 
+    @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
     def test_read_file_ovito(self) -> None:
         """The ovito backend must call ``import_file`` and store the pipeline."""
         gbs = GBStructure.__new__(GBStructure)
@@ -175,6 +211,7 @@ class TestReadFile(TestCase):
             mock_import.assert_called_once_with("test.lmp")
             assert gbs.pipeline is mock_pipeline
 
+    @pytest.mark.skipif(not find_spec("ase"), reason="ase not installed")
     def test_read_file_ase(self) -> None:
         """The ase backend must call ``ase.io.read`` and store atoms + empty selection."""
         gbs = GBStructure.__new__(GBStructure)
@@ -188,6 +225,7 @@ class TestReadFile(TestCase):
             assert gbs.data.atoms is mock_atoms
             assert gbs.data.selection == []
 
+    @pytest.mark.skipif(not find_spec("pymatgen"), reason="pymatgen not installed")
     def test_read_file_pymatgen(self) -> None:
         """The pymatgen backend must call ``Structure.from_file`` and store structure."""
         gbs = GBStructure.__new__(GBStructure)
@@ -282,6 +320,7 @@ class TestInitLmp(TestCase):
 class TestSaveStructure(TestCase):
     """Test ``GBStructure.save_structure`` for each backend."""
 
+    @pytest.mark.skipif(not find_spec("ase"), reason="ase not installed")
     def test_save_structure_ase(self) -> None:
         """The ase backend must call ``ase.io.write`` with the correct arguments."""
         gbs = GBStructure.__new__(GBStructure)
@@ -1720,6 +1759,7 @@ class TestGBStructureTimeseriesRemoveTimesteps(TestCase):
 class TestGBStructureTimeseriesReadFile(TestCase):
     """Test ``GBStructureTimeseries.read_file`` for the ase backend."""
 
+    @pytest.mark.skipif(not find_spec("ase"), reason="ase not installed")
     def test_read_file_ase_returns_list_of_frames(self) -> None:
         """The ase backend must read all frames into a list of Atoms objects."""
         ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
@@ -1734,6 +1774,7 @@ class TestGBStructureTimeseriesReadFile(TestCase):
             assert ts.data.atoms == [mock_atoms_1, mock_atoms_2]
             assert ts.data.selection == []
 
+    @pytest.mark.skipif(not find_spec("ase"), reason="ase not installed")
     def test_read_file_ase_wraps_single_frame_in_list(self) -> None:
         """When ``ase.io.read`` returns a single Atoms object, it must be wrapped in a list."""
         ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
