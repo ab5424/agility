@@ -401,3 +401,92 @@ class TestGetGrainEdgeIonsLammps(TestCase):
             return_type="Indices",
         )
         assert result == [1]
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(not find_spec("lammps"), reason="lammps not installed")
+class TestGetGbFractionLammps(TestCase):
+    """Test get_gb_fraction for the LAMMPS backend."""
+
+    def setUp(self) -> None:
+        """Set up a GBStructure with the lammps backend (no file loaded)."""
+        self.gbs = GBStructure("lammps", "")
+
+    def tearDown(self) -> None:
+        """Close the LAMMPS instance after each test."""
+        lmp = getattr(getattr(self, "gbs", None), "pylmp", None)
+        if lmp is not None:
+            lmp.lmp.close()
+
+    def _setup_fcc_lattice(self) -> None:
+        """Create a perfect periodic FCC Al lattice."""
+        lmp = self.gbs.pylmp
+        lmp.units("metal")
+        lmp.atom_style("atomic")
+        lmp.lattice("fcc 4.05")
+        lmp.region("box block 0 3 0 3 0 3 units lattice")
+        lmp.create_box("1 box")
+        lmp.create_atoms("1 box")
+        lmp.mass("1 26.982")
+        lmp.pair_style("zero 6.0")
+        lmp.pair_coeff("* *")
+        lmp.run("0")
+
+    def _setup_isolated_atoms(self) -> None:
+        """Create two isolated atoms with no FCC-like neighbors."""
+        lmp = self.gbs.pylmp
+        lmp.units("metal")
+        lmp.atom_style("atomic")
+        lmp.region("box block 0 20 0 20 0 20")
+        lmp.create_box("1 box")
+        lmp.create_atoms("1 single 5.0 5.0 5.0 units box")
+        lmp.create_atoms("1 single 15.0 15.0 15.0 units box")
+        lmp.mass("1 26.982")
+        lmp.pair_style("zero 6.0")
+        lmp.pair_coeff("* *")
+        lmp.run("0")
+
+    def _setup_fcc_with_isolated_atoms(self) -> None:
+        """Create mostly crystalline FCC lattice with two isolated atoms."""
+        lmp = self.gbs.pylmp
+        lmp.units("metal")
+        lmp.atom_style("atomic")
+        lmp.region("box block 0 20 0 20 0 20")
+        lmp.create_box("1 box")
+        lmp.lattice("fcc 4.05")
+        lmp.region("fcc block 0 2 0 2 0 2 units lattice")
+        lmp.create_atoms("1 region fcc")
+        lmp.create_atoms("1 single 15.0 15.0 15.0 units box")
+        lmp.create_atoms("1 single 5.0 15.0 5.0 units box")
+        lmp.mass("1 26.982")
+        lmp.pair_style("zero 6.0")
+        lmp.pair_coeff("* *")
+        lmp.run("0")
+
+    def test_gb_fraction_perfect_fcc_is_zero(self) -> None:
+        """A perfect FCC lattice has no grain boundary atoms."""
+        self._setup_fcc_lattice()
+        self.gbs.perform_cna(cutoff=3.3)
+        assert self.gbs.get_gb_fraction() == pytest.approx(0.0)
+
+    def test_gb_fraction_all_isolated_is_one(self) -> None:
+        """Isolated atoms with no crystalline environment give fraction 1."""
+        self._setup_isolated_atoms()
+        self.gbs.perform_cna(cutoff=3.3)
+        assert self.gbs.get_gb_fraction() == pytest.approx(1.0)
+
+    def test_gb_fraction_mixed_system(self) -> None:
+        """Fraction equals number of non-crystalline atoms over total atoms."""
+        self._setup_fcc_with_isolated_atoms()
+        self.gbs.perform_cna(cutoff=3.3)
+        n_atoms = self.gbs.pylmp.system.natoms
+        n_non_crystalline = len(self.gbs.get_non_crystalline_atoms(mode="cna"))
+        assert self.gbs.get_gb_fraction() == pytest.approx(
+            n_non_crystalline / n_atoms,
+        )
+
+    def test_gb_fraction_ptm_mode(self) -> None:
+        """The mode parameter is passed through to the structural analysis."""
+        self._setup_fcc_lattice()
+        self.gbs.perform_ptm()
+        assert self.gbs.get_gb_fraction(mode="ptm") == pytest.approx(0.0)

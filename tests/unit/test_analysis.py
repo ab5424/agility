@@ -1351,13 +1351,32 @@ class TestGetGrainEdgeIons(TestCase):
 class TestGetGbFraction(TestCase):
     """Test ``GBStructure.get_gb_fraction``."""
 
-    def test_get_gb_fraction_lammps_raises(self) -> None:
-        """The lammps backend must raise ``NotImplementedError`` for ``get_gb_fraction``."""
+    def test_get_gb_fraction_lammps(self) -> None:
+        """The lammps backend must return the fraction of non-crystalline atoms."""
         gbs = GBStructure.__new__(GBStructure)
         gbs.backend = "lammps"
         gbs.pylmp = MagicMock()
-        with pytest.raises(NotImplementedError, match="lammps"):
-            gbs.get_gb_fraction()
+        gbs.pylmp.system.natoms = 10
+        with patch.object(
+            GBStructure,
+            "get_non_crystalline_atoms",
+            return_value=[1, 2, 3],
+        ):
+            assert gbs.get_gb_fraction() == pytest.approx(0.3)
+
+    def test_get_gb_fraction_lammps_mode_passed_through(self) -> None:
+        """The lammps backend must pass the mode to get_non_crystalline_atoms."""
+        gbs = GBStructure.__new__(GBStructure)
+        gbs.backend = "lammps"
+        gbs.pylmp = MagicMock()
+        gbs.pylmp.system.natoms = 4
+        with patch.object(
+            GBStructure,
+            "get_non_crystalline_atoms",
+            return_value=[1],
+        ) as mock_gnc:
+            gbs.get_gb_fraction(mode="ptm")
+        mock_gnc.assert_called_once_with("ptm")
 
     def test_get_gb_fraction_unsupported_backend_raises(self) -> None:
         """An unsupported backend must raise ``NotImplementedError`` for ``get_gb_fraction``."""

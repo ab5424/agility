@@ -1298,9 +1298,8 @@ class GBStructure:
                 stacklevel=2,
             )
         elif self.backend == "lammps":
-            # TODO @ab5424: Implement lammps backend for get_gb_fraction
-            # https://github.com/ab5424/agility/issues/176
-            raise not_implemented(self.backend)
+            gb_atoms = self.get_non_crystalline_atoms(mode)
+            fraction = len(gb_atoms) / self.pylmp.system.natoms
         else:
             raise not_implemented(self.backend)
         return fraction
