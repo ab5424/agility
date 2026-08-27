@@ -44,7 +44,7 @@ Any contributions or even questions about the code are welcome - please use the 
 
 ### Development
 
-The development takes place on the `development` branch. Python 3.9 is the minimum requirement. Some backends (like ovito) currently do not support Python 3.10.
+The development takes place on the `development` branch. Python 3.11 is the minimum requirement. Some backends (like ovito) may not support the latest python version.
 
 ## Documentation
 
