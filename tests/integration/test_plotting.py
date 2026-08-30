@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import shutil
 import subprocess
+import sys
 import tempfile
 import urllib.error
 import urllib.request
@@ -22,9 +23,13 @@ MODULE_DIR = Path(__file__).absolute().parent
 TEST_FILES_DIR = MODULE_DIR.parent / "files"
 FIGSHARE_AL_POLYCRYSTAL_URL = "https://figshare.com/ndownloader/files/43058716"
 
+PYTHON_VERSION = sys.version_info
+SKIP_OVITO = PYTHON_VERSION <= (3, 12)
+
 
 @pytest.mark.integration
 @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
+@pytest.mark.skipif(SKIP_OVITO, reason="Python <= 3.12 not supported for ovito")
 class TestPlotting(TestCase):
     """Test ovito rendering via the plotting module."""
 
@@ -58,6 +63,7 @@ class TestPlotting(TestCase):
 
 @pytest.mark.integration
 @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
+@pytest.mark.skipif(SKIP_OVITO, reason="Python <= 3.12 not supported for ovito")
 class TestMdfLargePolycrystal(TestCase):
     """Integration tests for MDF symmetry behavior on a large Al polycrystal."""
 
