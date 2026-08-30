@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from importlib.metadata import version
+import sys
 from importlib.util import find_spec
 from pathlib import Path
 from unittest import TestCase
@@ -15,15 +15,12 @@ from numpy.testing import assert_allclose
 
 from agility.analysis import GBStructure, GBStructureTimeseries
 
+PYTHON_VERSION = sys.version_info
+SKIP_OVITO = PYTHON_VERSION <= (3, 12)
+
 MODULE_DIR = Path(__file__).absolute().parent
 TEST_FILES_DIR = MODULE_DIR.parent / "files"
 SHEAR_DUMP_URL = "https://gitlab.com/ovito-org/ovito-sample-data/-/raw/master/tutorial/shear.dump"
-
-# There is a breaking change in ovito 3.11 in the CNA modifier
-if find_spec("ovito"):
-    OVITO_VERSION = tuple(int(part) for part in version("ovito").split(".") if part.isdigit())
-    BREAKING_VERSION = tuple(map(int, ["3", "11"]))
-    BREAKING = OVITO_VERSION < BREAKING_VERSION
 
 
 def _ensure_shear_dump() -> Path:
@@ -40,6 +37,7 @@ def _ensure_shear_dump() -> Path:
 
 @pytest.mark.integration
 @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
+@pytest.mark.skipif(SKIP_OVITO, reason="Python <= 3.12 not supported for ovito")
 class TestGBStructure(TestCase):
     """Test the GBStructure class with the ovito backend."""
 
@@ -54,13 +52,13 @@ class TestGBStructure(TestCase):
         self.data.perform_cna(enabled=("fcc"))
         crystalline_atoms = self.data.get_crystalline_atoms()
         non_crystalline_atoms = self.data.get_non_crystalline_atoms()
-        assert len(crystalline_atoms) == (4320 if BREAKING else 4330)
-        assert len(non_crystalline_atoms) == (3361 if BREAKING else 3351)
+        assert len(crystalline_atoms) == 4330
+        assert len(non_crystalline_atoms) == 3351
         self.data.perform_cna(mode="AdaptiveCutoff", enabled=("fcc"))
         crystalline_atoms = self.data.get_crystalline_atoms()
         non_crystalline_atoms = self.data.get_non_crystalline_atoms()
-        assert len(crystalline_atoms) == (4275 if BREAKING else 4277)
-        assert len(non_crystalline_atoms) == (3406 if BREAKING else 3404)
+        assert len(crystalline_atoms) == 4277
+        assert len(non_crystalline_atoms) == 3404
 
     def test_ptm(self) -> None:
         """Test Polyhedral Template Matching method."""
@@ -76,7 +74,7 @@ class TestGBStructure(TestCase):
         self.data.perform_cna(enabled=("fcc"))
         gb_fraction = self.data.get_gb_fraction()
 
-        assert_allclose(gb_fraction, float(3361 / 7681 if BREAKING else 3351 / 7681))
+        assert_allclose(gb_fraction, float(3351 / 7681))
 
     def test_grain_segmentation(self) -> None:
         """Test the grain segmentation method."""
@@ -168,6 +166,7 @@ class TestGBStructure(TestCase):
 
 @pytest.mark.integration
 @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
+@pytest.mark.skipif(SKIP_OVITO, reason="Python <= 3.12 not supported for ovito")
 class TestGBStructureOxide(TestCase):
     """Test the GBStructure class for an oxide structure with the ovito backend."""
 
@@ -201,6 +200,7 @@ class TestGBStructureOxide(TestCase):
 
 @pytest.mark.integration
 @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
+@pytest.mark.skipif(SKIP_OVITO, reason="Python <= 3.12 not supported for ovito")
 class TestGBStructureTimeseriesOvito(TestCase):
     """Integration tests for GBStructureTimeseries with ovito."""
 
@@ -227,6 +227,6 @@ class TestGBStructureTimeseriesOvito(TestCase):
         assert any(not np.isclose(gb_fractions[0], fraction) for fraction in gb_fractions[1:])
         assert_allclose(
             [gb_fractions[0], gb_fractions[-1]],
-            [0.1882845, 0.421025 if BREAKING else 0.2834728],
+            [0.1882845, 0.2834728],
             rtol=1e-6,
         )

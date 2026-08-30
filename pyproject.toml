@@ -41,18 +41,18 @@ strict = [
     "seaborn==0.13.2",
 ]
 tests = [
-    "pytest-cov>=5",
-    "pytest-split>=0.9",
-    "pytest>=8",
+    "pytest-cov>=7",
+    "pytest-split>=0.10",
+    "pytest>=9",
 ]
 ovito = [
-    "ovito>=3.8",
+    "ovito>=3.12,<3.16",
 ]
 ase = [
-    "ase>=3.23",
+    "ase>=3.25",
 ]
 pymatgen = [
-    "pymatgen>=2024",
+    "pymatgen>=2025",
 ]
 all = ["agility[tests,ovito,ase,pymatgen]"]
 
