@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import sys
 from importlib.util import find_spec
 from pathlib import Path
-import sys
 from unittest import TestCase
 from urllib.error import URLError
 from urllib.request import urlretrieve
