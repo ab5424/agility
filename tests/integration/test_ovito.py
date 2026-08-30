@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from importlib.util import find_spec
 from pathlib import Path
+import sys
 from unittest import TestCase
 from urllib.error import URLError
 from urllib.request import urlretrieve
@@ -13,6 +14,9 @@ import pytest
 from numpy.testing import assert_allclose
 
 from agility.analysis import GBStructure, GBStructureTimeseries
+
+PYTHON_VERSION = sys.version_info
+SKIP_OVITO = PYTHON_VERSION <= (3, 12)
 
 MODULE_DIR = Path(__file__).absolute().parent
 TEST_FILES_DIR = MODULE_DIR.parent / "files"
@@ -33,6 +37,7 @@ def _ensure_shear_dump() -> Path:
 
 @pytest.mark.integration
 @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
+@pytest.mark.skipif(SKIP_OVITO, reason="Python <= 3.12 not supported for ovito")
 class TestGBStructure(TestCase):
     """Test the GBStructure class with the ovito backend."""
 
@@ -161,6 +166,7 @@ class TestGBStructure(TestCase):
 
 @pytest.mark.integration
 @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
+@pytest.mark.skipif(SKIP_OVITO, reason="Python <= 3.12 not supported for ovito")
 class TestGBStructureOxide(TestCase):
     """Test the GBStructure class for an oxide structure with the ovito backend."""
 
@@ -194,6 +200,7 @@ class TestGBStructureOxide(TestCase):
 
 @pytest.mark.integration
 @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
+@pytest.mark.skipif(SKIP_OVITO, reason="Python <= 3.12 not supported for ovito")
 class TestGBStructureTimeseriesOvito(TestCase):
     """Integration tests for GBStructureTimeseries with ovito."""
 
