@@ -42,11 +42,13 @@ jobs:
         run: |
           pip install uv
           uv pip install -e .[${{ matrix.version.extra }}] --resolution=${{ matrix.version.resolution }} --system
-      # Fix ImportError: libEGL.so.1: ...
+      # Fix ImportError: libEGL.so.1 and install Vulkan software rendering for OVITO >= 3.16
       - name: Install Linux system dependencies
         if: runner.os == 'Linux'
         run: |
-          sudo apt-get update && sudo apt-get install -y libegl1-mesa-dev gfortran liblapack-dev
+          sudo apt-get update && sudo apt-get install -y libegl1-mesa-dev libvulkan1 mesa-vulkan-drivers gfortran liblapack-dev
+          echo "VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json" >> "$GITHUB_ENV"
+          echo "VK_DRIVER_FILES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json" >> "$GITHUB_ENV"
       # The apt-installed LAMMPS Python bindings are compiled for the system Python.
       # Loading them under older Python versions (< 3.12) causes a segfault,
       # so only install and expose them on Python >= 3.12.
