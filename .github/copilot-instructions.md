@@ -46,7 +46,7 @@ pytest tests/
 pytest --cov=agility --cov-report=xml tests/
 ```
 
-Tests that depend on optional backends are guarded with `pytest.mark.skipif` and `importlib.util.find_spec`. On Linux, `libegl1-mesa-dev`, `libvulkan1`, and `mesa-vulkan-drivers` must be installed for ovito to work (`sudo apt install -y libegl1-mesa-dev libvulkan1 mesa-vulkan-drivers`). For headless Vulkan rendering (Lavapipe), set `VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json`.
+Tests that depend on optional backends are guarded with `pytest.mark.skipif` and `importlib.util.find_spec`. On Linux, `libegl1-mesa-dev`, `libvulkan1`, and `mesa-vulkan-drivers` must be installed for ovito to work (`sudo apt install -y libegl1-mesa-dev libvulkan1 mesa-vulkan-drivers xvfb`). On headless runners, execute tests with `xvfb-run`.
 
 ## Linting and Type Checking
 

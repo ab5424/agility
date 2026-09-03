@@ -46,9 +46,13 @@ jobs:
       - name: Install Linux system dependencies
         if: runner.os == 'Linux'
         run: |
-          sudo apt-get update && sudo apt-get install -y libegl1-mesa-dev libvulkan1 mesa-vulkan-drivers gfortran liblapack-dev
-          echo "VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json" >> "$GITHUB_ENV"
-          echo "VK_DRIVER_FILES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json" >> "$GITHUB_ENV"
+          sudo apt-get update && sudo apt-get install -y libegl1-mesa-dev libvulkan1 mesa-vulkan-drivers xvfb gfortran liblapack-dev
+          LVP_ICD=$(find /usr/share/vulkan/icd.d/ -name "*lvp*.json" 2>/dev/null | head -n 1)
+          if [ -n "$LVP_ICD" ]; then
+            echo "VK_ICD_FILENAMES=$LVP_ICD" >> "$GITHUB_ENV"
+            echo "VK_DRIVER_FILES=$LVP_ICD" >> "$GITHUB_ENV"
+          fi
+          echo "VK_LOADER_LAYERS_DISABLE=~all~" >> "$GITHUB_ENV"
       # The apt-installed LAMMPS Python bindings are compiled for the system Python.
       # Loading them under older Python versions (< 3.12) causes a segfault,
       # so only install and expose them on Python >= 3.12.
@@ -81,8 +85,13 @@ jobs:
         if: runner.os == 'Linux' && fromJSON(matrix.version.python) >= 3.12
         run: echo "PYTHONPATH=/tmp/lammps-bindings${PYTHONPATH:+:$PYTHONPATH}" >> "$GITHUB_ENV"
       - name: pytest
+        shell: bash
         run: |
-          pytest --cov=agility --cov-report=xml tests
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            xvfb-run --auto-servernum pytest --cov=agility --cov-report=xml tests
+          else
+            pytest --cov=agility --cov-report=xml tests
+          fi
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v7
         env:
