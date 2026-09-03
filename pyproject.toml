@@ -46,7 +46,7 @@ tests = [
     "pytest>=9",
 ]
 ovito = [
-    "ovito>=3.12",
+    "ovito>=3.12,<3.17",
 ]
 ase = [
     "ase>=3.25",
