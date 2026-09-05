@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from importlib.util import find_spec
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
@@ -10,6 +11,9 @@ import numpy as np
 import pytest
 
 from agility.plotting import plot_face_order, plot_mdf, render_ovito
+
+PYTHON_VERSION = sys.version_info
+SKIP_OVITO = PYTHON_VERSION <= (3, 12)
 
 # ---------------------------------------------------------------------------
 # render_ovito
@@ -21,6 +25,7 @@ class TestRenderOvito(TestCase):
     """Test the ``render_ovito`` function with a mock pipeline."""
 
     @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
+    @pytest.mark.skipif(SKIP_OVITO, reason="Python <= 3.12 not supported for ovito")
     def test_render_ovito_calls_viewport_render(self) -> None:
         """``render_ovito`` must call ``viewport.render_image`` and return the result."""
         mock_pipeline = MagicMock()
@@ -38,6 +43,7 @@ class TestRenderOvito(TestCase):
             mock_viewport.render_image.assert_called_once()
 
     @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
+    @pytest.mark.skipif(SKIP_OVITO, reason="Python <= 3.12 not supported for ovito")
     def test_render_ovito_default_res_factor(self) -> None:
         """``render_ovito`` must use the default ``res_factor=1`` when not specified."""
         mock_pipeline = MagicMock()
@@ -53,6 +59,7 @@ class TestRenderOvito(TestCase):
             assert call_kwargs["size"] == (640, 480)
 
     @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
+    @pytest.mark.skipif(SKIP_OVITO, reason="Python <= 3.12 not supported for ovito")
     def test_render_ovito_custom_res_factor(self) -> None:
         """``render_ovito`` must scale the render size by ``res_factor``."""
         mock_pipeline = MagicMock()

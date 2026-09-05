@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 import types
 import warnings
 from importlib.util import find_spec
@@ -18,6 +19,9 @@ from agility.analysis import (
     invalid_return_type,
     not_implemented,
 )
+
+PYTHON_VERSION = sys.version_info
+SKIP_OVITO = PYTHON_VERSION <= (3, 12)
 
 # ---------------------------------------------------------------------------
 # Helper utilities
@@ -98,6 +102,7 @@ class TestGetFinder(TestCase):
     """Test the ``get_finder`` helper function (ovito-only, mocked)."""
 
     @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
+    @pytest.mark.skipif(SKIP_OVITO, reason="Python <= 3.12 not supported for ovito")
     def test_cutoff_finder(self) -> None:
         """``get_finder`` must return a ``CutoffNeighborFinder`` when cutoff is given."""
         with patch("ovito.data.CutoffNeighborFinder") as mock_cutoff:
@@ -107,6 +112,7 @@ class TestGetFinder(TestCase):
             mock_cutoff.assert_called_once()
 
     @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
+    @pytest.mark.skipif(SKIP_OVITO, reason="Python <= 3.12 not supported for ovito")
     def test_nearest_n_finder(self) -> None:
         """``get_finder`` must return a ``NearestNeighborFinder`` when nearest_n is given."""
         with patch("ovito.data.NearestNeighborFinder") as mock_nn:
@@ -116,6 +122,7 @@ class TestGetFinder(TestCase):
             mock_nn.assert_called_once()
 
     @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
+    @pytest.mark.skipif(SKIP_OVITO, reason="Python <= 3.12 not supported for ovito")
     def test_no_arguments_raises(self) -> None:
         """``get_finder`` must raise when neither cutoff nor nearest_n is given."""
         with pytest.raises(NameError, match="Either cutoff or nearest_n"):
@@ -167,6 +174,7 @@ class TestGBStructureInit(TestCase):
             assert gbs.data.selection == []
 
     @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
+    @pytest.mark.skipif(SKIP_OVITO, reason="Python <= 3.12 not supported for ovito")
     def test_init_ovito_reads_file(self) -> None:
         """Constructing with the ovito backend must create a pipeline."""
         with patch("ovito.io.import_file") as mock_import:
@@ -200,6 +208,7 @@ class TestReadFile(TestCase):
     """Test ``GBStructure.read_file`` for each backend (mocked imports)."""
 
     @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
+    @pytest.mark.skipif(SKIP_OVITO, reason="Python <= 3.12 not supported for ovito")
     def test_read_file_ovito(self) -> None:
         """The ovito backend must call ``import_file`` and store the pipeline."""
         gbs = GBStructure.__new__(GBStructure)
@@ -527,6 +536,7 @@ class TestSelectParticlesByType(TestCase):
     """Test ``GBStructure.select_particles_by_type``."""
 
     @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
+    @pytest.mark.skipif(SKIP_OVITO, reason="Python <= 3.12 not supported for ovito")
     def test_select_particles_by_type_ovito_appends_modifier(self) -> None:
         """The ovito backend must append modifiers to the pipeline."""
         gbs = GBStructure.__new__(GBStructure)
@@ -614,6 +624,7 @@ class TestClearSelectionUnit(TestCase):
         assert gbs.data.selection == []
 
     @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
+    @pytest.mark.skipif(SKIP_OVITO, reason="Python <= 3.12 not supported for ovito")
     def test_clear_selection_ovito_appends_modifier(self) -> None:
         """The ovito backend must append a ``ClearSelectionModifier``."""
         gbs = GBStructure.__new__(GBStructure)
@@ -664,6 +675,7 @@ class TestInvertSelectionUnit(TestCase):
         assert gbs.data.selection == original
 
     @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
+    @pytest.mark.skipif(SKIP_OVITO, reason="Python <= 3.12 not supported for ovito")
     def test_invert_selection_ovito_appends_modifier(self) -> None:
         """The ovito backend must append an ``InvertSelectionModifier``."""
         gbs = GBStructure.__new__(GBStructure)
@@ -707,6 +719,7 @@ class TestDeleteSelectionUnit(TestCase):
         assert gbs.data.selection == []
 
     @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
+    @pytest.mark.skipif(SKIP_OVITO, reason="Python <= 3.12 not supported for ovito")
     def test_delete_selection_ovito_appends_modifier(self) -> None:
         """The ovito backend must append a ``DeleteSelectedModifier``."""
         gbs = GBStructure.__new__(GBStructure)
@@ -775,6 +788,7 @@ class TestPerformCnaValidation(TestCase):
             gbs.perform_cna(enabled=("fcc", "hcp", "bcc", "ico"), compute=False)
 
     @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
+    @pytest.mark.skipif(SKIP_OVITO, reason="Python <= 3.12 not supported for ovito")
     def test_cna_ovito_appends_modifier(self) -> None:
         """The ovito backend must append a ``CommonNeighborAnalysisModifier``."""
         gbs = GBStructure.__new__(GBStructure)
@@ -885,6 +899,7 @@ class TestPerformPtmValidation(TestCase):
         gbs.pylmp.compute.assert_called_once()
 
     @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
+    @pytest.mark.skipif(SKIP_OVITO, reason="Python <= 3.12 not supported for ovito")
     def test_ptm_ovito_appends_modifier(self) -> None:
         """The ovito backend must append a ``PolyhedralTemplateMatchingModifier``."""
         gbs = GBStructure.__new__(GBStructure)
@@ -986,6 +1001,7 @@ class TestGetDistinctGrains(TestCase):
     """Test ``GBStructure.get_distinct_grains``."""
 
     @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
+    @pytest.mark.skipif(SKIP_OVITO, reason="Python <= 3.12 not supported for ovito")
     def test_get_distinct_grains_ovito_returns_orientations(self) -> None:
         """The ovito backend must return an ``(N, 4)`` quaternion array when ``compute=True``."""
         gbs = GBStructure.__new__(GBStructure)
@@ -1002,6 +1018,7 @@ class TestGetDistinctGrains(TestCase):
         assert orientations.shape == (2, 4)
 
     @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
+    @pytest.mark.skipif(SKIP_OVITO, reason="Python <= 3.12 not supported for ovito")
     def test_get_distinct_grains_ovito_compute_false_returns_none(self) -> None:
         """The ovito backend must return ``None`` when ``compute=False``."""
         gbs = GBStructure.__new__(GBStructure)
@@ -1011,6 +1028,7 @@ class TestGetDistinctGrains(TestCase):
         assert result is None
 
     @pytest.mark.skipif(not find_spec("ovito"), reason="ovito not installed")
+    @pytest.mark.skipif(SKIP_OVITO, reason="Python <= 3.12 not supported for ovito")
     def test_get_distinct_grains_invalid_algorithm_raises(self) -> None:
         """An invalid algorithm name must raise ``ValueError``."""
         gbs = GBStructure.__new__(GBStructure)
