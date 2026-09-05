@@ -36,7 +36,7 @@ pip install -e ".[tests,ovito,ase,pymatgen]"
 uv pip install -e ".[tests,ovito,ase,pymatgen]" --system
 ```
 
-The package requires Python ≥ 3.10. Supported optional backends: `ovito`, `ase`, `pymatgen`.
+The package requires Python ≥ 3.11. Supported optional backends: `ovito`, `ase`, `pymatgen`.
 
 ## Running Tests
 
@@ -67,7 +67,7 @@ pre-commit run --all-files
 
 ## Code Style and Conventions
 
-- **Formatter / linter**: [Ruff](https://docs.astral.sh/ruff/) with `line-length = 100`, targeting Python 3.10+. All Ruff rules are enabled except those explicitly ignored in `pyproject.toml`.
+- **Formatter / linter**: [Ruff](https://docs.astral.sh/ruff/) with `line-length = 100`, targeting Python 3.11+. All Ruff rules are enabled except those explicitly ignored in `pyproject.toml`.
 - **Docstrings**: Google-style (`lint.pydocstyle.convention = "google"`).
 - **Imports**: Every module must include `from __future__ import annotations` as the first import (enforced by `lint.isort.required-imports`).
 - **Type annotations**: All public functions and methods must be fully annotated. Use `TYPE_CHECKING` guards for annotation-only imports.
