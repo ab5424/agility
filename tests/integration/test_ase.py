@@ -39,7 +39,7 @@ class TestGBStructureASE(TestCase):
 
     def test_delete_particles(self) -> None:
         """Test that delete_particles removes the specified species."""
-        self.gbs.delete_particles(["Na"])
+        self.gbs.delete_particles({"Na"})
         # Only 4 Cl atoms should remain
         assert len(self.gbs.data.atoms) == 4
         symbols_remaining = set(self.gbs.data.atoms.get_chemical_symbols())
@@ -48,7 +48,7 @@ class TestGBStructureASE(TestCase):
     def test_delete_particles_resets_selection(self) -> None:
         """Test that delete_particles resets the selection list after mutating the structure."""
         self.gbs.data.selection = [4, 5, 6, 7]
-        self.gbs.delete_particles(["Na"])
+        self.gbs.delete_particles({"Na"})
         assert self.gbs.data.selection == []
 
     def test_invert_selection_empty(self) -> None:
