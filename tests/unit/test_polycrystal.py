@@ -9,16 +9,25 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from agility.polycrystal import GrainDefinition, PolycrystalBuilder, find_atomsk
+from agility.polycrystal import (
+    GrainDefinition,
+    PolycrystalBuilder,
+    build_atomsk_from_source,
+    find_atomsk,
+)
+
+# ---------------------------------------------------------------------------
+# find_atomsk
+# ---------------------------------------------------------------------------
 
 
 @pytest.mark.unit
 class TestFindAtomsk(TestCase):
-    """Test the find_atomsk() helper function."""
+    """Test the ``find_atomsk()`` helper function."""
 
     @patch("agility.polycrystal.shutil.which", return_value="/usr/bin/atomsk")
     def test_returns_path_when_in_system_path(self, mock_which: MagicMock) -> None:
-        """Test that find_atomsk returns the binary path when atomsk is on PATH."""
+        """``find_atomsk`` must return the binary path when atomsk is on PATH."""
         result = find_atomsk()
         assert result == "/usr/bin/atomsk"
         mock_which.assert_called_once_with("atomsk")
@@ -30,53 +39,248 @@ class TestFindAtomsk(TestCase):
         mock_is_file: MagicMock,
         mock_which: MagicMock,
     ) -> None:
-        """Test that find_atomsk returns None when atomsk is not installed anywhere."""
+        """``find_atomsk`` must return ``None`` when atomsk is not installed anywhere."""
         result = find_atomsk()
         assert result is None
         mock_which.assert_called_once_with("atomsk")
         mock_is_file.assert_called()
 
+    @patch("agility.polycrystal.shutil.which", return_value=None)
+    @patch.object(pathlib.Path, "is_file", return_value=True)
+    @patch("agility.polycrystal.os.access", return_value=True)
+    def test_returns_local_bin_when_not_on_path(
+        self,
+        mock_access: MagicMock,  # noqa: ARG002
+        mock_is_file: MagicMock,  # noqa: ARG002
+        mock_which: MagicMock,  # noqa: ARG002
+    ) -> None:
+        """``find_atomsk`` must fall back to ``~/.local/bin/atomsk`` when not on PATH."""
+        result = find_atomsk()
+        assert result is not None
+        assert result.endswith("atomsk")
+
+
+# ---------------------------------------------------------------------------
+# build_atomsk_from_source
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+class TestBuildAtomskFromSource(TestCase):
+    """Test the ``build_atomsk_from_source`` function using mocked subprocess calls."""
+
+    @patch("agility.polycrystal.shutil.which")
+    def test_raises_when_gfortran_missing(self, mock_which: MagicMock) -> None:
+        """``build_atomsk_from_source`` must raise ``RuntimeError`` when gfortran is missing."""
+        mock_which.return_value = None
+        with pytest.raises(RuntimeError, match="gfortran"):
+            build_atomsk_from_source()
+
+    @patch("agility.polycrystal.shutil.which")
+    def test_raises_when_git_missing(self, mock_which: MagicMock) -> None:
+        """``build_atomsk_from_source`` must raise ``RuntimeError`` when git is missing."""
+        mock_which.side_effect = lambda cmd: None if cmd == "git" else "/usr/bin/gfortran"
+        with pytest.raises(RuntimeError, match="git"):
+            build_atomsk_from_source()
+
+    @patch("agility.polycrystal.shutil.which")
+    def test_raises_when_make_missing(self, mock_which: MagicMock) -> None:
+        """``build_atomsk_from_source`` must raise ``RuntimeError`` when make is missing."""
+        mock_which.side_effect = lambda cmd: None if cmd == "make" else "/usr/bin/gfortran"
+        with pytest.raises(RuntimeError, match="make"):
+            build_atomsk_from_source()
+
+    @patch("agility.polycrystal.shutil.which")
+    @patch("agility.polycrystal.subprocess.run")
+    @patch("agility.polycrystal.shutil.copy2")
+    @patch.object(pathlib.Path, "is_file", return_value=True)
+    def test_successful_build_returns_path(
+        self,
+        mock_is_file: MagicMock,  # noqa: ARG002
+        mock_copy2: MagicMock,
+        mock_run: MagicMock,
+        mock_which: MagicMock,
+    ) -> None:
+        """A successful build must return the path to the installed binary."""
+        mock_which.return_value = "/usr/bin/gfortran"
+        mock_run.return_value = MagicMock(returncode=0)
+
+        def _copy2_side_effect(src: str, dst: str) -> None:  # noqa: ARG001
+            pathlib.Path(dst).write_text("dummy", encoding="utf-8")
+
+        mock_copy2.side_effect = _copy2_side_effect
+        with tempfile.TemporaryDirectory() as tmpdir:
+            result = build_atomsk_from_source(install_dir=tmpdir)
+            assert result.endswith("atomsk")
+            assert pathlib.Path(result).parent == pathlib.Path(tmpdir)
+
+    @patch("agility.polycrystal.shutil.which")
+    @patch("agility.polycrystal.subprocess.run")
+    def test_clone_failure_raises_runtime_error(
+        self,
+        mock_run: MagicMock,
+        mock_which: MagicMock,
+    ) -> None:
+        """A failed ``git clone`` must raise ``RuntimeError``."""
+        import subprocess as sp  # noqa: PLC0415
+
+        mock_which.return_value = "/usr/bin/gfortran"
+        mock_run.side_effect = sp.CalledProcessError(1, "git", stderr="clone failed")
+        with pytest.raises(RuntimeError, match="Failed to clone"):
+            build_atomsk_from_source()
+
+    @patch("agility.polycrystal.shutil.which")
+    @patch("agility.polycrystal.subprocess.run")
+    def test_make_failure_raises_runtime_error(
+        self,
+        mock_run: MagicMock,
+        mock_which: MagicMock,
+    ) -> None:
+        """A failed ``make`` must raise ``RuntimeError``."""
+        import subprocess as sp  # noqa: PLC0415
+
+        mock_which.return_value = "/usr/bin/gfortran"
+        # First call (git clone) succeeds, second call (make) fails
+        mock_run.side_effect = [
+            MagicMock(returncode=0),
+            sp.CalledProcessError(1, "make", stderr="make failed"),
+        ]
+        with pytest.raises(RuntimeError, match="Failed to compile"):
+            build_atomsk_from_source()
+
+    @patch("agility.polycrystal.shutil.which")
+    @patch("agility.polycrystal.subprocess.run")
+    @patch.object(pathlib.Path, "is_file", return_value=False)
+    def test_binary_not_found_after_build_raises(
+        self,
+        mock_is_file: MagicMock,  # noqa: ARG002
+        mock_run: MagicMock,
+        mock_which: MagicMock,
+    ) -> None:
+        """If the binary is missing after a successful build, ``FileNotFoundError`` must be raised."""  # noqa: E501
+        mock_which.return_value = "/usr/bin/gfortran"
+        mock_run.return_value = MagicMock(returncode=0)
+        with pytest.raises(FileNotFoundError, match="binary not found"):
+            build_atomsk_from_source()
+
+    @patch("agility.polycrystal.shutil.which")
+    @patch("agility.polycrystal.subprocess.run")
+    @patch("agility.polycrystal.shutil.copy2")
+    @patch.object(pathlib.Path, "is_file", return_value=True)
+    def test_default_install_dir_uses_home_local_bin(
+        self,
+        mock_is_file: MagicMock,  # noqa: ARG002
+        mock_copy2: MagicMock,
+        mock_run: MagicMock,
+        mock_which: MagicMock,
+    ) -> None:
+        """When ``install_dir`` is ``None``, the default ``~/.local/bin`` must be used."""
+        mock_which.return_value = "/usr/bin/gfortran"
+        mock_run.return_value = MagicMock(returncode=0)
+
+        def _copy2_side_effect(src: str, dst: str) -> None:  # noqa: ARG001
+            pathlib.Path(dst).write_text("dummy", encoding="utf-8")
+
+        mock_copy2.side_effect = _copy2_side_effect
+        with (
+            tempfile.TemporaryDirectory() as tmpdir,
+            patch.object(pathlib.Path, "home", return_value=pathlib.Path(tmpdir)),
+        ):
+            result = build_atomsk_from_source()
+            expected = pathlib.Path(tmpdir) / ".local" / "bin" / "atomsk"
+            assert pathlib.Path(result) == expected
+
+
+# ---------------------------------------------------------------------------
+# GrainDefinition
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+class TestGrainDefinition(TestCase):
+    """Test the ``GrainDefinition`` dataclass."""
+
+    def test_creation(self) -> None:
+        """A ``GrainDefinition`` must store seed and Euler angles correctly."""
+        grain = GrainDefinition(seed=(1.0, 2.0, 3.0), euler_angles=(10.0, 20.0, 30.0))
+        assert grain.seed == (1.0, 2.0, 3.0)
+        assert grain.euler_angles == (10.0, 20.0, 30.0)
+
+    def test_equality(self) -> None:
+        """Two ``GrainDefinition`` instances with equal fields must compare as equal."""
+        g1 = GrainDefinition(seed=(1.0, 2.0, 3.0), euler_angles=(0.0, 0.0, 0.0))
+        g2 = GrainDefinition(seed=(1.0, 2.0, 3.0), euler_angles=(0.0, 0.0, 0.0))
+        assert g1 == g2
+
+    def test_inequality(self) -> None:
+        """Two ``GrainDefinition`` instances with different fields must not be equal."""
+        g1 = GrainDefinition(seed=(0.0, 0.0, 0.0), euler_angles=(0.0, 0.0, 0.0))
+        g2 = GrainDefinition(seed=(1.0, 0.0, 0.0), euler_angles=(0.0, 0.0, 0.0))
+        assert g1 != g2
+
+
+# ---------------------------------------------------------------------------
+# PolycrystalBuilder.__init__
+# ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestPolycrystalBuilderInit(TestCase):
-    """Test PolycrystalBuilder initialisation."""
+    """Test ``PolycrystalBuilder`` initialisation."""
 
     def test_init_with_explicit_atomsk_path(self) -> None:
-        """Test construction succeeds when an explicit atomsk path is supplied."""
+        """Construction must succeed when an explicit atomsk path is supplied."""
         builder = PolycrystalBuilder("unit.lmp", atomsk_path="/usr/bin/atomsk")
         assert builder._atomsk == "/usr/bin/atomsk"  # noqa: SLF001
         assert builder.unit_cell == pathlib.Path("unit.lmp").resolve()
 
     @patch("agility.polycrystal.find_atomsk", return_value=None)
     def test_raises_when_atomsk_not_found(self, mock_find: MagicMock) -> None:
-        """Test that FileNotFoundError is raised when atomsk cannot be found."""
+        """``FileNotFoundError`` must be raised when atomsk cannot be found."""
         with pytest.raises(FileNotFoundError, match="atomsk"):
             PolycrystalBuilder("unit.lmp")
         mock_find.assert_called_once()
 
     @patch("agility.polycrystal.find_atomsk", return_value="/usr/bin/atomsk")
     def test_uses_auto_detected_atomsk_path(self, mock_find: MagicMock) -> None:
-        """Test that the auto-detected atomsk path is stored on the builder."""
+        """The auto-detected atomsk path must be stored on the builder."""
         builder = PolycrystalBuilder("unit.lmp")
         assert builder._atomsk == "/usr/bin/atomsk"  # noqa: SLF001
         mock_find.assert_called_once()
 
+    def test_init_accepts_pathlib_unit_cell(self) -> None:
+        """The unit cell must be accepted as a ``pathlib.Path``."""
+        builder = PolycrystalBuilder(pathlib.Path("unit.lmp"), atomsk_path="/usr/bin/atomsk")
+        assert builder.unit_cell == pathlib.Path("unit.lmp").resolve()
+
+    def test_init_initialises_empty_state(self) -> None:
+        """The builder must start with no box and no grains."""
+        builder = PolycrystalBuilder("unit.lmp", atomsk_path="/usr/bin/atomsk")
+        assert builder._box is None  # noqa: SLF001
+        assert builder._grains == []  # noqa: SLF001
+        assert builder._random_grains is None  # noqa: SLF001
+
+
+# ---------------------------------------------------------------------------
+# PolycrystalBuilder configuration methods
+# ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 class TestPolycrystalBuilderConfiguration(TestCase):
-    """Test PolycrystalBuilder grain and box configuration methods."""
+    """Test ``PolycrystalBuilder`` grain and box configuration methods."""
 
     def setUp(self) -> None:
         """Set up a builder with a mocked atomsk path."""
         self.builder = PolycrystalBuilder("unit.lmp", atomsk_path="/usr/bin/atomsk")
 
     def test_set_box(self) -> None:
-        """Test that set_box stores the correct dimensions."""
+        """``set_box`` must store the correct dimensions."""
         self.builder.set_box(100.0, 200.0, 150.0)
         assert self.builder._box == (100.0, 200.0, 150.0)  # noqa: SLF001
 
     def test_add_grain_appends_definition(self) -> None:
-        """Test that add_grain appends a GrainDefinition to the internal list."""
+        """``add_grain`` must append a ``GrainDefinition`` to the internal list."""
         self.builder.add_grain((10.0, 20.0, 30.0), (0.0, 45.0, 90.0))
         assert len(self.builder._grains) == 1  # noqa: SLF001
         grain = self.builder._grains[0]  # noqa: SLF001
@@ -84,30 +288,30 @@ class TestPolycrystalBuilderConfiguration(TestCase):
         assert grain.euler_angles == (0.0, 45.0, 90.0)
 
     def test_add_multiple_grains(self) -> None:
-        """Test that multiple explicit grains can be added."""
+        """Multiple explicit grains can be added."""
         self.builder.add_grain((0.0, 0.0, 0.0), (0.0, 0.0, 0.0))
         self.builder.add_grain((50.0, 50.0, 50.0), (30.0, 0.0, 0.0))
         assert len(self.builder._grains) == 2  # noqa: SLF001
 
     def test_set_random_grains_stores_count(self) -> None:
-        """Test that set_random_grains stores the requested grain count."""
+        """``set_random_grains`` must store the requested grain count."""
         self.builder.set_random_grains(5)
         assert self.builder._random_grains == 5  # noqa: SLF001
 
     def test_add_grain_raises_after_set_random(self) -> None:
-        """Test that add_grain raises ValueError after set_random_grains is called."""
+        """``add_grain`` must raise ``ValueError`` after ``set_random_grains`` is called."""
         self.builder.set_random_grains(3)
         with pytest.raises(ValueError, match="set_random_grains"):
             self.builder.add_grain((0.0, 0.0, 0.0), (0.0, 0.0, 0.0))
 
     def test_set_random_raises_after_add_grain(self) -> None:
-        """Test that set_random_grains raises ValueError after add_grain is called."""
+        """``set_random_grains`` must raise ``ValueError`` after ``add_grain`` is called."""
         self.builder.add_grain((0.0, 0.0, 0.0), (0.0, 0.0, 0.0))
         with pytest.raises(ValueError, match="add_grain"):
             self.builder.set_random_grains(3)
 
     def test_grains_property_returns_copy(self) -> None:
-        """Test that the grains property returns a shallow copy of the list."""
+        """The ``grains`` property must return a shallow copy of the list."""
         self.builder.add_grain((1.0, 2.0, 3.0), (0.0, 0.0, 0.0))
         grains_copy = self.builder.grains
         assert len(grains_copy) == 1
@@ -116,16 +320,21 @@ class TestPolycrystalBuilderConfiguration(TestCase):
         assert len(self.builder._grains) == 1  # noqa: SLF001
 
 
+# ---------------------------------------------------------------------------
+# PolycrystalBuilder._write_param_file
+# ---------------------------------------------------------------------------
+
+
 @pytest.mark.unit
 class TestPolycrystalBuilderWriteParamFile(TestCase):
-    """Test the content produced by _write_param_file."""
+    """Test the content produced by ``_write_param_file``."""
 
     def setUp(self) -> None:
         """Set up a builder with a mocked atomsk path."""
         self.builder = PolycrystalBuilder("unit.lmp", atomsk_path="/usr/bin/atomsk")
 
     def test_raises_without_box(self) -> None:
-        """Test that _write_param_file raises ValueError when no box is set."""
+        """``_write_param_file`` must raise ``ValueError`` when no box is set."""
         self.builder.set_random_grains(2)
         with (
             tempfile.NamedTemporaryFile(suffix=".txt") as tmp,
@@ -134,7 +343,7 @@ class TestPolycrystalBuilderWriteParamFile(TestCase):
             self.builder._write_param_file(pathlib.Path(tmp.name))  # noqa: SLF001
 
     def test_raises_without_grains(self) -> None:
-        """Test that _write_param_file raises ValueError when no grains are defined."""
+        """``_write_param_file`` must raise ``ValueError`` when no grains are defined."""
         self.builder.set_box(100.0, 100.0, 100.0)
         with (
             tempfile.NamedTemporaryFile(suffix=".txt") as tmp,
@@ -143,7 +352,7 @@ class TestPolycrystalBuilderWriteParamFile(TestCase):
             self.builder._write_param_file(pathlib.Path(tmp.name))  # noqa: SLF001
 
     def test_random_grain_file_content(self) -> None:
-        """Test that the parameter file for random grains has the correct content."""
+        """The parameter file for random grains must have the correct content."""
         self.builder.set_box(100.0, 200.0, 300.0)
         self.builder.set_random_grains(4)
         with tempfile.NamedTemporaryFile(suffix=".txt", delete=False) as tmp:
@@ -157,7 +366,7 @@ class TestPolycrystalBuilderWriteParamFile(TestCase):
         assert "random 4" in content
 
     def test_explicit_grain_file_content(self) -> None:
-        """Test that the parameter file for explicit grains has the correct content."""
+        """The parameter file for explicit grains must have the correct content."""
         self.builder.set_box(50.0, 50.0, 50.0)
         self.builder.add_grain((10.0, 20.0, 30.0), (0.0, 45.0, 90.0))
         with tempfile.NamedTemporaryFile(suffix=".txt", delete=False) as tmp:
@@ -172,7 +381,7 @@ class TestPolycrystalBuilderWriteParamFile(TestCase):
         assert "0.0 45.0 90.0" in content
 
     def test_multiple_explicit_grains_all_written(self) -> None:
-        """Test that all added explicit grains appear in the parameter file."""
+        """All added explicit grains must appear in the parameter file."""
         self.builder.set_box(100.0, 100.0, 100.0)
         self.builder.add_grain((25.0, 50.0, 50.0), (0.0, 0.0, 0.0))
         self.builder.add_grain((75.0, 50.0, 50.0), (45.0, 0.0, 0.0))
@@ -186,9 +395,14 @@ class TestPolycrystalBuilderWriteParamFile(TestCase):
         assert content.count("grain") == 2
 
 
+# ---------------------------------------------------------------------------
+# PolycrystalBuilder.build
+# ---------------------------------------------------------------------------
+
+
 @pytest.mark.unit
 class TestPolycrystalBuilderBuild(TestCase):
-    """Test the build() method subprocess invocation."""
+    """Test the ``build()`` method subprocess invocation."""
 
     def setUp(self) -> None:
         """Set up a fully configured builder with a mocked atomsk path."""
@@ -198,7 +412,7 @@ class TestPolycrystalBuilderBuild(TestCase):
 
     @patch("subprocess.run")
     def test_build_calls_subprocess(self, mock_run: MagicMock) -> None:
-        """Test that build() invokes subprocess.run with the atomsk command."""
+        """``build()`` must invoke ``subprocess.run`` with the atomsk command."""
         mock_run.return_value = MagicMock(returncode=0)
         result = self.builder.build("output.lmp")
         assert mock_run.called
@@ -209,7 +423,7 @@ class TestPolycrystalBuilderBuild(TestCase):
 
     @patch("subprocess.run")
     def test_build_includes_unit_cell_in_command(self, mock_run: MagicMock) -> None:
-        """Test that the unit cell path appears in the atomsk command."""
+        """The unit cell path must appear in the atomsk command."""
         mock_run.return_value = MagicMock(returncode=0)
         with tempfile.TemporaryDirectory() as tmpdir:
             unit_cell = pathlib.Path(tmpdir) / "unit.lmp"
@@ -225,7 +439,7 @@ class TestPolycrystalBuilderBuild(TestCase):
 
     @patch("subprocess.run")
     def test_build_passes_output_format(self, mock_run: MagicMock) -> None:
-        """Test that the output_format argument is appended to the command."""
+        """The ``output_format`` argument must be appended to the command."""
         mock_run.return_value = MagicMock(returncode=0)
         with tempfile.TemporaryDirectory() as tmpdir:
             output = pathlib.Path(tmpdir) / "output.lmp"
@@ -236,7 +450,7 @@ class TestPolycrystalBuilderBuild(TestCase):
 
     @patch("subprocess.run")
     def test_build_passes_extra_options(self, mock_run: MagicMock) -> None:
-        """Test that extra_options flags are forwarded to the atomsk command."""
+        """``extra_options`` flags must be forwarded to the atomsk command."""
         mock_run.return_value = MagicMock(returncode=0)
         self.builder.build("output.lmp", extra_options=["-overwrite"])
         cmd = mock_run.call_args[0][0]
@@ -244,18 +458,14 @@ class TestPolycrystalBuilderBuild(TestCase):
 
     @patch("subprocess.run")
     def test_build_returns_path_object(self, mock_run: MagicMock) -> None:
-        """Test that build() returns a pathlib.Path instance."""
+        """``build()`` must return a ``pathlib.Path`` instance."""
         mock_run.return_value = MagicMock(returncode=0)
         result = self.builder.build("output.lmp")
         assert isinstance(result, pathlib.Path)
 
     @patch("subprocess.run")
     def test_build_without_format_no_format_arg(self, mock_run: MagicMock) -> None:
-        """Test that no format keyword is appended when output_format is None.
-
-        Expected command: [atomsk, --polycrystal, <unit_cell>, <param_file>, <output_path>]
-        — exactly five elements with no trailing format identifier.
-        """
+        """No format keyword must be appended when ``output_format`` is ``None``."""
         mock_run.return_value = MagicMock(returncode=0)
         self.builder.build("output.lmp")
         cmd = mock_run.call_args[0][0]
@@ -267,7 +477,7 @@ class TestPolycrystalBuilderBuild(TestCase):
         self,
         mock_run: MagicMock,
     ) -> None:
-        """Test that build() returns the resolved requested path when output_format is omitted."""
+        """``build()`` must return the resolved requested path when ``output_format`` is omitted."""
         mock_run.return_value = MagicMock(returncode=0)
         result = self.builder.build("output.lmp")
         assert result == pathlib.Path("output.lmp").resolve()
@@ -277,11 +487,7 @@ class TestPolycrystalBuilderBuild(TestCase):
         self,
         mock_run: MagicMock,
     ) -> None:
-        """Test that build() returns the path with the output_format extension.
-
-        atomsk writes <prefix>.<output_format>, so the returned Path must reflect that
-        even when output_file carries a different (or no) extension.
-        """
+        """``build()`` must return the path with the ``output_format`` extension."""
         mock_run.return_value = MagicMock(returncode=0)
         with tempfile.TemporaryDirectory() as tmpdir:
             output = pathlib.Path(tmpdir) / "output.cfg"
@@ -292,7 +498,7 @@ class TestPolycrystalBuilderBuild(TestCase):
 
     @patch("subprocess.run")
     def test_build_returns_correct_path_without_extension(self, mock_run: MagicMock) -> None:
-        """Test that build() appends output_format when output_file has no extension."""
+        """``build()`` must append ``output_format`` when ``output_file`` has no extension."""
         mock_run.return_value = MagicMock(returncode=0)
         with tempfile.TemporaryDirectory() as tmpdir:
             output = pathlib.Path(tmpdir) / "poly"
@@ -304,7 +510,7 @@ class TestPolycrystalBuilderBuild(TestCase):
 
     @patch("subprocess.run")
     def test_build_allows_compound_output_format(self, mock_run: MagicMock) -> None:
-        """Test that build() supports compound output formats such as cfg.gz."""
+        """``build()`` must support compound output formats such as ``cfg.gz``."""
         mock_run.return_value = MagicMock(returncode=0)
         with tempfile.TemporaryDirectory() as tmpdir:
             output = pathlib.Path(tmpdir) / "poly.cfg"
@@ -315,7 +521,7 @@ class TestPolycrystalBuilderBuild(TestCase):
 
     @patch("subprocess.run")
     def test_build_strips_all_suffixes_when_format_given(self, mock_run: MagicMock) -> None:
-        """Test that all existing output_file suffixes are stripped for atomsk output prefix."""
+        """All existing ``output_file`` suffixes must be stripped for the atomsk output prefix."""
         mock_run.return_value = MagicMock(returncode=0)
         with tempfile.TemporaryDirectory() as tmpdir:
             output = pathlib.Path(tmpdir) / "poly.cfg.gz"
@@ -332,7 +538,7 @@ class TestPolycrystalBuilderBuild(TestCase):
         self,
         mock_run: MagicMock,
     ) -> None:
-        """Test fallback to output prefix when atomsk writes extensionless output (e.g. vasp)."""
+        """Fallback to output prefix when atomsk writes extensionless output (e.g. vasp)."""
         mock_run.return_value = MagicMock(returncode=0)
         with tempfile.TemporaryDirectory() as tmpdir:
             output = pathlib.Path(tmpdir) / "poly.vasp"
@@ -344,7 +550,7 @@ class TestPolycrystalBuilderBuild(TestCase):
 
     @patch("subprocess.run")
     def test_build_returns_poscar_if_vasp_output_is_poscar(self, mock_run: MagicMock) -> None:
-        """Test fallback to POSCAR when atomsk writes VASP output to POSCAR."""
+        """Fallback to ``POSCAR`` when atomsk writes VASP output to ``POSCAR``."""
         mock_run.return_value = MagicMock(returncode=0)
         with tempfile.TemporaryDirectory() as tmpdir:
             output = pathlib.Path(tmpdir) / "poly.vasp"
@@ -361,7 +567,7 @@ class TestPolycrystalBuilderBuild(TestCase):
 
     @patch("subprocess.run")
     def test_build_returns_contcar_if_vasp_output_is_contcar(self, mock_run: MagicMock) -> None:
-        """Test fallback to CONTCAR when atomsk writes VASP output to CONTCAR."""
+        """Fallback to ``CONTCAR`` when atomsk writes VASP output to ``CONTCAR``."""
         mock_run.return_value = MagicMock(returncode=0)
         with tempfile.TemporaryDirectory() as tmpdir:
             output = pathlib.Path(tmpdir) / "poly.vasp"
@@ -379,7 +585,7 @@ class TestPolycrystalBuilderBuild(TestCase):
 
     @patch("subprocess.run")
     def test_build_sets_cwd_to_output_directory(self, mock_run: MagicMock) -> None:
-        """Test that atomsk is executed in the output file directory."""
+        """Atomsk must be executed in the output file directory."""
         mock_run.return_value = MagicMock(returncode=0)
         with tempfile.TemporaryDirectory() as tmpdir:
             output = pathlib.Path(tmpdir) / "poly.lmp"
@@ -389,33 +595,10 @@ class TestPolycrystalBuilderBuild(TestCase):
 
     @patch("subprocess.run")
     def test_build_raises_if_formatted_output_file_not_found(self, mock_run: MagicMock) -> None:
-        """Test that build() raises when no expected output file exists."""
+        """``build()`` must raise when no expected output file exists."""
         mock_run.return_value = MagicMock(returncode=0)
 
         with tempfile.TemporaryDirectory() as tmpdir:
             output = pathlib.Path(tmpdir) / "poly.vasp"
             with pytest.raises(FileNotFoundError, match="output file was not found"):
                 self.builder.build(output, output_format="vasp")
-
-
-@pytest.mark.unit
-class TestGrainDefinition(TestCase):
-    """Test the GrainDefinition dataclass."""
-
-    def test_creation(self) -> None:
-        """Test that a GrainDefinition stores seed and Euler angles correctly."""
-        grain = GrainDefinition(seed=(1.0, 2.0, 3.0), euler_angles=(10.0, 20.0, 30.0))
-        assert grain.seed == (1.0, 2.0, 3.0)
-        assert grain.euler_angles == (10.0, 20.0, 30.0)
-
-    def test_equality(self) -> None:
-        """Test that two GrainDefinitions with equal fields compare as equal."""
-        g1 = GrainDefinition(seed=(1.0, 2.0, 3.0), euler_angles=(0.0, 0.0, 0.0))
-        g2 = GrainDefinition(seed=(1.0, 2.0, 3.0), euler_angles=(0.0, 0.0, 0.0))
-        assert g1 == g2
-
-    def test_inequality(self) -> None:
-        """Test that two GrainDefinitions with different fields are not equal."""
-        g1 = GrainDefinition(seed=(0.0, 0.0, 0.0), euler_angles=(0.0, 0.0, 0.0))
-        g2 = GrainDefinition(seed=(1.0, 0.0, 0.0), euler_angles=(0.0, 0.0, 0.0))
-        assert g1 != g2
