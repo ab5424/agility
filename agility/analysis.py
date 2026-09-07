@@ -1037,6 +1037,12 @@ class GBStructure:
 
         Returns:
             List of non-crystalline particles.
+
+        Note:
+            For the ``lammps`` backend, results are rank-local in parallel (MPI)
+            runs. In multi-process LAMMPS simulations, only atoms assigned to the
+            current MPI rank are returned; use serial LAMMPS or gather across
+            ranks manually for complete results.
         """
         if self.backend == "ovito":
             if "Structure Type" in self.data.particles:
@@ -1288,6 +1294,10 @@ class GBStructure:
 
         Returns:
             fraction (float): Fraction of grain boundary ions.
+
+        Note:
+            For the ``lammps`` backend, the calculation is performed on a
+            single core (serial execution).
         """
         if self.backend == "ovito":
             fraction = len(self.get_non_crystalline_atoms(mode)) / len(
@@ -1298,8 +1308,22 @@ class GBStructure:
                 stacklevel=2,
             )
         elif self.backend == "lammps":
-            gb_atoms = self.get_non_crystalline_atoms(mode)
-            fraction = len(gb_atoms) / self.pylmp.system.natoms
+            lmp = getattr(self.pylmp, "lmp", None)
+            if lmp is not None and hasattr(lmp, "extract_setting"):
+                try:
+                    world_size = lmp.extract_setting("world_size")
+                    if isinstance(world_size, int) and world_size > 1:
+                        msg = (
+                            "get_gb_fraction with the lammps backend only supports "
+                            f"single-core (serial) execution, but {world_size} MPI processes "
+                            "were detected. Please run in serial."
+                        )
+                        raise RuntimeError(msg)
+                except (TypeError, AttributeError):
+                    pass
+
+            n_atoms = self.pylmp.system.natoms
+            fraction = 0.0 if n_atoms == 0 else len(self.get_non_crystalline_atoms(mode)) / n_atoms
         else:
             raise not_implemented(self.backend)
         return fraction

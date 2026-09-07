@@ -1378,6 +1378,23 @@ class TestGetGbFraction(TestCase):
             gbs.get_gb_fraction(mode="ptm")
         mock_gnc.assert_called_once_with("ptm")
 
+    def test_get_gb_fraction_lammps_zero_atoms(self) -> None:
+        """The lammps backend must return 0.0 when natoms is zero."""
+        gbs = GBStructure.__new__(GBStructure)
+        gbs.backend = "lammps"
+        gbs.pylmp = MagicMock()
+        gbs.pylmp.system.natoms = 0
+        assert gbs.get_gb_fraction() == 0.0
+
+    def test_get_gb_fraction_lammps_multi_process_raises(self) -> None:
+        """The lammps backend must raise RuntimeError if multiple MPI processes are detected."""
+        gbs = GBStructure.__new__(GBStructure)
+        gbs.backend = "lammps"
+        gbs.pylmp = MagicMock()
+        gbs.pylmp.lmp.extract_setting.return_value = 4
+        with pytest.raises(RuntimeError, match="only supports single-core"):
+            gbs.get_gb_fraction()
+
     def test_get_gb_fraction_unsupported_backend_raises(self) -> None:
         """An unsupported backend must raise ``NotImplementedError`` for ``get_gb_fraction``."""
         gbs = GBStructure.__new__(GBStructure)
