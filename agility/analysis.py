@@ -955,7 +955,9 @@ class GBStructure:
                         "At least one atoms has only two other atoms to assign.",
                         stacklevel=2,
                     )
-                group_neighbors = [len(i.intersection(neighbors_no_selected)) for i in group_sets]
+                group_neighbors = np.array(
+                    [len(i.intersection(neighbors_no_selected)) for i in group_sets],
+                )
                 indices_max = np.where(group_neighbors == np.amax(group_neighbors))[0]
                 if len(indices_max) > 1 and return_random:
                     groups_non_selected[random.choice(indices_max)].append(index)  # noqa: S311
@@ -1704,10 +1706,11 @@ def check_lammps_world_size(pylmp: object, func_name: str | None = None) -> None
         RuntimeError: If more than 1 MPI process is detected.
     """
     lmp = getattr(pylmp, "lmp", pylmp)
-    if lmp is not None and hasattr(lmp, "extract_setting"):
+    extract_setting = getattr(lmp, "extract_setting", None)
+    if callable(extract_setting):
         world_size = None
         with contextlib.suppress(TypeError, AttributeError):
-            world_size = lmp.extract_setting("world_size")
+            world_size = extract_setting("world_size")
         if isinstance(world_size, int) and world_size > 1:
             prefix = f"{func_name} with the " if func_name else "The "
             msg = (
