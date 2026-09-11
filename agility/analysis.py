@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import builtins
+import contextlib
 import pathlib
 import random
 import types
@@ -1037,12 +1038,6 @@ class GBStructure:
 
         Returns:
             List of non-crystalline particles.
-
-        Note:
-            For the ``lammps`` backend, results are rank-local in parallel (MPI)
-            runs. In multi-process LAMMPS simulations, only atoms assigned to the
-            current MPI rank are returned; use serial LAMMPS or gather across
-            ranks manually for complete results.
         """
         if self.backend == "ovito":
             if "Structure Type" in self.data.particles:
@@ -1068,6 +1063,7 @@ class GBStructure:
         elif self.backend == "lammps":
             if return_type not in ("Identifier", "Indices"):
                 raise invalid_return_type(return_type)
+            check_lammps_world_size(self.pylmp, "get_non_crystalline_atoms")
             ids, types, non_crystalline_value = self._extract_lammps_structure_ids_and_types(mode)
             if return_type == "Identifier":
                 gb_list = ids[types == non_crystalline_value].tolist()
@@ -1294,10 +1290,6 @@ class GBStructure:
 
         Returns:
             fraction (float): Fraction of grain boundary ions.
-
-        Note:
-            For the ``lammps`` backend, the calculation is performed on a
-            single core (serial execution).
         """
         if self.backend == "ovito":
             fraction = len(self.get_non_crystalline_atoms(mode)) / len(
@@ -1308,20 +1300,7 @@ class GBStructure:
                 stacklevel=2,
             )
         elif self.backend == "lammps":
-            lmp = getattr(self.pylmp, "lmp", None)
-            if lmp is not None and hasattr(lmp, "extract_setting"):
-                try:
-                    world_size = lmp.extract_setting("world_size")
-                    if isinstance(world_size, int) and world_size > 1:
-                        msg = (
-                            "get_gb_fraction with the lammps backend only supports "
-                            f"single-core (serial) execution, but {world_size} MPI processes "
-                            "were detected. Please run in serial."
-                        )
-                        raise RuntimeError(msg)
-                except (TypeError, AttributeError):
-                    pass
-
+            check_lammps_world_size(self.pylmp, "get_gb_fraction")
             n_atoms = self.pylmp.system.natoms
             fraction = 0.0 if n_atoms == 0 else len(self.get_non_crystalline_atoms(mode)) / n_atoms
         else:
@@ -1339,12 +1318,6 @@ class GBStructure:
 
         Returns:
             List of particles of the specified type.
-
-        Note:
-            For the ``lammps`` backend, results are rank-local in parallel (MPI)
-            runs. In multi-process LAMMPS simulations, only atoms assigned to the
-            current MPI rank are returned; use serial LAMMPS or gather across
-            ranks manually for complete results.
         """
         if self.backend == "ovito":
             # Currently doesn't work!
@@ -1380,9 +1353,7 @@ class GBStructure:
             # return list(df_atom["Particle Identifier"])
 
         elif self.backend == "lammps":
-            # Note: in parallel (MPI) LAMMPS runs, extract_atom only returns
-            # atoms local to the current rank. Results will be incomplete unless
-            # running in serial or gathering across ranks manually.
+            check_lammps_world_size(self.pylmp, "get_type")
             ids = np.ravel(self.pylmp.lmp.numpy.extract_atom("id"))
             atom_types = np.ravel(self.pylmp.lmp.numpy.extract_atom("type"))
             if return_type == "Identifier":
@@ -1720,3 +1691,32 @@ def invalid_return_type(return_type: str) -> ValueError:
         f"Invalid return type {return_type} specified. Only "
         "Indices and Identifier are possible as return types.",
     )
+
+
+def check_lammps_world_size(pylmp: object, func_name: str | None = None) -> None:
+    """Check that LAMMPS is running in serial (single-core) mode.
+
+    Args:
+        pylmp: PyLammps or LAMMPS instance.
+        func_name: Optional name of the calling function for error reporting.
+
+    Raises:
+        RuntimeError: If more than 1 MPI process is detected.
+    """
+    lmp = getattr(pylmp, "lmp", pylmp)
+    if lmp is not None and hasattr(lmp, "extract_setting"):
+        world_size = None
+        with contextlib.suppress(TypeError, AttributeError):
+            world_size = lmp.extract_setting("world_size")
+        if isinstance(world_size, int) and world_size > 1:
+            prefix = f"{func_name} with the " if func_name else "The "
+            msg = (
+                f"{prefix}lammps backend only supports "
+                f"single-core (serial) execution, but {world_size} MPI processes "
+                "were detected. Please run in serial."
+            )
+            raise RuntimeError(msg)
+
+
+check_world_size = check_lammps_world_size
+check_lammps_serial = check_lammps_world_size

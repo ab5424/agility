@@ -485,6 +485,7 @@ class TestGetGbFractionLammps(TestCase):
             n_non_crystalline / n_atoms,
         )
 
+    @pytest.mark.skip(reason="PTM mode not available in pre-compiled LAMMPS binaries")
     def test_gb_fraction_ptm_mode(self) -> None:
         """The mode parameter is passed through to the structural analysis."""
         self._setup_fcc_lattice()
