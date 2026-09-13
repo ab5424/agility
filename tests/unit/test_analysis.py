@@ -15,6 +15,7 @@ import pytest
 from agility.analysis import (
     GBStructure,
     GBStructureTimeseries,
+    check_lammps_world_size,
     get_finder,
     invalid_return_type,
     not_implemented,
@@ -95,6 +96,43 @@ class TestInvalidReturnType(TestCase):
         err = invalid_return_type("Bogus")
         with pytest.raises(ValueError, match="Bogus"):
             raise err
+
+
+@pytest.mark.unit
+class TestCheckLammpsWorldSize(TestCase):
+    """Test the ``check_lammps_world_size`` helper function."""
+
+    def test_serial_world_size_does_not_raise(self) -> None:
+        """A world_size of 1 (serial) must not raise."""
+        mock_pylmp = MagicMock()
+        mock_pylmp.lmp.extract_setting.return_value = 1
+        check_lammps_world_size(mock_pylmp)
+
+    def test_multi_process_raises_runtime_error(self) -> None:
+        """A world_size > 1 must raise RuntimeError."""
+        mock_pylmp = MagicMock()
+        mock_pylmp.lmp.extract_setting.return_value = 4
+        with pytest.raises(RuntimeError, match="only supports single-core"):
+            check_lammps_world_size(mock_pylmp)
+
+    def test_func_name_in_error_message(self) -> None:
+        """The calling function name must appear in the error message."""
+        mock_pylmp = MagicMock()
+        mock_pylmp.lmp.extract_setting.return_value = 2
+        with pytest.raises(RuntimeError, match="my_func with the lammps backend"):
+            check_lammps_world_size(mock_pylmp, func_name="my_func")
+
+    def test_direct_lmp_instance_accepted(self) -> None:
+        """Passing a raw lammps instance (without .lmp attribute) must inspect extract_setting."""
+        mock_lmp = MagicMock(spec=["extract_setting"])
+        mock_lmp.extract_setting.return_value = 3
+        with pytest.raises(RuntimeError, match="only supports single-core"):
+            check_lammps_world_size(mock_lmp)
+
+    def test_none_or_missing_extract_setting_does_not_raise(self) -> None:
+        """Objects lacking extract_setting or None must not raise."""
+        check_lammps_world_size(None)
+        check_lammps_world_size(object())
 
 
 @pytest.mark.unit
@@ -1269,6 +1307,15 @@ class TestGetNonCrystallineAtoms(TestCase):
         with pytest.raises(NotImplementedError, match="ovito"):
             gbs.get_non_crystalline_atoms()
 
+    def test_get_non_crystalline_atoms_lammps_multi_process_raises(self) -> None:
+        """The lammps backend must raise RuntimeError if multiple MPI processes are detected."""
+        gbs = GBStructure.__new__(GBStructure)
+        gbs.backend = "lammps"
+        gbs.pylmp = MagicMock()
+        gbs.pylmp.lmp.extract_setting.return_value = 4
+        with pytest.raises(RuntimeError, match="only supports single-core"):
+            gbs.get_non_crystalline_atoms()
+
 
 # ---------------------------------------------------------------------------
 # GBStructure.get_crystalline_atoms
@@ -1351,12 +1398,48 @@ class TestGetGrainEdgeIons(TestCase):
 class TestGetGbFraction(TestCase):
     """Test ``GBStructure.get_gb_fraction``."""
 
-    def test_get_gb_fraction_lammps_raises(self) -> None:
-        """The lammps backend must raise ``NotImplementedError`` for ``get_gb_fraction``."""
+    def test_get_gb_fraction_lammps(self) -> None:
+        """The lammps backend must return the fraction of non-crystalline atoms."""
         gbs = GBStructure.__new__(GBStructure)
         gbs.backend = "lammps"
         gbs.pylmp = MagicMock()
-        with pytest.raises(NotImplementedError, match="lammps"):
+        gbs.pylmp.system.natoms = 10
+        with patch.object(
+            GBStructure,
+            "get_non_crystalline_atoms",
+            return_value=[1, 2, 3],
+        ):
+            assert gbs.get_gb_fraction() == pytest.approx(0.3)
+
+    def test_get_gb_fraction_lammps_mode_passed_through(self) -> None:
+        """The lammps backend must pass the mode to get_non_crystalline_atoms."""
+        gbs = GBStructure.__new__(GBStructure)
+        gbs.backend = "lammps"
+        gbs.pylmp = MagicMock()
+        gbs.pylmp.system.natoms = 4
+        with patch.object(
+            GBStructure,
+            "get_non_crystalline_atoms",
+            return_value=[1],
+        ) as mock_gnc:
+            gbs.get_gb_fraction(mode="ptm")
+        mock_gnc.assert_called_once_with("ptm")
+
+    def test_get_gb_fraction_lammps_zero_atoms(self) -> None:
+        """The lammps backend must return 0.0 when natoms is zero."""
+        gbs = GBStructure.__new__(GBStructure)
+        gbs.backend = "lammps"
+        gbs.pylmp = MagicMock()
+        gbs.pylmp.system.natoms = 0
+        assert gbs.get_gb_fraction() == 0.0
+
+    def test_get_gb_fraction_lammps_multi_process_raises(self) -> None:
+        """The lammps backend must raise RuntimeError if multiple MPI processes are detected."""
+        gbs = GBStructure.__new__(GBStructure)
+        gbs.backend = "lammps"
+        gbs.pylmp = MagicMock()
+        gbs.pylmp.lmp.extract_setting.return_value = 4
+        with pytest.raises(RuntimeError, match="only supports single-core"):
             gbs.get_gb_fraction()
 
     def test_get_gb_fraction_unsupported_backend_raises(self) -> None:
@@ -1393,6 +1476,15 @@ class TestGetType(TestCase):
         gbs.pylmp.lmp.numpy.extract_atom.return_value = np.array([1, 2, 3, 4])
         with pytest.raises(ValueError, match="Invalid return type"):
             gbs.get_type(1, return_type="Bogus")
+
+    def test_get_type_lammps_multi_process_raises(self) -> None:
+        """The lammps backend must raise RuntimeError if multiple MPI processes are detected."""
+        gbs = GBStructure.__new__(GBStructure)
+        gbs.backend = "lammps"
+        gbs.pylmp = MagicMock()
+        gbs.pylmp.lmp.extract_setting.return_value = 4
+        with pytest.raises(RuntimeError, match="only supports single-core"):
+            gbs.get_type(1)
 
 
 # ---------------------------------------------------------------------------
