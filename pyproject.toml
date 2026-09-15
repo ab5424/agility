@@ -9,7 +9,7 @@ description = "Analysis tool for simulations of grain boundaries and interfaces"
 authors = [{name = "Alexander Bonkowski", email = "alexander.bonkowski@rwth-aachen.de"}]
 maintainers = [{name = "Alexander Bonkowski"}]
 dependencies = ["numpy>=1.25", "pandas>=2", "scipy>=1.12", "seaborn>=0.13"]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 readme = "README.md"
 license = {file = "LICENSE"}
 keywords = ["grain boundaries", "interfaces", "science", "analysis"]
@@ -19,7 +19,6 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -64,7 +63,7 @@ include = ["agility", "agility.*"]
 exclude = ["tests", "tests.*"]
 
 [tool.ruff]
-target-version = "py310"
+target-version = "py311"
 line-length = 100
 lint.select = ["ALL"]
 lint.ignore = [
