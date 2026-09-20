@@ -2096,6 +2096,91 @@ class TestGBStructureTimeseriesArgumentValidation(TestCase):
         ):
             ts.get_diffusion_coefficient(fit_frames=(0, 1))
 
+    def test_fit_frames_invalid_tuple_length_raises_value_error(self) -> None:
+        """fit_frames not of length 2 must raise ValueError."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "ovito"
+        ts.pipeline = MagicMock()
+        ts.pipeline.source.num_frames = 5
+        with (
+            patch.object(ts, "get_time_array", return_value=np.zeros(5)),
+            patch.object(ts, "get_msd", return_value=np.zeros(5)),
+            pytest.raises(ValueError, match="must be a tuple of"),
+        ):
+            ts.get_diffusion_coefficient(fit_frames=(1, 2, 3))  # type: ignore[arg-type]
+
+    def test_fit_frames_negative_start_raises_value_error(self) -> None:
+        """Negative start in fit_frames must raise ValueError."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "ovito"
+        ts.pipeline = MagicMock()
+        ts.pipeline.source.num_frames = 5
+        with (
+            patch.object(ts, "get_time_array", return_value=np.zeros(5)),
+            patch.object(ts, "get_msd", return_value=np.zeros(5)),
+            pytest.raises(ValueError, match=r"start index .* must be non-negative"),
+        ):
+            ts.get_diffusion_coefficient(fit_frames=(-1, 3))
+
+    def test_fit_frames_start_exceeds_num_frames_raises_value_error(self) -> None:
+        """Start in fit_frames >= num_frames must raise ValueError."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "ovito"
+        ts.pipeline = MagicMock()
+        ts.pipeline.source.num_frames = 5
+        with (
+            patch.object(ts, "get_time_array", return_value=np.zeros(5)),
+            patch.object(ts, "get_msd", return_value=np.zeros(5)),
+            pytest.raises(ValueError, match=r"start index .* exceeds the number of frames"),
+        ):
+            ts.get_diffusion_coefficient(fit_frames=(5, 7))
+
+    def test_fit_frames_end_exceeds_num_frames_raises_value_error(self) -> None:
+        """End in fit_frames > num_frames must raise ValueError."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "ovito"
+        ts.pipeline = MagicMock()
+        ts.pipeline.source.num_frames = 5
+        with (
+            patch.object(ts, "get_time_array", return_value=np.zeros(5)),
+            patch.object(ts, "get_msd", return_value=np.zeros(5)),
+            pytest.raises(ValueError, match=r"end index .* exceeds the number of frames"),
+        ):
+            ts.get_diffusion_coefficient(fit_frames=(0, 10))
+
+    def test_fit_frames_start_greater_or_equal_end_raises_value_error(self) -> None:
+        """Start >= end in fit_frames must raise ValueError."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "ovito"
+        ts.pipeline = MagicMock()
+        ts.pipeline.source.num_frames = 5
+        with (
+            patch.object(ts, "get_time_array", return_value=np.zeros(5)),
+            patch.object(ts, "get_msd", return_value=np.zeros(5)),
+            pytest.raises(ValueError, match="must be strictly less than"),
+        ):
+            ts.get_diffusion_coefficient(fit_frames=(3, 3))
+
+    def test_reference_frame_out_of_bounds_raises_value_error(self) -> None:
+        """reference_frame out of bounds when fit_frames is None must raise ValueError."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "ovito"
+        ts.pipeline = MagicMock()
+        ts.pipeline.source.num_frames = 5
+        with (
+            patch.object(ts, "get_time_array", return_value=np.zeros(5)),
+            patch.object(ts, "get_msd", return_value=np.zeros(5)),
+            pytest.raises(ValueError, match="out of bounds"),
+        ):
+            ts.get_diffusion_coefficient(reference_frame=-1)
+
+        with (
+            patch.object(ts, "get_time_array", return_value=np.zeros(5)),
+            patch.object(ts, "get_msd", return_value=np.zeros(5)),
+            pytest.raises(ValueError, match="out of bounds"),
+        ):
+            ts.get_diffusion_coefficient(reference_frame=5)
+
     def test_handle_missing_invalid_mode_raises_value_error(self) -> None:
         """Invalid handle_missing mode must raise ValueError."""
         ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
