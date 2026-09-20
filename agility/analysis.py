@@ -2234,7 +2234,8 @@ class GBStructureTimeseries(GBStructure):
             reference_frame: Reference frame index (default 0).
             fit_frames: Optional tuple (start_frame, end_frame) specifying the slice of
                 frames used for the linear regression. If None, all frames from
-                reference_frame onward are used.
+                reference_frame onward are used. Bounds must satisfy
+                0 <= start_frame < end_frame <= num_frames.
             dimension: Dimensionality of diffusion (default 3 for 3D).
             return_fit: If True, returns (D, fit_dict) containing slope, intercept, rvalue, stderr.
             exclude_edge: If True, exclude grain edge particles from bulk.
@@ -2250,8 +2251,9 @@ class GBStructureTimeseries(GBStructure):
 
         Raises:
             NotImplementedError: If the backend is not 'ovito'.
-            ValueError: If fewer than 2 frames are available for fitting, if handle_missing is
-                invalid, or if handle_missing='error' and cohort particles are missing.
+            ValueError: If fewer than 2 frames are available for fitting, if fit_frames or
+                reference_frame are out of bounds, if handle_missing is invalid, or if
+                cohort particles are missing with handle_missing='error'.
         """
         if self.backend != "ovito":
             raise not_implemented(self.backend)
@@ -2275,8 +2277,38 @@ class GBStructureTimeseries(GBStructure):
         )
 
         if fit_frames is not None:
+            if len(fit_frames) != 2:
+                msg = f"fit_frames must be a tuple of (start_frame, end_frame), got {fit_frames}."
+                raise ValueError(msg)
             start_idx, end_idx = fit_frames
+            if start_idx < 0:
+                msg = f"fit_frames start index ({start_idx}) must be non-negative."
+                raise ValueError(msg)
+            if start_idx >= self.num_frames:
+                msg = (
+                    f"fit_frames start index ({start_idx}) exceeds the number of frames "
+                    f"in the trajectory ({self.num_frames})."
+                )
+                raise ValueError(msg)
+            if end_idx > self.num_frames:
+                msg = (
+                    f"fit_frames end index ({end_idx}) exceeds the number of frames "
+                    f"in the trajectory ({self.num_frames})."
+                )
+                raise ValueError(msg)
+            if start_idx >= end_idx:
+                msg = (
+                    f"fit_frames start index ({start_idx}) must be strictly less than "
+                    f"end index ({end_idx})."
+                )
+                raise ValueError(msg)
         else:
+            if reference_frame < 0 or reference_frame >= self.num_frames:
+                msg = (
+                    f"reference_frame ({reference_frame}) is out of bounds for trajectory "
+                    f"with {self.num_frames} frames."
+                )
+                raise ValueError(msg)
             start_idx = reference_frame
             end_idx = self.num_frames
 
