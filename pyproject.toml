@@ -71,6 +71,7 @@ lint.ignore = [
   "ANN002",  # Missing type annotation for `*args`
   "ANN003",  # Missing type annotation for `**kwargs`
   "C901",    # Function is too complex
+  "COM812",  # Missing trailing comma
   "ERA001",  # Found commented-out code
   "FIX002",  # Line contains TODO, consider resolving the issue
   "FBT001",  # Boolean-typed positional argument in function definition
