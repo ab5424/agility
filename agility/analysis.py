@@ -37,6 +37,7 @@ diffusion_regions = Literal[
     "edge",
 ]
 selection_modes = Literal["initial", "continuous"]
+handle_missing_modes = Literal["error", "nan", "drop"]
 
 
 class GBStructure:
@@ -1999,6 +2000,7 @@ class GBStructureTimeseries(GBStructure):
         selection_mode: selection_modes = "initial",
         reference_frame: int = 0,
         exclude_edge: bool = False,
+        handle_missing: handle_missing_modes = "error",
         **kwargs,
     ) -> np.ndarray:
         """Get displacement vectors of selected particles at a given frame.
@@ -2010,17 +2012,31 @@ class GBStructureTimeseries(GBStructure):
             selection_mode: 'initial' (classified at reference frame) or 'continuous'.
             reference_frame: Reference frame index (default 0).
             exclude_edge: If True, exclude grain edge particles from bulk.
+            handle_missing: How to handle particles from the selected cohort that are missing in
+                frame_idx ('error', 'nan', or 'drop').
+                'error' (default): Raise ValueError if any cohort particle is missing.
+                'nan': Return an array of shape (N_selected, 3) with np.nan for missing particles.
+                'drop': Warn and return displacements only for surviving particles.
             **kwargs: Additional keyword arguments.
 
         Returns:
-            A numpy array of shape (N_selected, 3) containing displacement vectors
-            in simulation length units (typically Ångströms [Å]).
+            A numpy array of displacement vectors in simulation length units
+            (typically Ångströms [Å]).
 
         Raises:
             NotImplementedError: If the backend is not 'ovito'.
+            ValueError: If handle_missing is invalid, or if handle_missing='error' and cohort
+                particles are missing.
         """
         if self.backend != "ovito":
             raise not_implemented(self.backend)
+
+        if handle_missing not in ("error", "nan", "drop"):
+            msg = (
+                f"Invalid handle_missing mode '{handle_missing}'. "
+                "Valid options are 'error', 'nan', or 'drop'."
+            )
+            raise ValueError(msg)
 
         self.calculate_displacements(reference_frame=reference_frame)
         selected_ids = self._get_selected_particle_ids(
@@ -2043,6 +2059,36 @@ class GBStructureTimeseries(GBStructure):
         disp = np.asarray(frame_data.particles["Displacement"])
 
         mask = np.isin(all_ids, selected_ids)
+        n_present = int(np.sum(mask))
+        n_cohort = len(selected_ids)
+
+        if n_present < n_cohort:
+            match handle_missing:
+                case "error":
+                    msg = (
+                        f"Frame {frame_idx} is missing {n_cohort - n_present} of {n_cohort} "
+                        "particles from the selected cohort. Set handle_missing='nan' or 'drop' "
+                        "to handle missing particles."
+                    )
+                    raise ValueError(msg)
+                case "drop":
+                    warnings.warn(
+                        f"Frame {frame_idx} is missing {n_cohort - n_present} of {n_cohort} "
+                        "particles from the selected cohort; returning displacements for "
+                        "surviving particles.",
+                        UserWarning,
+                        stacklevel=2,
+                    )
+                    return disp[mask]
+                case "nan":
+                    result = np.full((n_cohort, 3), np.nan, dtype=float)
+                    if n_present > 0:
+                        id_to_disp = dict(zip(all_ids[mask], disp[mask], strict=True))
+                        for i, pid in enumerate(selected_ids):
+                            if pid in id_to_disp:
+                                result[i] = id_to_disp[pid]
+                    return result
+
         return disp[mask]
 
     def get_msd(
@@ -2052,6 +2098,7 @@ class GBStructureTimeseries(GBStructure):
         selection_mode: selection_modes = "initial",
         reference_frame: int = 0,
         exclude_edge: bool = False,
+        handle_missing: handle_missing_modes = "error",
         **kwargs,
     ) -> np.ndarray:
         """Compute the Mean Squared Displacement (MSD) for each frame.
@@ -2062,6 +2109,12 @@ class GBStructureTimeseries(GBStructure):
             selection_mode: 'initial' or 'continuous'.
             reference_frame: Reference frame index (default 0).
             exclude_edge: If True, exclude grain edge particles from bulk.
+            handle_missing: How to handle particles from the selected cohort that are missing in
+                a frame ('error', 'nan', or 'drop').
+                'error' (default): Raise ValueError if any cohort particle is missing.
+                'nan': Set MSD to np.nan for frames with missing cohort particles.
+                'drop': Warn and average over surviving particles; set to np.nan if no
+                    particles remain.
             **kwargs: Additional keyword arguments.
 
         Returns:
@@ -2071,10 +2124,18 @@ class GBStructureTimeseries(GBStructure):
 
         Raises:
             NotImplementedError: If the backend is not 'ovito'.
-            ValueError: If no particles match the selection criteria.
+            ValueError: If no particles match the selection criteria, if handle_missing is
+                invalid, or if handle_missing='error' and cohort particles are missing in any frame.
         """
         if self.backend != "ovito":
             raise not_implemented(self.backend)
+
+        if handle_missing not in ("error", "nan", "drop"):
+            msg = (
+                f"Invalid handle_missing mode '{handle_missing}'. "
+                "Valid options are 'error', 'nan', or 'drop'."
+            )
+            raise ValueError(msg)
 
         self.calculate_displacements(reference_frame=reference_frame)
         selected_ids = self._get_selected_particle_ids(
@@ -2089,6 +2150,7 @@ class GBStructureTimeseries(GBStructure):
             msg = f"No particles found matching criteria (species={species}, region={region})."
             raise ValueError(msg)
 
+        n_cohort = len(selected_ids)
         msd = np.zeros(self.num_frames, dtype=float)
         for f in range(self.num_frames):
             frame_data = self.pipeline.compute(frame=f)
@@ -2098,9 +2160,32 @@ class GBStructureTimeseries(GBStructure):
                 frame_data.particles["Particle Identifier"] if has_pid else np.arange(p_count),
             )
             mask = np.isin(all_ids, selected_ids)
-            if not np.any(mask):
-                msd[f] = 0.0
-                continue
+            n_present = int(np.sum(mask))
+
+            if n_present < n_cohort:
+                match handle_missing:
+                    case "error":
+                        msg = (
+                            f"Frame {f} is missing {n_cohort - n_present} of {n_cohort} "
+                            "particles from the selected cohort. Set handle_missing='nan' "
+                            "or 'drop' to handle missing particles."
+                        )
+                        raise ValueError(msg)
+                    case "nan":
+                        msd[f] = np.nan
+                        continue
+                    case "drop":
+                        if n_present == 0:
+                            msd[f] = np.nan
+                            continue
+                        warnings.warn(
+                            f"Frame {f} is missing {n_cohort - n_present} of {n_cohort} "
+                            "particles from the selected cohort; averaging over surviving "
+                            "particles.",
+                            UserWarning,
+                            stacklevel=2,
+                        )
+
             disp = np.asarray(frame_data.particles["Displacement"])[mask]
             sq_disp = np.sum(disp**2, axis=1)
             msd[f] = np.mean(sq_disp)
@@ -2118,6 +2203,7 @@ class GBStructureTimeseries(GBStructure):
         dimension: int = 3,
         return_fit: bool = False,
         exclude_edge: bool = False,
+        handle_missing: handle_missing_modes = "error",
         **kwargs,
     ) -> float | tuple[float, dict[str, float]]:
         """Calculate the diffusion coefficient D from trajectory Mean Squared Displacement.
@@ -2140,6 +2226,9 @@ class GBStructureTimeseries(GBStructure):
             dimension: Dimensionality of diffusion (default 3 for 3D).
             return_fit: If True, returns (D, fit_dict) containing slope, intercept, rvalue, stderr.
             exclude_edge: If True, exclude grain edge particles from bulk.
+            handle_missing: How to handle missing particles in MSD calculation
+                ('error', 'nan', or 'drop'). If 'nan', non-finite frames are excluded
+                from the linear fit.
             **kwargs: Additional keyword arguments.
 
         Returns:
@@ -2149,10 +2238,18 @@ class GBStructureTimeseries(GBStructure):
 
         Raises:
             NotImplementedError: If the backend is not 'ovito'.
-            ValueError: If fewer than 2 frames are available for fitting.
+            ValueError: If fewer than 2 frames are available for fitting, if handle_missing is
+                invalid, or if handle_missing='error' and cohort particles are missing.
         """
         if self.backend != "ovito":
             raise not_implemented(self.backend)
+
+        if handle_missing not in ("error", "nan", "drop"):
+            msg = (
+                f"Invalid handle_missing mode '{handle_missing}'. "
+                "Valid options are 'error', 'nan', or 'drop'."
+            )
+            raise ValueError(msg)
 
         time_array = self.get_time_array(dt=dt)
         msd = self.get_msd(
@@ -2161,6 +2258,7 @@ class GBStructureTimeseries(GBStructure):
             selection_mode=selection_mode,
             reference_frame=reference_frame,
             exclude_edge=exclude_edge,
+            handle_missing=handle_missing,
             **kwargs,
         )
 
@@ -2177,9 +2275,17 @@ class GBStructureTimeseries(GBStructure):
         t_fit = time_array[start_idx:end_idx]
         msd_fit = msd[start_idx:end_idx]
 
+        valid = np.isfinite(t_fit) & np.isfinite(msd_fit)
+        t_valid = t_fit[valid]
+        msd_valid = msd_fit[valid]
+
+        if len(t_valid) < 2:
+            msg = f"At least 2 valid frames required for linear fit, got {len(t_valid)}."
+            raise ValueError(msg)
+
         from scipy.stats import linregress  # noqa: PLC0415
 
-        res = linregress(t_fit, msd_fit)
+        res = linregress(t_valid, msd_valid)
         slope = res.slope
         d_coeff = float(slope / (2.0 * dimension))
 
