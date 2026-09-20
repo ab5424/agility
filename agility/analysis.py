@@ -1799,6 +1799,27 @@ class GBStructureTimeseries(GBStructure):
         species_mask = np.asarray(frame_data.particles["Particle Type"]) == type_id
         return set(np.asarray(all_ids)[species_mask].tolist())
 
+    def _get_particle_identifiers(self, frame_data: DataCollection) -> np.ndarray:
+        """Retrieve persistent Particle Identifier array from frame data.
+
+        Args:
+            frame_data: DataCollection for the frame.
+
+        Returns:
+            1D array of particle identifiers.
+
+        Raises:
+            ValueError: If 'Particle Identifier' is not present in frame_data.particles.
+        """
+        if "Particle Identifier" not in frame_data.particles:
+            msg = (
+                "Trajectory particles lack the 'Particle Identifier' property required for "
+                "cross-frame tracking. Particles cannot be reliably identified across frames "
+                "without persistent identifiers."
+            )
+            raise ValueError(msg)
+        return np.asarray(frame_data.particles["Particle Identifier"])
+
     def _filter_region(
         self,
         frame_idx: int,
@@ -1831,8 +1852,8 @@ class GBStructureTimeseries(GBStructure):
                 raise ValueError(msg)
 
             frame_gbs = self.get_frame(frame_idx)
-            has_pid = "Particle Identifier" in frame_data.particles
-            ret_type = "Identifier" if has_pid else "Indices"
+            self._get_particle_identifiers(frame_data)
+            ret_type = "Identifier"
 
             if "Structure Type" not in frame_data.particles:
                 warnings.warn(
@@ -1869,9 +1890,7 @@ class GBStructureTimeseries(GBStructure):
     ) -> set[int]:
         """Get set of particle IDs in a specific frame matching species and region criteria."""
         frame_data = self.pipeline.compute(frame=frame_idx)
-        has_pid = "Particle Identifier" in frame_data.particles
-        p_count = getattr(frame_data.particles, "count", len(frame_data.particles))
-        all_ids = frame_data.particles["Particle Identifier"] if has_pid else np.arange(p_count)
+        all_ids = self._get_particle_identifiers(frame_data)
         species_ids = self._filter_species(frame_data, species, all_ids)
         region_ids = self._filter_region(
             frame_idx,
@@ -2051,11 +2070,7 @@ class GBStructureTimeseries(GBStructure):
             return np.empty((0, 3), dtype=float)
 
         frame_data = self.pipeline.compute(frame=frame_idx)
-        has_pid = "Particle Identifier" in frame_data.particles
-        p_count = getattr(frame_data.particles, "count", len(frame_data.particles))
-        all_ids = np.asarray(
-            frame_data.particles["Particle Identifier"] if has_pid else np.arange(p_count),
-        )
+        all_ids = self._get_particle_identifiers(frame_data)
         disp = np.asarray(frame_data.particles["Displacement"])
 
         mask = np.isin(all_ids, selected_ids)
@@ -2125,7 +2140,8 @@ class GBStructureTimeseries(GBStructure):
         Raises:
             NotImplementedError: If the backend is not 'ovito'.
             ValueError: If no particles match the selection criteria, if handle_missing is
-                invalid, or if handle_missing='error' and cohort particles are missing in any frame.
+                invalid, if cohort particles are missing with handle_missing='error',
+                or if trajectory particles lack the 'Particle Identifier' property.
         """
         if self.backend != "ovito":
             raise not_implemented(self.backend)
@@ -2154,11 +2170,7 @@ class GBStructureTimeseries(GBStructure):
         msd = np.zeros(self.num_frames, dtype=float)
         for f in range(self.num_frames):
             frame_data = self.pipeline.compute(frame=f)
-            has_pid = "Particle Identifier" in frame_data.particles
-            p_count = getattr(frame_data.particles, "count", len(frame_data.particles))
-            all_ids = np.asarray(
-                frame_data.particles["Particle Identifier"] if has_pid else np.arange(p_count),
-            )
+            all_ids = self._get_particle_identifiers(frame_data)
             mask = np.isin(all_ids, selected_ids)
             n_present = int(np.sum(mask))
 

@@ -2300,3 +2300,49 @@ class TestGBStructureTimeseriesArgumentValidation(TestCase):
             pytest.raises(ValueError, match="At least 2 valid frames required"),
         ):
             ts.get_diffusion_coefficient(handle_missing="nan")
+
+    def test_missing_particle_identifier_raises_in_get_displacements(self) -> None:
+        """get_displacements must reject trajectories lacking 'Particle Identifier'."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "ovito"
+        mock_pipeline = MagicMock()
+        mock_data = MagicMock()
+        mock_data.particles = {"Displacement": np.array([[1.0, 0.0, 0.0]])}
+        mock_pipeline.compute.return_value = mock_data
+        ts.pipeline = mock_pipeline
+        with (
+            patch.object(ts, "calculate_displacements"),
+            patch.object(ts, "_get_selected_particle_ids", return_value=[0]),
+            pytest.raises(ValueError, match="lack the 'Particle Identifier' property"),
+        ):
+            ts.get_displacements(0)
+
+    def test_missing_particle_identifier_raises_in_get_msd(self) -> None:
+        """get_msd must reject trajectories lacking 'Particle Identifier'."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "ovito"
+        mock_pipeline = MagicMock()
+        mock_pipeline.source.num_frames = 1
+        mock_data = MagicMock()
+        mock_data.particles = {"Displacement": np.array([[0.0, 0.0, 0.0]])}
+        mock_pipeline.compute.return_value = mock_data
+        ts.pipeline = mock_pipeline
+        with (
+            patch.object(ts, "calculate_displacements"),
+            patch.object(ts, "_get_selected_particle_ids", return_value=[0]),
+            pytest.raises(ValueError, match="lack the 'Particle Identifier' property"),
+        ):
+            ts.get_msd()
+
+    def test_missing_particle_identifier_raises_in_get_region_residence(self) -> None:
+        """get_region_residence must reject trajectories lacking 'Particle Identifier'."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "ovito"
+        mock_pipeline = MagicMock()
+        mock_pipeline.source.num_frames = 1
+        mock_data = MagicMock()
+        mock_data.particles = {}
+        mock_pipeline.compute.return_value = mock_data
+        ts.pipeline = mock_pipeline
+        with pytest.raises(ValueError, match="lack the 'Particle Identifier' property"):
+            ts.get_region_residence()
