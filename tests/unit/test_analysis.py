@@ -16,9 +16,11 @@ from agility.analysis import (
     GBStructure,
     GBStructureTimeseries,
     check_lammps_world_size,
+    diffusion_regions,
     get_finder,
     invalid_return_type,
     not_implemented,
+    selection_modes,
 )
 
 PYTHON_VERSION = sys.version_info
@@ -1916,3 +1918,178 @@ class TestGBStructureTimeseriesReadFile(TestCase):
         with patch.object(GBStructure, "read_file") as mock_super_read:
             ts.read_file("traj.dump")
             mock_super_read.assert_called_once_with("traj.dump")
+
+
+# ---------------------------------------------------------------------------
+# GBStructureTimeseries diffusion methods (unit tests)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+class TestGBStructureTimeseriesDiffusionNotImplemented(TestCase):
+    """Test that diffusion methods raise NotImplementedError on unsupported backends."""
+
+    def setUp(self) -> None:
+        """Set up test instance with unsupported backend."""
+        self.ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        self.ts.backend = "ase"
+        self.ts.data = None
+        self.ts.timestamps = None
+        self.ts.dt = None
+
+    def test_calculate_displacements_raises(self) -> None:
+        """calculate_displacements must raise NotImplementedError for non-ovito."""
+        with pytest.raises(NotImplementedError):
+            self.ts.calculate_displacements()
+
+    def test_get_time_array_raises(self) -> None:
+        """get_time_array must raise NotImplementedError for non-ovito."""
+        with pytest.raises(NotImplementedError):
+            self.ts.get_time_array()
+
+    def test_get_displacements_raises(self) -> None:
+        """get_displacements must raise NotImplementedError for non-ovito."""
+        with pytest.raises(NotImplementedError):
+            self.ts.get_displacements(0)
+
+    def test_get_msd_raises(self) -> None:
+        """get_msd must raise NotImplementedError for non-ovito."""
+        with pytest.raises(NotImplementedError):
+            self.ts.get_msd()
+
+    def test_get_diffusion_coefficient_raises(self) -> None:
+        """get_diffusion_coefficient must raise NotImplementedError for non-ovito."""
+        with pytest.raises(NotImplementedError):
+            self.ts.get_diffusion_coefficient()
+
+    def test_get_region_residence_raises(self) -> None:
+        """get_region_residence must raise NotImplementedError for non-ovito."""
+        with pytest.raises(NotImplementedError):
+            self.ts.get_region_residence()
+
+
+@pytest.mark.unit
+class TestGBStructureTimeseriesGetTimeArray(TestCase):
+    """Unit tests for get_time_array logic."""
+
+    def test_missing_timestep_and_dt_raises_value_error(self) -> None:
+        """ValueError must be raised when neither trajectory timesteps nor dt is provided."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "ovito"
+        ts.timestamps = None
+        ts.dt = None
+        mock_pipeline = MagicMock()
+        mock_pipeline.source.num_frames = 2
+        d0 = MagicMock()
+        d0.attributes = {}
+        mock_pipeline.compute.return_value = d0
+        ts.pipeline = mock_pipeline
+
+        with pytest.raises(ValueError, match="No timestep information"):
+            ts.get_time_array()
+
+    def test_provided_dt_used_when_no_trajectory_timesteps(self) -> None:
+        """User-provided dt parameter must be used to construct time array."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "ovito"
+        ts.timestamps = None
+        ts.dt = None
+        mock_pipeline = MagicMock()
+        mock_pipeline.source.num_frames = 3
+        d0 = MagicMock()
+        d0.attributes = {}
+        mock_pipeline.compute.return_value = d0
+        ts.pipeline = mock_pipeline
+
+        times = ts.get_time_array(dt=2.5)
+        np.testing.assert_allclose(times, [0.0, 2.5, 5.0])
+
+    def test_provided_dt_overwrites_trajectory_timesteps_with_warning(self) -> None:
+        """User-provided dt parameter must overwrite trajectory timesteps with a warning."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "ovito"
+        ts.timestamps = [0, 100, 200]
+        ts.dt = None
+        mock_pipeline = MagicMock()
+        mock_pipeline.source.num_frames = 3
+        ts.pipeline = mock_pipeline
+
+        with pytest.warns(UserWarning, match="overwrites the timestep property"):
+            times = ts.get_time_array(dt=1.0)
+        np.testing.assert_allclose(times, [0.0, 1.0, 2.0])
+
+    def test_trajectory_timestamps_used_when_no_dt_provided(self) -> None:
+        """Trajectory timestamps must be used when no dt is provided."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "ovito"
+        ts.timestamps = [100, 250, 400]
+        ts.dt = None
+        mock_pipeline = MagicMock()
+        mock_pipeline.source.num_frames = 3
+        ts.pipeline = mock_pipeline
+
+        times = ts.get_time_array()
+        np.testing.assert_allclose(times, [0.0, 150.0, 300.0])
+
+
+@pytest.mark.unit
+class TestGBStructureTimeseriesArgumentValidation(TestCase):
+    """Unit tests for diffusion argument validation and selection modes."""
+
+    def test_literal_types_exported(self) -> None:
+        """Verify diffusion Literal types are defined and importable."""
+        assert diffusion_regions is not None
+        assert selection_modes is not None
+
+    def test_invalid_selection_mode_raises_value_error(self) -> None:
+        """Invalid selection_mode must raise ValueError in match-case routing."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "ovito"
+        with (
+            patch.object(ts, "calculate_displacements"),
+            pytest.raises(ValueError, match="Invalid selection_mode"),
+        ):
+            ts.get_displacements(0, selection_mode="bogus")  # type: ignore[arg-type]
+
+    def test_invalid_region_type_raises_type_error(self) -> None:
+        """Non-string and non-sequence region must raise TypeError."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "ovito"
+        mock_pipeline = MagicMock()
+        mock_data = MagicMock()
+        mock_data.particles = {"Particle Identifier": np.array([1, 2, 3])}
+        mock_pipeline.compute.return_value = mock_data
+        ts.pipeline = mock_pipeline
+        with (
+            patch.object(ts, "calculate_displacements"),
+            pytest.raises(TypeError, match="Unsupported type for region"),
+        ):
+            ts.get_displacements(0, region=12345)  # type: ignore[arg-type]
+
+    def test_invalid_region_string_raises_value_error(self) -> None:
+        """Unrecognized region string must raise ValueError in match-case routing."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "ovito"
+        mock_pipeline = MagicMock()
+        mock_data = MagicMock()
+        mock_data.particles = {"Particle Identifier": np.array([1, 2, 3])}
+        mock_pipeline.compute.return_value = mock_data
+        ts.pipeline = mock_pipeline
+        with (
+            patch.object(ts, "calculate_displacements"),
+            pytest.raises(ValueError, match="Unknown region"),
+        ):
+            ts.get_displacements(0, region="unknown_zone")  # type: ignore[arg-type]
+
+    def test_fit_frames_less_than_two_raises_value_error(self) -> None:
+        """Requesting a fit slice with fewer than 2 frames must raise ValueError."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "ovito"
+        ts.pipeline = MagicMock()
+        ts.pipeline.source.num_frames = 1
+        with (
+            patch.object(ts, "get_time_array", return_value=np.array([0.0])),
+            patch.object(ts, "get_msd", return_value=np.array([0.0])),
+            pytest.raises(ValueError, match="At least 2 frames required"),
+        ):
+            ts.get_diffusion_coefficient(fit_frames=(0, 1))
