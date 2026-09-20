@@ -21,8 +21,22 @@ from agility.minimiser import minimise_lmp
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    from ovito.data import DataCollection
+
 available_backends = Literal["ovito", "pymatgen", "babel", "pyiron", "ase", "lammps"]
 # https://github.com/pyiron/pylammpsmpi
+
+diffusion_regions = Literal[
+    "all",
+    "bulk",
+    "crystalline",
+    "gb",
+    "grain_boundary",
+    "non_crystalline",
+    "grain_edge",
+    "edge",
+]
+selection_modes = Literal["initial", "continuous"]
 
 
 class GBStructure:
@@ -1494,6 +1508,7 @@ class GBStructureTimeseries(GBStructure):
         backend: available_backends,
         filename: str | pathlib.Path,
         timestamps: list[int | float] | None = None,
+        dt: float | None = None,
         **kwargs,
     ) -> None:
         """Initialize.
@@ -1503,10 +1518,13 @@ class GBStructureTimeseries(GBStructure):
             filename: Trajectory file to read.
             timestamps: Timestamps corresponding to each frame.  When
                 ``None`` frames are identified by their zero-based index.
+            dt: Time difference between consecutive frames in simulation time units
+                (e.g. picoseconds [ps] or seconds [s]).
             **kwargs: Additional keyword arguments forwarded to
                 :meth:`GBStructure.read_file`.
         """
         self.timestamps: list[int | float] | None = timestamps
+        self.dt: float | None = dt
         super().__init__(backend, filename, **kwargs)
         if self.timestamps is not None:
             try:
@@ -1635,6 +1653,545 @@ class GBStructureTimeseries(GBStructure):
                 self.timestamps = self.timestamps[timesteps_to_exclude:]
         else:
             raise not_implemented(self.backend)
+
+    def get_time_array(self, dt: float | None = None) -> np.ndarray:
+        """Resolve and return an array of timestamps corresponding to each frame.
+
+        The timestep property is read from the trajectory if present (such as
+        from the ``Timestep`` or ``Time`` global attributes in OVITO, or from
+        :attr:`timestamps`). A user-provided ``dt`` parameter is also considered.
+        If both a trajectory property and ``dt`` are present, ``dt`` is used
+        (overwriting the trajectory property) and a warning is issued.
+        If neither is available, a ``ValueError`` is raised.
+
+        Args:
+            dt: Time difference between consecutive frames in simulation time units
+                (e.g. picoseconds [ps] or seconds [s]). If provided, it takes
+                precedence over trajectory timestep properties.
+
+        Returns:
+            A 1D numpy array of timestamps (floats) of length :attr:`num_frames`,
+            relative to the first frame (i.e. starting at 0.0), with units of time
+            matching ``dt`` (or trajectory time units, e.g. ps or MD steps).
+
+        Raises:
+            ValueError: If neither trajectory timestep information nor a ``dt``
+                parameter is available.
+            NotImplementedError: If the current backend does not support this
+                functionality.
+        """
+        if self.backend != "ovito":
+            raise not_implemented(self.backend)
+
+        provided_dt = dt if dt is not None else getattr(self, "dt", None)
+
+        traj_times: np.ndarray | None = None
+        if self.timestamps is not None and len(self.timestamps) > 1:
+            traj_times = np.asarray(self.timestamps, dtype=float)
+        elif self.num_frames > 0:
+            d0 = self.pipeline.compute(0)
+            if "Time" in d0.attributes:
+                traj_times = np.array(
+                    [
+                        float(self.pipeline.compute(f).attributes["Time"])
+                        for f in range(self.num_frames)
+                    ],
+                    dtype=float,
+                )
+            elif "Timestep" in d0.attributes:
+                traj_times = np.array(
+                    [
+                        float(self.pipeline.compute(f).attributes["Timestep"])
+                        for f in range(self.num_frames)
+                    ],
+                    dtype=float,
+                )
+
+        if provided_dt is not None:
+            if traj_times is not None:
+                warnings.warn(
+                    "The dt parameter was provided and overwrites the timestep property "
+                    "read from the trajectory.",
+                    UserWarning,
+                    stacklevel=2,
+                )
+            return np.arange(self.num_frames, dtype=float) * float(provided_dt)
+
+        if traj_times is not None:
+            return traj_times - traj_times[0]
+
+        msg = "No timestep information found in the trajectory and no dt parameter was provided."
+        raise ValueError(msg)
+
+    def calculate_displacements(
+        self,
+        reference_frame: int = 0,
+        minimum_image_convention: bool = True,
+        **kwargs,
+    ) -> None:
+        """Calculate particle displacements relative to a reference frame.
+
+        Args:
+            reference_frame: Zero-based animation frame to use as reference.
+            minimum_image_convention: If True, apply minimum image convention
+                when calculating displacements across periodic boundaries.
+            **kwargs: Additional keyword arguments forwarded to
+                :class:`ovito.modifiers.CalculateDisplacementsModifier`.
+
+        Raises:
+            NotImplementedError: If the backend is not 'ovito'.
+        """
+        if self.backend == "ovito":
+            from ovito.modifiers import CalculateDisplacementsModifier  # noqa: PLC0415
+
+            for mod in self.pipeline.modifiers:
+                if isinstance(mod, CalculateDisplacementsModifier):
+                    mod.reference_frame = reference_frame
+                    mod.minimum_image_convention = minimum_image_convention
+                    for k, v in kwargs.items():
+                        setattr(mod, k, v)
+                    return
+            self.pipeline.modifiers.append(
+                CalculateDisplacementsModifier(
+                    reference_frame=reference_frame,
+                    minimum_image_convention=minimum_image_convention,
+                    **kwargs,
+                ),
+            )
+        else:
+            raise not_implemented(self.backend)
+
+    def _filter_species(
+        self,
+        frame_data: DataCollection,
+        species: str | int | None,
+        all_ids: np.ndarray,
+    ) -> set[int]:
+        """Filter particle IDs by chemical species or type."""
+        if species is None:
+            return set(np.asarray(all_ids).tolist())
+
+        if "Particle Type" not in frame_data.particles:
+            msg = (
+                f"Cannot filter by species '{species}': 'Particle Type' "
+                "property not found in trajectory particles."
+            )
+            raise ValueError(msg)
+
+        ptypes_prop = frame_data.particles.particle_types
+        type_id: int | None = None
+        if isinstance(species, str):
+            if ptypes_prop is not None and hasattr(ptypes_prop, "types"):
+                for t in ptypes_prop.types:
+                    if t.name == species or str(t.id) == species:
+                        type_id = t.id
+                        break
+            if type_id is None:
+                with contextlib.suppress(ValueError):
+                    type_id = int(species)
+        else:
+            type_id = int(species)
+
+        if type_id is None:
+            return set()
+
+        species_mask = np.asarray(frame_data.particles["Particle Type"]) == type_id
+        return set(np.asarray(all_ids)[species_mask].tolist())
+
+    def _filter_region(
+        self,
+        frame_idx: int,
+        frame_data: DataCollection,
+        region: diffusion_regions | Sequence[int] | None,
+        exclude_edge: bool = False,
+        **kwargs,
+    ) -> set[int] | None:
+        """Get set of particle IDs in region, or None if no region filtering."""
+        if region == "all" or region is None:
+            return None
+        if isinstance(region, (list, set, tuple, np.ndarray)):
+            return set(region)
+        if isinstance(region, str):
+            reg_lower = region.lower()
+            if reg_lower not in (
+                "bulk",
+                "crystalline",
+                "gb",
+                "grain_boundary",
+                "non_crystalline",
+                "grain_edge",
+                "edge",
+            ):
+                msg = (
+                    f"Unknown region '{region}'. Supported regions: 'all', "
+                    "'bulk', 'crystalline', 'grain_boundary', 'gb', 'non_crystalline', "
+                    "'grain_edge', 'edge', or a sequence of IDs."
+                )
+                raise ValueError(msg)
+
+            frame_gbs = self.get_frame(frame_idx)
+            has_pid = "Particle Identifier" in frame_data.particles
+            ret_type = "Identifier" if has_pid else "Indices"
+
+            if "Structure Type" not in frame_data.particles:
+                warnings.warn(
+                    "No structure type information found. Automatically applying "
+                    "Common Neighbor Analysis (CNA).",
+                    UserWarning,
+                    stacklevel=2,
+                )
+                self.perform_cna(compute=False)
+                frame_gbs = self.get_frame(frame_idx)
+
+            match reg_lower:
+                case "bulk" | "crystalline":
+                    cryst = set(frame_gbs.get_crystalline_atoms(return_type=ret_type))
+                    if exclude_edge:
+                        edge = set(frame_gbs.get_grain_edge_ions(return_type=ret_type, **kwargs))
+                        return cryst - edge
+                    return cryst
+                case "gb" | "grain_boundary" | "non_crystalline":
+                    return set(frame_gbs.get_non_crystalline_atoms(return_type=ret_type))
+                case "grain_edge" | "edge":
+                    return set(frame_gbs.get_grain_edge_ions(return_type=ret_type, **kwargs))
+
+        msg = f"Unsupported type for region: {type(region)}"
+        raise TypeError(msg)
+
+    def _get_particle_ids_for_frame(
+        self,
+        frame_idx: int,
+        species: str | int | None = None,
+        region: diffusion_regions | Sequence[int] | None = "all",
+        exclude_edge: bool = False,
+        **kwargs,
+    ) -> set[int]:
+        """Get set of particle IDs in a specific frame matching species and region criteria."""
+        frame_data = self.pipeline.compute(frame=frame_idx)
+        has_pid = "Particle Identifier" in frame_data.particles
+        p_count = getattr(frame_data.particles, "count", len(frame_data.particles))
+        all_ids = frame_data.particles["Particle Identifier"] if has_pid else np.arange(p_count)
+        species_ids = self._filter_species(frame_data, species, all_ids)
+        region_ids = self._filter_region(
+            frame_idx,
+            frame_data,
+            region,
+            exclude_edge=exclude_edge,
+            **kwargs,
+        )
+        return species_ids if region_ids is None else species_ids.intersection(region_ids)
+
+    def _get_selected_particle_ids(
+        self,
+        species: str | int | None = None,
+        region: diffusion_regions | Sequence[int] | None = "all",
+        selection_mode: selection_modes = "initial",
+        reference_frame: int = 0,
+        exclude_edge: bool = False,
+        **kwargs,
+    ) -> list[int]:
+        """Determine selected particle IDs based on species, region, and selection mode."""
+        match selection_mode:
+            case "initial":
+                selected = self._get_particle_ids_for_frame(
+                    reference_frame,
+                    species=species,
+                    region=region,
+                    exclude_edge=exclude_edge,
+                    **kwargs,
+                )
+            case "continuous":
+                selected_set: set[int] | None = None
+                for f in range(self.num_frames):
+                    f_ids = self._get_particle_ids_for_frame(
+                        f,
+                        species=species,
+                        region=region,
+                        exclude_edge=exclude_edge,
+                        **kwargs,
+                    )
+                    selected_set = (
+                        f_ids if selected_set is None else selected_set.intersection(f_ids)
+                    )
+                    if not selected_set:
+                        break
+                if not selected_set:
+                    msg = (
+                        f"No particles remained continuously in region '{region}' "
+                        f"(species={species}) across all {self.num_frames} frames."
+                    )
+                    raise ValueError(msg)
+                selected = selected_set
+            case _:
+                msg = (
+                    f"Invalid selection_mode '{selection_mode}'. "
+                    "Valid options are 'initial' or 'continuous'."
+                )
+                raise ValueError(msg)
+        return sorted(selected)
+
+    def get_region_residence(
+        self,
+        region: diffusion_regions | Sequence[int] | None = "gb",
+        species: str | int | None = None,
+        reference_frame: int = 0,
+        exclude_edge: bool = False,
+        **kwargs,
+    ) -> dict[str, Any]:
+        """Compute the fraction of particles remaining in a region over time.
+
+        Analyzes the particles that were present in *region* at *reference_frame*
+        and tracks how many of them remain in *region* at each subsequent frame.
+
+        Args:
+            region: Region to analyze ('bulk', 'gb', 'grain_edge', etc., or a list of IDs).
+            species: Optional species filter.
+            reference_frame: Reference frame for initial residence (default 0).
+            exclude_edge: If True and region is 'bulk', exclude grain edge particles.
+            **kwargs: Additional kwargs passed to region calculation.
+
+        Returns:
+            A dict containing:
+                - ``initial_ids``: List of particle IDs in the region at *reference_frame*.
+                - ``counts``: 1D array of particle counts in the region over time.
+                - ``fraction_remaining``: 1D array of fraction of initial particles remaining.
+
+        Raises:
+            NotImplementedError: If the backend is not 'ovito'.
+        """
+        if self.backend != "ovito":
+            raise not_implemented(self.backend)
+
+        initial_set = self._get_particle_ids_for_frame(
+            reference_frame,
+            species=species,
+            region=region,
+            exclude_edge=exclude_edge,
+            **kwargs,
+        )
+        n_initial = len(initial_set)
+        counts = np.zeros(self.num_frames, dtype=int)
+        fractions = np.zeros(self.num_frames, dtype=float)
+
+        for f in range(self.num_frames):
+            f_set = self._get_particle_ids_for_frame(
+                f,
+                species=species,
+                region=region,
+                exclude_edge=exclude_edge,
+                **kwargs,
+            )
+            intersect_count = len(initial_set.intersection(f_set))
+            counts[f] = intersect_count
+            fractions[f] = (intersect_count / n_initial) if n_initial > 0 else 0.0
+
+        return {
+            "initial_ids": sorted(initial_set),
+            "counts": counts,
+            "fraction_remaining": fractions,
+        }
+
+    def get_displacements(
+        self,
+        frame_idx: int,
+        species: str | int | None = None,
+        region: diffusion_regions | Sequence[int] | None = "all",
+        selection_mode: selection_modes = "initial",
+        reference_frame: int = 0,
+        exclude_edge: bool = False,
+        **kwargs,
+    ) -> np.ndarray:
+        """Get displacement vectors of selected particles at a given frame.
+
+        Args:
+            frame_idx: Zero-based frame index to retrieve displacements for.
+            species: Optional particle species/type filter.
+            region: Region filter ('all', 'bulk', 'gb', 'grain_edge', etc., or a list of IDs).
+            selection_mode: 'initial' (classified at reference frame) or 'continuous'.
+            reference_frame: Reference frame index (default 0).
+            exclude_edge: If True, exclude grain edge particles from bulk.
+            **kwargs: Additional keyword arguments.
+
+        Returns:
+            A numpy array of shape (N_selected, 3) containing displacement vectors
+            in simulation length units (typically Ångströms [Å]).
+
+        Raises:
+            NotImplementedError: If the backend is not 'ovito'.
+        """
+        if self.backend != "ovito":
+            raise not_implemented(self.backend)
+
+        self.calculate_displacements(reference_frame=reference_frame)
+        selected_ids = self._get_selected_particle_ids(
+            species=species,
+            region=region,
+            selection_mode=selection_mode,
+            reference_frame=reference_frame,
+            exclude_edge=exclude_edge,
+            **kwargs,
+        )
+        if not selected_ids:
+            return np.empty((0, 3), dtype=float)
+
+        frame_data = self.pipeline.compute(frame=frame_idx)
+        has_pid = "Particle Identifier" in frame_data.particles
+        p_count = getattr(frame_data.particles, "count", len(frame_data.particles))
+        all_ids = np.asarray(
+            frame_data.particles["Particle Identifier"] if has_pid else np.arange(p_count),
+        )
+        disp = np.asarray(frame_data.particles["Displacement"])
+
+        mask = np.isin(all_ids, selected_ids)
+        return disp[mask]
+
+    def get_msd(
+        self,
+        species: str | int | None = None,
+        region: diffusion_regions | Sequence[int] | None = "all",
+        selection_mode: selection_modes = "initial",
+        reference_frame: int = 0,
+        exclude_edge: bool = False,
+        **kwargs,
+    ) -> np.ndarray:
+        """Compute the Mean Squared Displacement (MSD) for each frame.
+
+        Args:
+            species: Optional particle species/type filter.
+            region: Region filter ('all', 'bulk', 'gb', 'grain_edge', etc., or a list of IDs).
+            selection_mode: 'initial' or 'continuous'.
+            reference_frame: Reference frame index (default 0).
+            exclude_edge: If True, exclude grain edge particles from bulk.
+            **kwargs: Additional keyword arguments.
+
+        Returns:
+            A 1D numpy array of length :attr:`num_frames` containing the Mean Squared
+            Displacement (MSD) at each frame in squared simulation length units
+            (typically Ångströms squared [Å²]).
+
+        Raises:
+            NotImplementedError: If the backend is not 'ovito'.
+            ValueError: If no particles match the selection criteria.
+        """
+        if self.backend != "ovito":
+            raise not_implemented(self.backend)
+
+        self.calculate_displacements(reference_frame=reference_frame)
+        selected_ids = self._get_selected_particle_ids(
+            species=species,
+            region=region,
+            selection_mode=selection_mode,
+            reference_frame=reference_frame,
+            exclude_edge=exclude_edge,
+            **kwargs,
+        )
+        if not selected_ids:
+            msg = f"No particles found matching criteria (species={species}, region={region})."
+            raise ValueError(msg)
+
+        msd = np.zeros(self.num_frames, dtype=float)
+        for f in range(self.num_frames):
+            frame_data = self.pipeline.compute(frame=f)
+            has_pid = "Particle Identifier" in frame_data.particles
+            p_count = getattr(frame_data.particles, "count", len(frame_data.particles))
+            all_ids = np.asarray(
+                frame_data.particles["Particle Identifier"] if has_pid else np.arange(p_count),
+            )
+            mask = np.isin(all_ids, selected_ids)
+            if not np.any(mask):
+                msd[f] = 0.0
+                continue
+            disp = np.asarray(frame_data.particles["Displacement"])[mask]
+            sq_disp = np.sum(disp**2, axis=1)
+            msd[f] = np.mean(sq_disp)
+
+        return msd
+
+    def get_diffusion_coefficient(
+        self,
+        dt: float | None = None,
+        species: str | int | None = None,
+        region: diffusion_regions | Sequence[int] | None = "all",
+        selection_mode: selection_modes = "initial",
+        reference_frame: int = 0,
+        fit_frames: tuple[int, int] | None = None,
+        dimension: int = 3,
+        return_fit: bool = False,
+        exclude_edge: bool = False,
+        **kwargs,
+    ) -> float | tuple[float, dict[str, float]]:
+        """Calculate the diffusion coefficient D from trajectory Mean Squared Displacement.
+
+        Uses the Einstein relation:
+            MSD = 2 * dimension * D * t (+ C)
+
+        Args:
+            dt: Time difference between consecutive frames in simulation time units
+                (typically picoseconds [ps] or seconds [s]). If the trajectory contains
+                timestep or time attributes, dt overwrites them and a warning is issued.
+                If trajectory has no timestep information, dt must be provided.
+            species: Optional particle species/type filter.
+            region: Region filter ('all', 'bulk', 'gb', 'grain_edge', etc., or a list of IDs).
+            selection_mode: 'initial' or 'continuous'.
+            reference_frame: Reference frame index (default 0).
+            fit_frames: Optional tuple (start_frame, end_frame) specifying the slice of
+                frames used for the linear regression. If None, all frames from
+                reference_frame onward are used.
+            dimension: Dimensionality of diffusion (default 3 for 3D).
+            return_fit: If True, returns (D, fit_dict) containing slope, intercept, rvalue, stderr.
+            exclude_edge: If True, exclude grain edge particles from bulk.
+            **kwargs: Additional keyword arguments.
+
+        Returns:
+            The diffusion coefficient D as a float in units of [length]² / [time]
+            (typically Å²/ps or Å²/s, where 1 Å²/ps = 1e-4 cm²/s = 1e-8 m²/s),
+            or a tuple (D, fit_dict) if return_fit is True.
+
+        Raises:
+            NotImplementedError: If the backend is not 'ovito'.
+            ValueError: If fewer than 2 frames are available for fitting.
+        """
+        if self.backend != "ovito":
+            raise not_implemented(self.backend)
+
+        time_array = self.get_time_array(dt=dt)
+        msd = self.get_msd(
+            species=species,
+            region=region,
+            selection_mode=selection_mode,
+            reference_frame=reference_frame,
+            exclude_edge=exclude_edge,
+            **kwargs,
+        )
+
+        if fit_frames is not None:
+            start_idx, end_idx = fit_frames
+        else:
+            start_idx = reference_frame
+            end_idx = self.num_frames
+
+        if end_idx - start_idx < 2:
+            msg = f"At least 2 frames required for linear fit, got {end_idx - start_idx}."
+            raise ValueError(msg)
+
+        t_fit = time_array[start_idx:end_idx]
+        msd_fit = msd[start_idx:end_idx]
+
+        from scipy.stats import linregress  # noqa: PLC0415
+
+        res = linregress(t_fit, msd_fit)
+        slope = res.slope
+        d_coeff = float(slope / (2.0 * dimension))
+
+        if return_fit:
+            fit_dict = {
+                "slope": float(res.slope),
+                "intercept": float(res.intercept),
+                "rvalue": float(res.rvalue),
+                "stderr": float(res.stderr) if res.stderr is not None else 0.0,
+            }
+            return d_coeff, fit_dict
+        return d_coeff
 
     # TODO @ab5424: Differentiate between diffusion along GB, transverse to GB, and between grains
     # https://github.com/ab5424/agility/issues/183
