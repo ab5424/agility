@@ -45,12 +45,13 @@ class GBStructure:
             _get_ipython = getattr(builtins, "get_ipython", None)
             if callable(_get_ipython):
                 shell = _get_ipython().__class__.__name__
-                if shell == "ZMQInteractiveShell":
-                    ipy = True  # Jupyter notebook or qtconsole
-                elif shell == "TerminalInteractiveShell":
-                    ipy = False  # Terminal running IPython
-                else:
-                    ipy = False  # Other type (?)
+                match shell:
+                    case "ZMQInteractiveShell":
+                        ipy = True  # Jupyter notebook or qtconsole
+                    case "TerminalInteractiveShell":
+                        ipy = False  # Terminal running IPython
+                    case _:
+                        ipy = False  # Other type (?)
             else:
                 ipy = False  # Probably standard Python interpreter
 
@@ -76,30 +77,31 @@ class GBStructure:
         Returns:
             None
         """
-        if self.backend == "ovito":
-            from ovito.io import import_file  # noqa: PLC0415
+        match self.backend:
+            case "ovito":
+                from ovito.io import import_file  # noqa: PLC0415
 
-            self.pipeline = import_file(str(filename))
+                self.pipeline = import_file(str(filename))
 
-        elif self.backend == "ase":
-            from ase.io import read  # noqa: PLC0415
+            case "ase":
+                from ase.io import read  # noqa: PLC0415
 
-            self.data = types.SimpleNamespace()
-            self.data.atoms = read(str(filename), **kwargs)
-            self.data.selection = []
+                self.data = types.SimpleNamespace()
+                self.data.atoms = read(str(filename), **kwargs)
+                self.data.selection = []
 
-        elif self.backend == "pymatgen":
-            from pymatgen.core import Structure  # noqa: PLC0415
+            case "pymatgen":
+                from pymatgen.core import Structure  # noqa: PLC0415
 
-            self.data = types.SimpleNamespace()
-            self.data.structure = Structure.from_file(filename)
-            self.data.selection = []
+                self.data = types.SimpleNamespace()
+                self.data.structure = Structure.from_file(filename)
+                self.data.selection = []
 
-        elif self.backend == "lammps":
-            self._init_lmp(filename=filename, **kwargs)
+            case "lammps":
+                self._init_lmp(filename=filename, **kwargs)
 
-        else:
-            raise not_implemented(self.backend)
+            case _:
+                raise not_implemented(self.backend)
 
     def _init_lmp(
         self,
@@ -122,15 +124,16 @@ class GBStructure:
         self.pylmp.pair_style(f"{pair_style}")
         if kspace_style:
             self.pylmp.kspace_style(f"{kspace_style}")
-        if file_type == "data":
-            self.pylmp.read_data(filename)
-        elif file_type == "dump":
-            self.pylmp.read_dump(filename)
-        elif file_type == "restart":
-            self.pylmp.read_restart(filename)
-        else:
-            msg = "Please specify the type of lammps file to read."
-            raise ValueError(msg)
+        match file_type:
+            case "data":
+                self.pylmp.read_data(filename)
+            case "dump":
+                self.pylmp.read_dump(filename)
+            case "restart":
+                self.pylmp.read_restart(filename)
+            case _:
+                msg = "Please specify the type of lammps file to read."
+                raise ValueError(msg)
 
     def save_structure(self, filename: str, file_type: str, **kwargs) -> None:
         """Save structure to disc.
@@ -140,35 +143,37 @@ class GBStructure:
             file_type (str): File type (data, dump, restart)
             **kwargs: Additional arguments for saving the file.
         """
-        if self.backend == "ase":
-            from ase.io import write  # noqa: PLC0415
+        match self.backend:
+            case "ase":
+                from ase.io import write  # noqa: PLC0415
 
-            write(filename, self.data.atoms, format=file_type, **kwargs)
+                write(filename, self.data.atoms, format=file_type, **kwargs)
 
-        elif self.backend == "ovito":
-            from ovito.io import export_file  # noqa: PLC0415
+            case "ovito":
+                from ovito.io import export_file  # noqa: PLC0415
 
-            export_file(self.pipeline, filename, file_type, **kwargs)
+                export_file(self.pipeline, filename, file_type, **kwargs)
 
-        elif self.backend == "lammps":
-            if file_type == "data":
-                self.pylmp.write_data(filename)
-            elif file_type == "dump":
-                self.pylmp.write_dump(filename)
-            elif file_type == "restart":
-                self.pylmp.write_restart(filename)
-            else:
-                msg = (
-                    f"Unrecognised file type '{file_type}' for the lammps backend."
-                    " Expected one of: data, dump, restart."
-                )
-                raise ValueError(msg)
+            case "lammps":
+                match file_type:
+                    case "data":
+                        self.pylmp.write_data(filename)
+                    case "dump":
+                        self.pylmp.write_dump(filename)
+                    case "restart":
+                        self.pylmp.write_restart(filename)
+                    case _:
+                        msg = (
+                            f"Unrecognised file type '{file_type}' for the lammps backend."
+                            " Expected one of: data, dump, restart."
+                        )
+                        raise ValueError(msg)
 
-        elif self.backend == "pymatgen":
-            self.data.structure.to(filename=filename, fmt=file_type, **kwargs)
+            case "pymatgen":
+                self.data.structure.to(filename=filename, fmt=file_type, **kwargs)
 
-        else:
-            raise not_implemented(self.backend)
+            case _:
+                raise not_implemented(self.backend)
 
     def minimise(self, *args, **kwargs) -> None:
         """Minimise structure.
@@ -190,60 +195,61 @@ class GBStructure:
                 - **steps** (*int*, default ``500``): Maximum number of optimisation steps.
                 - Any remaining kwargs are forwarded to the optimizer constructor.
         """
-        if self.backend == "ovito":
-            msg = f"The {self.backend} backend has no minimisation capabilities."
-            raise NotImplementedError(msg)
-        if self.backend == "lammps":
-            self.pylmp = minimise_lmp(self.pylmp, *args, **kwargs)
-        elif self.backend == "pymatgen":
-            relax_output = self.data.structure.relax(*args, **kwargs)
-            self.data.structure = (
-                relax_output[0] if isinstance(relax_output, tuple) else relax_output
-            )
-        elif self.backend == "ase":
-            import inspect  # noqa: PLC0415
+        match self.backend:
+            case "ovito":
+                msg = f"The {self.backend} backend has no minimisation capabilities."
+                raise NotImplementedError(msg)
+            case "lammps":
+                self.pylmp = minimise_lmp(self.pylmp, *args, **kwargs)
+            case "pymatgen":
+                relax_output = self.data.structure.relax(*args, **kwargs)
+                self.data.structure = (
+                    relax_output[0] if isinstance(relax_output, tuple) else relax_output
+                )
+            case "ase":
+                import inspect  # noqa: PLC0415
 
-            import ase.optimize  # noqa: PLC0415
+                import ase.optimize  # noqa: PLC0415
 
-            calculator = kwargs.pop("calculator", None)
-            optimizer = kwargs.pop("optimizer", "FIRE")
-            fmax = kwargs.pop("fmax", 0.1)
-            steps = kwargs.pop("steps", 500)
+                calculator = kwargs.pop("calculator", None)
+                optimizer = kwargs.pop("optimizer", "FIRE")
+                fmax = kwargs.pop("fmax", 0.1)
+                steps = kwargs.pop("steps", 500)
 
-            if calculator is not None:
-                self.data.atoms.calc = calculator
+                if calculator is not None:
+                    self.data.atoms.calc = calculator
 
-            if isinstance(optimizer, str):
-                from ase.optimize.optimize import Optimizer as _AseOptimizer  # noqa: PLC0415
+                if isinstance(optimizer, str):
+                    from ase.optimize.optimize import Optimizer as _AseOptimizer  # noqa: PLC0415
 
-                optimizer_map = {
-                    name: obj
-                    for name, obj in inspect.getmembers(ase.optimize)
-                    if inspect.isclass(obj)
-                    and issubclass(obj, _AseOptimizer)
-                    and obj is not _AseOptimizer
-                }
-                if optimizer not in optimizer_map:
+                    optimizer_map = {
+                        name: obj
+                        for name, obj in inspect.getmembers(ase.optimize)
+                        if inspect.isclass(obj)
+                        and issubclass(obj, _AseOptimizer)
+                        and obj is not _AseOptimizer
+                    }
+                    if optimizer not in optimizer_map:
+                        msg = (
+                            f"Unknown optimizer '{optimizer}'. "
+                            f"Available optimizers: {sorted(optimizer_map)}."
+                        )
+                        raise ValueError(msg)
+                    optimizer_cls = optimizer_map[optimizer]
+                else:
+                    optimizer_cls = optimizer
+
+                if self.data.atoms.calc is None:
                     msg = (
-                        f"Unknown optimizer '{optimizer}'. "
-                        f"Available optimizers: {sorted(optimizer_map)}."
+                        "No ASE calculator is set on the atoms object. "
+                        "Pass a calculator via the 'calculator' keyword argument."
                     )
                     raise ValueError(msg)
-                optimizer_cls = optimizer_map[optimizer]
-            else:
-                optimizer_cls = optimizer
 
-            if self.data.atoms.calc is None:
-                msg = (
-                    "No ASE calculator is set on the atoms object. "
-                    "Pass a calculator via the 'calculator' keyword argument."
-                )
-                raise ValueError(msg)
-
-            opt = optimizer_cls(self.data.atoms, *args, **kwargs)
-            opt.run(fmax=fmax, steps=steps)
-        else:
-            raise not_implemented(self.backend)
+                opt = optimizer_cls(self.data.atoms, *args, **kwargs)
+                opt.run(fmax=fmax, steps=steps)
+            case _:
+                raise not_implemented(self.backend)
 
     def delete_particles(self, particle_type: set) -> None:
         """Delete a specific type of particles from a structure.
@@ -256,29 +262,30 @@ class GBStructure:
             particle_type: Particle type to delete.
 
         """
-        if self.backend == "ovito":
-            from ovito.modifiers import DeleteSelectedModifier  # noqa: PLC0415
+        match self.backend:
+            case "ovito":
+                from ovito.modifiers import DeleteSelectedModifier  # noqa: PLC0415
 
-            self.select_particles_by_type(particle_type)
-            self.pipeline.modifiers.append(DeleteSelectedModifier())
+                self.select_particles_by_type(particle_type)
+                self.pipeline.modifiers.append(DeleteSelectedModifier())
 
-        elif self.backend == "lammps":
-            self.pylmp.group(f"delete type {particle_type}")
-            self.pylmp.delete_atoms("group delete compress no")
+            case "lammps":
+                self.pylmp.group(f"delete type {particle_type}")
+                self.pylmp.delete_atoms("group delete compress no")
 
-        elif self.backend == "pymatgen":
-            self.data.structure.remove_species(particle_type)
-            self.data.selection = []
+            case "pymatgen":
+                self.data.structure.remove_species(particle_type)
+                self.data.selection = []
 
-        elif self.backend == "ase":
-            indices_to_keep = [
-                i for i, atom in enumerate(self.data.atoms) if atom.symbol not in particle_type
-            ]
-            self.data.atoms = self.data.atoms[indices_to_keep]
-            self.data.selection = []
+            case "ase":
+                indices_to_keep = [
+                    i for i, atom in enumerate(self.data.atoms) if atom.symbol not in particle_type
+                ]
+                self.data.atoms = self.data.atoms[indices_to_keep]
+                self.data.selection = []
 
-        elif self.backend == "babel":
-            pass
+            case "babel":
+                pass
 
     #    def assign_particles_types(self, particle_types: list):
     #        """Assign
@@ -346,60 +353,64 @@ class GBStructure:
         Returns:
             None
         """
-        if self.backend == "ovito":
-            try:
-                if np.where(self.data.particles.selection != 0)[0].size > 0:
-                    self._clear_selection()
+        match self.backend:
+            case "ovito":
+                try:
+                    if np.where(self.data.particles.selection != 0)[0].size > 0:
+                        self._clear_selection()
+                        warnings.warn(
+                            "Selection currently not empty. Clearing selection.",
+                            stacklevel=2,
+                        )
+                except AttributeError:
+                    pass
+
+                def modify(frame, data):  # noqa: ANN001,ANN202,ARG001  # pylint: disable=W0613
+                    # Specify the IDs of all atoms that are to remain here
+                    match list_ids_type:
+                        case "Identifier":
+                            ids = data.particles["Particle Identifier"]
+                        case "Indices":
+                            ids = np.arange(data.particles.count)
+                        case _:
+                            raise invalid_return_type(list_ids_type)
+                    l_ids = np.isin(ids, list_ids, assume_unique=True, invert=False)
+                    selection = data.particles_.create_property(  # noqa: F841
+                        "Selection",
+                        data=l_ids,
+                    )
+
+                self.pipeline.modifiers.append(modify)
+
+                if expand_nearest_neighbors or expand_cutoff:
+                    from ovito.plugins.ParticlesPython import (  # noqa: PLC0415
+                        ExpandSelectionModifier,
+                    )
+
+                    if expand_nearest_neighbors:
+                        self.pipeline.modifiers.append(
+                            ExpandSelectionModifier(
+                                mode=ExpandSelectionModifier.ExpansionMode.Nearest,
+                                num_neighbors=expand_nearest_neighbors,
+                                iterations=iterations,
+                            ),
+                        )
+                    else:
+                        self.pipeline.modifiers.append(
+                            ExpandSelectionModifier(
+                                cutoff=expand_cutoff,
+                                mode=ExpandSelectionModifier.ExpansionMode.Cutoff,
+                                iterations=iterations,
+                            ),
+                        )
+
+            case "pymatgen" | "ase":
+                if self.data.selection:
                     warnings.warn(
-                        "Selection currently not empty. Clearing selection.",
+                        "Selection currently not empty. Overwriting selection.",
                         stacklevel=2,
                     )
-            except AttributeError:
-                pass
-
-            def modify(frame, data):  # noqa: ANN001,ANN202,ARG001  # pylint: disable=W0613
-                # Specify the IDs of all atoms that are to remain here
-                if list_ids_type == "Identifier":
-                    ids = data.particles["Particle Identifier"]
-                elif list_ids_type == "Indices":
-                    ids = np.arange(data.particles.count)
-                else:
-                    raise invalid_return_type(list_ids_type)
-                l_ids = np.isin(ids, list_ids, assume_unique=True, invert=False)
-                selection = data.particles_.create_property(  # noqa: F841
-                    "Selection",
-                    data=l_ids,
-                )
-
-            self.pipeline.modifiers.append(modify)
-
-            if expand_nearest_neighbors or expand_cutoff:
-                from ovito.plugins.ParticlesPython import ExpandSelectionModifier  # noqa: PLC0415
-
-                if expand_nearest_neighbors:
-                    self.pipeline.modifiers.append(
-                        ExpandSelectionModifier(
-                            mode=ExpandSelectionModifier.ExpansionMode.Nearest,
-                            num_neighbors=expand_nearest_neighbors,
-                            iterations=iterations,
-                        ),
-                    )
-                else:
-                    self.pipeline.modifiers.append(
-                        ExpandSelectionModifier(
-                            cutoff=expand_cutoff,
-                            mode=ExpandSelectionModifier.ExpansionMode.Cutoff,
-                            iterations=iterations,
-                        ),
-                    )
-
-        elif self.backend in ("pymatgen", "ase"):
-            if self.data.selection:
-                warnings.warn(
-                    "Selection currently not empty. Overwriting selection.",
-                    stacklevel=2,
-                )
-            self.data.selection = list(list_ids)
+                self.data.selection = list(list_ids)
 
         if invert:
             self._invert_selection()  # for bulk ions
@@ -407,41 +418,44 @@ class GBStructure:
             self._delete_selection()
 
     def _invert_selection(self) -> None:
-        if self.backend == "ovito":
-            from ovito.modifiers import InvertSelectionModifier  # noqa: PLC0415
+        match self.backend:
+            case "ovito":
+                from ovito.modifiers import InvertSelectionModifier  # noqa: PLC0415
 
-            self.pipeline.modifiers.append(InvertSelectionModifier())
+                self.pipeline.modifiers.append(InvertSelectionModifier())
 
-        elif self.backend in ("pymatgen", "ase"):
-            structure = self.data.structure if self.backend == "pymatgen" else self.data.atoms
-            all_indices = set(range(len(structure)))
-            selected_set = set(self.data.selection)
-            self.data.selection = sorted(all_indices - selected_set)
+            case "pymatgen" | "ase":
+                structure = self.data.structure if self.backend == "pymatgen" else self.data.atoms
+                all_indices = set(range(len(structure)))
+                selected_set = set(self.data.selection)
+                self.data.selection = sorted(all_indices - selected_set)
 
     def _delete_selection(self) -> None:
-        if self.backend == "ovito":
-            from ovito.modifiers import DeleteSelectedModifier  # noqa: PLC0415
+        match self.backend:
+            case "ovito":
+                from ovito.modifiers import DeleteSelectedModifier  # noqa: PLC0415
 
-            self.pipeline.modifiers.append(DeleteSelectedModifier())
+                self.pipeline.modifiers.append(DeleteSelectedModifier())
 
-        elif self.backend == "pymatgen":
-            self.data.structure.remove_sites(self.data.selection)
-            self.data.selection = []
+            case "pymatgen":
+                self.data.structure.remove_sites(self.data.selection)
+                self.data.selection = []
 
-        elif self.backend == "ase":
-            selected_set = set(self.data.selection)
-            indices_to_keep = [i for i in range(len(self.data.atoms)) if i not in selected_set]
-            self.data.atoms = self.data.atoms[indices_to_keep]
-            self.data.selection = []
+            case "ase":
+                selected_set = set(self.data.selection)
+                indices_to_keep = [i for i in range(len(self.data.atoms)) if i not in selected_set]
+                self.data.atoms = self.data.atoms[indices_to_keep]
+                self.data.selection = []
 
     def _clear_selection(self) -> None:
-        if self.backend == "ovito":
-            from ovito.modifiers import ClearSelectionModifier  # noqa: PLC0415
+        match self.backend:
+            case "ovito":
+                from ovito.modifiers import ClearSelectionModifier  # noqa: PLC0415
 
-            self.pipeline.modifiers.append(ClearSelectionModifier())
+                self.pipeline.modifiers.append(ClearSelectionModifier())
 
-        elif self.backend in ("pymatgen", "ase"):
-            self.data.selection = []
+            case "pymatgen" | "ase":
+                self.data.selection = []
 
     def perform_cna(
         self,
@@ -478,56 +492,59 @@ class GBStructure:
             if i not in ("fcc", "hcp", "bcc", "ico"):
                 msg = f"Enabled structure type {i!r} unknown. Valid types: fcc, hcp, bcc, ico."
                 raise ValueError(msg)
-        if self.backend == "ovito":
-            from ovito.modifiers import CommonNeighborAnalysisModifier  # noqa: PLC0415
+        match self.backend:
+            case "ovito":
+                from ovito.modifiers import CommonNeighborAnalysisModifier  # noqa: PLC0415
 
-            cna_modes = {
-                "IntervalCutoff": CommonNeighborAnalysisModifier.Mode.IntervalCutoff,
-                "AdaptiveCutoff": CommonNeighborAnalysisModifier.Mode.AdaptiveCutoff,
-                "FixedCutoff": CommonNeighborAnalysisModifier.Mode.FixedCutoff,
-                "BondBased": CommonNeighborAnalysisModifier.Mode.BondBased,
-            }
+                cna_modes = {
+                    "IntervalCutoff": CommonNeighborAnalysisModifier.Mode.IntervalCutoff,
+                    "AdaptiveCutoff": CommonNeighborAnalysisModifier.Mode.AdaptiveCutoff,
+                    "FixedCutoff": CommonNeighborAnalysisModifier.Mode.FixedCutoff,
+                    "BondBased": CommonNeighborAnalysisModifier.Mode.BondBased,
+                }
 
-            _cna = CommonNeighborAnalysisModifier(  # type: ignore[call-arg]
-                mode=cna_modes[mode],
-                cutoff=cutoff,
-                color_by_type=color_by_type,
-                only_selected=only_selected,
-            )
-            # Enabled by default: FCC, HCP, BCC; ICO is disabled by default
-            if "fcc" not in enabled:
-                _cna.structures[
-                    CommonNeighborAnalysisModifier.Type.FCC  # type: ignore[attr-defined]
-                ].enabled = False  # type: ignore[misc]
-            if "hcp" not in enabled:
-                _cna.structures[
-                    CommonNeighborAnalysisModifier.Type.HCP  # type: ignore[attr-defined]
-                ].enabled = False  # type: ignore[misc]
-            if "bcc" not in enabled:
-                _cna.structures[
-                    CommonNeighborAnalysisModifier.Type.BCC  # type: ignore[attr-defined]
-                ].enabled = False  # type: ignore[misc]
-            _cna.structures[
-                CommonNeighborAnalysisModifier.Type.ICO  # type: ignore[attr-defined]
-            ].enabled = "ico" in enabled  # type: ignore[misc]
-
-            self.pipeline.modifiers.append(_cna)
-
-        elif self.backend == "lammps":
-            # https://docs.lammps.org/compute_cna_atom.html
-            # Note: lammps cna/atom always computes all structure types; enabled is ignored.
-            _all_cna_types = {"fcc", "hcp", "bcc", "ico"}
-            if set(enabled) != _all_cna_types:
-                warnings.warn(
-                    "The lammps cna/atom compute always evaluates all structure types. "
-                    "The enabled parameter is ignored for the lammps backend.",
-                    stacklevel=2,
+                _cna = CommonNeighborAnalysisModifier(  # type: ignore[call-arg]
+                    mode=cna_modes[mode],
+                    cutoff=cutoff,
+                    color_by_type=color_by_type,
+                    only_selected=only_selected,
                 )
-            n_compute = len([i["style"] for i in self.pylmp.computes if i["style"] == "cna/atom"])
-            self.pylmp.compute(f"cna_{n_compute} all cna/atom {cutoff}")
+                # Enabled by default: FCC, HCP, BCC; ICO is disabled by default
+                if "fcc" not in enabled:
+                    _cna.structures[
+                        CommonNeighborAnalysisModifier.Type.FCC  # type: ignore[attr-defined]
+                    ].enabled = False  # type: ignore[misc]
+                if "hcp" not in enabled:
+                    _cna.structures[
+                        CommonNeighborAnalysisModifier.Type.HCP  # type: ignore[attr-defined]
+                    ].enabled = False  # type: ignore[misc]
+                if "bcc" not in enabled:
+                    _cna.structures[
+                        CommonNeighborAnalysisModifier.Type.BCC  # type: ignore[attr-defined]
+                    ].enabled = False  # type: ignore[misc]
+                _cna.structures[
+                    CommonNeighborAnalysisModifier.Type.ICO  # type: ignore[attr-defined]
+                ].enabled = "ico" in enabled  # type: ignore[misc]
 
-        else:
-            raise not_implemented(self.backend)
+                self.pipeline.modifiers.append(_cna)
+
+            case "lammps":
+                # https://docs.lammps.org/compute_cna_atom.html
+                # Note: lammps cna/atom always computes all structure types; enabled is ignored.
+                _all_cna_types = {"fcc", "hcp", "bcc", "ico"}
+                if set(enabled) != _all_cna_types:
+                    warnings.warn(
+                        "The lammps cna/atom compute always evaluates all structure types. "
+                        "The enabled parameter is ignored for the lammps backend.",
+                        stacklevel=2,
+                    )
+                n_compute = len(
+                    [i["style"] for i in self.pylmp.computes if i["style"] == "cna/atom"],
+                )
+                self.pylmp.compute(f"cna_{n_compute} all cna/atom {cutoff}")
+
+            case _:
+                raise not_implemented(self.backend)
 
         if only_selected:
             warnings.warn(
@@ -585,19 +602,20 @@ class GBStructure:
         Returns:
             None
         """
-        if self.backend == "ovito":
-            from ovito.plugins.ParticlesPython import VoronoiAnalysisModifier  # noqa: PLC0415
+        match self.backend:
+            case "ovito":
+                from ovito.plugins.ParticlesPython import VoronoiAnalysisModifier  # noqa: PLC0415
 
-            voro = VoronoiAnalysisModifier(
-                compute_indices=True,
-                use_radii=False,
-                edge_threshold=0.0,
-            )
-            self.pipeline.modifiers.append(voro)
+                voro = VoronoiAnalysisModifier(
+                    compute_indices=True,
+                    use_radii=False,
+                    edge_threshold=0.0,
+                )
+                self.pipeline.modifiers.append(voro)
 
-        elif self.backend == "lammps":
-            # https://docs.lammps.org/compute_voronoi_atom.html
-            self.pylmp.compute("1 all voronoi/atom")
+            case "lammps":
+                # https://docs.lammps.org/compute_voronoi_atom.html
+                self.pylmp.compute("1 all voronoi/atom")
 
         if compute:
             self.set_analysis()
@@ -647,60 +665,63 @@ class GBStructure:
             if i not in ["fcc", "hcp", "bcc", "ico", "sc", "dcub", "dhex", "graphene"]:
                 msg = f"Enabled structure type {i} unknown"
                 raise ValueError(msg)
-        if self.backend == "ovito":
-            from ovito.modifiers import PolyhedralTemplateMatchingModifier  # noqa: PLC0415
+        match self.backend:
+            case "ovito":
+                from ovito.modifiers import PolyhedralTemplateMatchingModifier  # noqa: PLC0415
 
-            _ptm = PolyhedralTemplateMatchingModifier(  # type: ignore[call-arg]
-                rmsd_cutoff=rmsd_threshold,
-                only_selected=only_selected,
-                **kwargs,
-            )
+                _ptm = PolyhedralTemplateMatchingModifier(  # type: ignore[call-arg]
+                    rmsd_cutoff=rmsd_threshold,
+                    only_selected=only_selected,
+                    **kwargs,
+                )
 
-            # Enabled by default: FCC, HCP, BCC
-            if "fcc" not in enabled:
-                _ptm.structures[
-                    PolyhedralTemplateMatchingModifier.Type.FCC  # type: ignore[attr-defined]
-                ].enabled = False  # type: ignore[misc]
-            if "hcp" not in enabled:
-                _ptm.structures[
-                    PolyhedralTemplateMatchingModifier.Type.HCP  # type: ignore[attr-defined]
-                ].enabled = False  # type: ignore[misc]
-            if "bcc" not in enabled:
-                _ptm.structures[
-                    PolyhedralTemplateMatchingModifier.Type.BCC  # type: ignore[attr-defined]
-                ].enabled = False  # type: ignore[misc]
-            if "ico" in enabled:
-                _ptm.structures[
-                    PolyhedralTemplateMatchingModifier.Type.ICO  # type: ignore[attr-defined]
-                ].enabled = True  # type: ignore[misc]
-            if "sc" in enabled:
-                _ptm.structures[
-                    PolyhedralTemplateMatchingModifier.Type.SC  # type: ignore[attr-defined]
-                ].enabled = True  # type: ignore[misc]
-            if "dcub" in enabled:
-                _ptm.structures[
-                    PolyhedralTemplateMatchingModifier.Type.CUBIC_DIAMOND  # type: ignore[attr-defined]
-                ].enabled = True  # type: ignore[misc]
-            if "dhex" in enabled:
-                _ptm.structures[
-                    PolyhedralTemplateMatchingModifier.Type.HEX_DIAMOND  # type: ignore[attr-defined]
-                ].enabled = True  # type: ignore[misc]
-            if "graphene" in enabled:
-                _ptm.structures[
-                    PolyhedralTemplateMatchingModifier.Type.GRAPHENE  # type: ignore[attr-defined]
-                ].enabled = True  # type: ignore[misc]
+                # Enabled by default: FCC, HCP, BCC
+                if "fcc" not in enabled:
+                    _ptm.structures[
+                        PolyhedralTemplateMatchingModifier.Type.FCC  # type: ignore[attr-defined]
+                    ].enabled = False  # type: ignore[misc]
+                if "hcp" not in enabled:
+                    _ptm.structures[
+                        PolyhedralTemplateMatchingModifier.Type.HCP  # type: ignore[attr-defined]
+                    ].enabled = False  # type: ignore[misc]
+                if "bcc" not in enabled:
+                    _ptm.structures[
+                        PolyhedralTemplateMatchingModifier.Type.BCC  # type: ignore[attr-defined]
+                    ].enabled = False  # type: ignore[misc]
+                if "ico" in enabled:
+                    _ptm.structures[
+                        PolyhedralTemplateMatchingModifier.Type.ICO  # type: ignore[attr-defined]
+                    ].enabled = True  # type: ignore[misc]
+                if "sc" in enabled:
+                    _ptm.structures[
+                        PolyhedralTemplateMatchingModifier.Type.SC  # type: ignore[attr-defined]
+                    ].enabled = True  # type: ignore[misc]
+                if "dcub" in enabled:
+                    _ptm.structures[
+                        PolyhedralTemplateMatchingModifier.Type.CUBIC_DIAMOND  # type: ignore[attr-defined]
+                    ].enabled = True  # type: ignore[misc]
+                if "dhex" in enabled:
+                    _ptm.structures[
+                        PolyhedralTemplateMatchingModifier.Type.HEX_DIAMOND  # type: ignore[attr-defined]
+                    ].enabled = True  # type: ignore[misc]
+                if "graphene" in enabled:
+                    _ptm.structures[
+                        PolyhedralTemplateMatchingModifier.Type.GRAPHENE  # type: ignore[attr-defined]
+                    ].enabled = True  # type: ignore[misc]
 
-            self.pipeline.modifiers.append(_ptm)
+                self.pipeline.modifiers.append(_ptm)
 
-        elif self.backend == "lammps":
-            # https://docs.lammps.org/compute_ptm_atom.html
-            n_compute = len([i["style"] for i in self.pylmp.computes if i["style"] == "ptm/atom"])
-            enabled_structures = " ".join(enabled)
-            self.pylmp.compute(
-                f"ptm_{n_compute} all ptm/atom {enabled_structures} {rmsd_threshold}",
-            )
-        else:
-            raise not_implemented(self.backend)
+            case "lammps":
+                # https://docs.lammps.org/compute_ptm_atom.html
+                n_compute = len(
+                    [i["style"] for i in self.pylmp.computes if i["style"] == "ptm/atom"],
+                )
+                enabled_structures = " ".join(enabled)
+                self.pylmp.compute(
+                    f"ptm_{n_compute} all ptm/atom {enabled_structures} {rmsd_threshold}",
+                )
+            case _:
+                raise not_implemented(self.backend)
 
         if compute:
             self.set_analysis()
@@ -711,23 +732,24 @@ class GBStructure:
         https://doi.org/10.1103/PhysRevB.73.054104
         Returns:
         """
-        if self.backend == "ovito":
-            from ovito.plugins.ParticlesPython import AcklandJonesModifier  # noqa: PLC0415
+        match self.backend:
+            case "ovito":
+                from ovito.plugins.ParticlesPython import AcklandJonesModifier  # noqa: PLC0415
 
-            ajm = AcklandJonesModifier()
-            self.pipeline.modifiers.append(ajm)
+                ajm = AcklandJonesModifier()
+                self.pipeline.modifiers.append(ajm)
 
-            if compute:
-                self.data = self.pipeline.compute()
+                if compute:
+                    self.data = self.pipeline.compute()
 
-        elif self.backend == "lammps":
-            n_compute = len(
-                [i["style"] for i in self.pylmp.computes if i["style"] == "ackland/atom"],
-            )
-            self.pylmp.compute(f"ackland_{n_compute} all ackland/atom")
+            case "lammps":
+                n_compute = len(
+                    [i["style"] for i in self.pylmp.computes if i["style"] == "ackland/atom"],
+                )
+                self.pylmp.compute(f"ackland_{n_compute} all ackland/atom")
 
-        else:
-            pass
+            case _:
+                pass
 
         if compute:
             self.set_analysis()
@@ -738,18 +760,19 @@ class GBStructure:
         Use 12 for fcc and 8 for bcc, respectively
         Returns:
         """
-        if self.backend == "ovito":
-            from ovito.plugins.ParticlesPython import CentroSymmetryModifier  # noqa: PLC0415
+        match self.backend:
+            case "ovito":
+                from ovito.plugins.ParticlesPython import CentroSymmetryModifier  # noqa: PLC0415
 
-            csp = CentroSymmetryModifier()
-            self.pipeline.modifiers.append(csp)
+                csp = CentroSymmetryModifier()
+                self.pipeline.modifiers.append(csp)
 
-        elif self.backend == "lammps":
-            # https://docs.lammps.org/compute_centro_atom.html
-            n_compute = len(
-                [i["style"] for i in self.pylmp.computes if i["style"] == "centro/atom"],
-            )
-            self.pylmp.compute(f"centro_{n_compute} all centro/atom {num_neighbors}")
+            case "lammps":
+                # https://docs.lammps.org/compute_centro_atom.html
+                n_compute = len(
+                    [i["style"] for i in self.pylmp.computes if i["style"] == "centro/atom"],
+                )
+                self.pylmp.compute(f"centro_{n_compute} all centro/atom {num_neighbors}")
 
         if compute:
             self.set_analysis()
@@ -789,15 +812,16 @@ class GBStructure:
         if self.backend == "ovito":
             from ovito.modifiers import GrainSegmentationModifier  # noqa: PLC0415
 
-            if algorithm == "GraphClusteringAuto":
-                gsm_mode = GrainSegmentationModifier.Algorithm.GraphClusteringAuto
-            elif algorithm == "GraphClusteringManual":
-                gsm_mode = GrainSegmentationModifier.Algorithm.GraphClusteringManual
-            elif algorithm == "MinimumSpanningTree":
-                gsm_mode = GrainSegmentationModifier.Algorithm.MinimumSpanningTree
-            else:
-                msg = "Incorrect Grain Segmentation algorithm specified."
-                raise ValueError(msg)
+            match algorithm:
+                case "GraphClusteringAuto":
+                    gsm_mode = GrainSegmentationModifier.Algorithm.GraphClusteringAuto
+                case "GraphClusteringManual":
+                    gsm_mode = GrainSegmentationModifier.Algorithm.GraphClusteringManual
+                case "MinimumSpanningTree":
+                    gsm_mode = GrainSegmentationModifier.Algorithm.MinimumSpanningTree
+                case _:
+                    msg = "Incorrect Grain Segmentation algorithm specified."
+                    raise ValueError(msg)
 
             gsm = GrainSegmentationModifier(*args, algorithm=gsm_mode, **kwargs)
             self.pipeline.modifiers.append(gsm)
@@ -816,15 +840,16 @@ class GBStructure:
         Returns:
             None
         """
-        if self.backend == "ovito":
-            self.data = self.pipeline.compute()
+        match self.backend:
+            case "ovito":
+                self.data = self.pipeline.compute()
 
-        elif self.backend == "lammps":
-            self.pylmp.run(1)
+            case "lammps":
+                self.pylmp.run(1)
 
-        elif self.backend == "pymatgen":
-            msg = "The pymatgen backend does not require setting the analysis."
-            raise NotImplementedError(msg)
+            case "pymatgen":
+                msg = "The pymatgen backend does not require setting the analysis."
+                raise NotImplementedError(msg)
 
     def expand_to_non_selected(
         self,
@@ -991,21 +1016,22 @@ class GBStructure:
         """
         from lammps import LMP_STYLE_ATOM, LMP_TYPE_ARRAY, LMP_TYPE_VECTOR  # noqa: PLC0415
 
-        if mode == "cna":
-            compute_name = "cna_0"
-            non_crystalline_sentinel = 5
-        elif mode == "ptm":
-            compute_name = "ptm_0"
-            non_crystalline_sentinel = 0
-        elif mode == "ackland":
-            compute_name = "ackland_0"
-            non_crystalline_sentinel = 0
-        elif mode in ("voronoi", "centro"):
-            msg = f"Mode {mode} currently not implemented"
-            raise NotImplementedError(msg)
-        else:
-            msg = f"Incorrect mode {mode} specified"
-            raise ValueError(msg)
+        match mode:
+            case "cna":
+                compute_name = "cna_0"
+                non_crystalline_sentinel = 5
+            case "ptm":
+                compute_name = "ptm_0"
+                non_crystalline_sentinel = 0
+            case "ackland":
+                compute_name = "ackland_0"
+                non_crystalline_sentinel = 0
+            case "voronoi" | "centro":
+                msg = f"Mode {mode} currently not implemented"
+                raise NotImplementedError(msg)
+            case _:
+                msg = f"Incorrect mode {mode} specified"
+                raise ValueError(msg)
 
         # https://docs.lammps.org/Classes_atom.html#_CPPv4N9LAMMPS_NS4Atom7extractEPKc
         if mode == "ptm":
@@ -1041,38 +1067,43 @@ class GBStructure:
         Returns:
             List of non-crystalline particles.
         """
-        if self.backend == "ovito":
-            if "Structure Type" in self.data.particles:
-                if return_type == "Identifier":
-                    gb_list = [
-                        i[0]
-                        for i in zip(
-                            self.data.particles["Particle Identifier"],
-                            self.data.particles["Structure Type"],
-                            strict=True,
-                        )
-                        if i[1] == 0
-                    ]
-                elif return_type == "Indices":
-                    gb_list = list(np.where(self.data.particles["Structure Type"] == 0)[0])
+        match self.backend:
+            case "ovito":
+                if "Structure Type" in self.data.particles:
+                    match return_type:
+                        case "Identifier":
+                            gb_list = [
+                                i[0]
+                                for i in zip(
+                                    self.data.particles["Particle Identifier"],
+                                    self.data.particles["Structure Type"],
+                                    strict=True,
+                                )
+                                if i[1] == 0
+                            ]
+                        case "Indices":
+                            gb_list = list(np.where(self.data.particles["Structure Type"] == 0)[0])
+                        case _:
+                            raise invalid_return_type(return_type)
+                elif "Centrosymmetry" in self.data.particles:
+                    msg = "Implementation in progress."
+                    raise NotImplementedError(msg)
                 else:
-                    raise invalid_return_type(return_type)
-            elif "Centrosymmetry" in self.data.particles:
-                msg = "Implementation in progress."
-                raise NotImplementedError(msg)
-            else:
+                    raise not_implemented(self.backend)
+            case "lammps":
+                check_lammps_world_size(self.pylmp, "get_non_crystalline_atoms")
+                ids, types, non_crystalline_value = self._extract_lammps_structure_ids_and_types(
+                    mode,
+                )
+                match return_type:
+                    case "Identifier":
+                        gb_list = ids[types == non_crystalline_value].tolist()
+                    case "Indices":
+                        gb_list = list(np.where(types == non_crystalline_value)[0])
+                    case _:
+                        raise invalid_return_type(return_type)
+            case _:
                 raise not_implemented(self.backend)
-        elif self.backend == "lammps":
-            if return_type not in ("Identifier", "Indices"):
-                raise invalid_return_type(return_type)
-            check_lammps_world_size(self.pylmp, "get_non_crystalline_atoms")
-            ids, types, non_crystalline_value = self._extract_lammps_structure_ids_and_types(mode)
-            if return_type == "Identifier":
-                gb_list = ids[types == non_crystalline_value].tolist()
-            else:
-                gb_list = list(np.where(types == non_crystalline_value)[0])
-        else:
-            raise not_implemented(self.backend)
         return gb_list
 
     # TODO @ab5424: Rename to particles
@@ -1090,41 +1121,44 @@ class GBStructure:
         Returns:
             List of crystalline particles.
         """
-        if self.backend == "ovito":
-            if "Structure Type" in self.data.particles:
-                if return_type == "Identifier":
-                    gb_list = [
-                        i[0]
-                        for i in zip(
-                            self.data.particles["Particle Identifier"],
-                            self.data.particles["Structure Type"],
-                            strict=True,
-                        )
-                        if i[1] != 0
-                    ]
-                elif return_type == "Indices":
-                    gb_list = list(np.where(self.data.particles["Structure Type"] != 0)[0])
+        match self.backend:
+            case "ovito":
+                if "Structure Type" in self.data.particles:
+                    match return_type:
+                        case "Identifier":
+                            gb_list = [
+                                i[0]
+                                for i in zip(
+                                    self.data.particles["Particle Identifier"],
+                                    self.data.particles["Structure Type"],
+                                    strict=True,
+                                )
+                                if i[1] != 0
+                            ]
+                        case "Indices":
+                            gb_list = list(np.where(self.data.particles["Structure Type"] != 0)[0])
+                        case _:
+                            raise invalid_return_type(return_type)
                 else:
-                    raise invalid_return_type(return_type)
-            else:
-                warnings.warn(
-                    "No structure type information found. Returning empty list.",
-                    stacklevel=2,
+                    warnings.warn(
+                        "No structure type information found. Returning empty list.",
+                        stacklevel=2,
+                    )
+                    gb_list = []
+            case "lammps":
+                ids, types, non_crystalline_sentinel = self._extract_lammps_structure_ids_and_types(
+                    mode,
                 )
-                gb_list = []
-        elif self.backend == "lammps":
-            if return_type not in ("Identifier", "Indices"):
-                raise invalid_return_type(return_type)
-            ids, types, non_crystalline_sentinel = self._extract_lammps_structure_ids_and_types(
-                mode,
-            )
 
-            if return_type == "Identifier":
-                gb_list = ids[types != non_crystalline_sentinel].tolist()
-            else:
-                gb_list = list(np.where(types != non_crystalline_sentinel)[0])
-        else:
-            raise not_implemented(self.backend)
+                match return_type:
+                    case "Identifier":
+                        gb_list = ids[types != non_crystalline_sentinel].tolist()
+                    case "Indices":
+                        gb_list = list(np.where(types != non_crystalline_sentinel)[0])
+                    case _:
+                        raise invalid_return_type(return_type)
+            case _:
+                raise not_implemented(self.backend)
         return gb_list
 
     # TODO @ab5424: Rename to particles
@@ -1150,135 +1184,142 @@ class GBStructure:
             return_type (str): Identifier or Indices.
 
         """
-        if self.backend == "ovito":
-            # finder: CutoffNeighborFinder | NearestNeighborFinder
+        match self.backend:
+            case "ovito":
+                # finder: CutoffNeighborFinder | NearestNeighborFinder
 
-            from ovito.data import CutoffNeighborFinder, NearestNeighborFinder  # noqa: PLC0415
+                from ovito.data import CutoffNeighborFinder, NearestNeighborFinder  # noqa: PLC0415
 
-            finder: CutoffNeighborFinder | NearestNeighborFinder
-            if cutoff:
-                finder = CutoffNeighborFinder(cutoff, self.data)
-            else:
-                finder = NearestNeighborFinder(nearest_n, self.data)
-            # ptypes = self.data.particles.particle_types
-
-            gb_edge_ions = []
-            gb_ions_set = gb_ions or self.get_non_crystalline_atoms(return_type="Indices")
-            bulk_ions_list = bulk_ions or self.get_crystalline_atoms(return_type="Indices")
-            gb_ions_set = set(gb_ions_set)
-            for index in bulk_ions_list:
-                # print("Nearest neighbors of particle %i:" % index)
-                # for neigh in finder.find(index):
-                #    print(neigh.index, neigh.distance, neigh.delta)
-                #    # The index can be used to access properties of the current neighbor, e.g.
-                #    type_of_neighbor = ptypes[neigh.index]
-                neighbors = [neigh.index for neigh in finder.find(index)]
-                if any(x in gb_ions_set for x in neighbors):
-                    gb_edge_ions.append(index)
-            if return_type == "Identifier":
-                gb_edge_ions = [self.data.particles["Particle Identifier"][i] for i in gb_edge_ions]
-        elif self.backend == "lammps":
-            from scipy.spatial import KDTree  # noqa: PLC0415
-
-            if return_type not in ("Identifier", "Indices"):
-                raise invalid_return_type(return_type)
-
-            gb_ions_set = (
-                set(gb_ions)
-                if gb_ions is not None
-                else set(self.get_non_crystalline_atoms(return_type="Indices"))
-            )
-            bulk_ions_list = (
-                list(bulk_ions)
-                if bulk_ions is not None
-                else self.get_crystalline_atoms(return_type="Indices")
-            )
-
-            gb_edge_ions = []
-            if gb_ions_set and bulk_ions_list:
-                all_positions = np.asarray(self.pylmp.lmp.numpy.extract_atom("x"))
-                box = self.pylmp.lmp.extract_box()
-                box_lo = np.asarray(box[0], dtype=float)
-                box_hi = np.asarray(box[1], dtype=float)
-                periodicity = tuple(int(v) for v in box[5])
-                box_lengths = box_hi - box_lo
-
-                shifts_per_axis = [
-                    (-box_lengths[i], 0.0, box_lengths[i]) if periodicity[i] else (0.0,)
-                    for i in range(3)
-                ]
-                periodic_shifts = (
-                    np.array(
-                        np.meshgrid(*shifts_per_axis, indexing="ij"),
-                    )
-                    .reshape(3, -1)
-                    .T
-                )
-                n_images = len(periodic_shifts)
-
-                gb_positions = all_positions[sorted(gb_ions_set)]
-                bulk_positions = all_positions[bulk_ions_list]
-
-                if cutoff is not None:
-                    gb_image_positions = (
-                        gb_positions[None, :, :] + periodic_shifts[:, None, :]
-                    ).reshape(
-                        -1,
-                        3,
-                    )
-                    tree = KDTree(gb_image_positions)
-                    pairs = tree.query_ball_point(bulk_positions, cutoff)
-                    gb_edge_indices = [bulk_ions_list[i] for i, nbrs in enumerate(pairs) if nbrs]
+                finder: CutoffNeighborFinder | NearestNeighborFinder
+                if cutoff:
+                    finder = CutoffNeighborFinder(cutoff, self.data)
                 else:
-                    n_atoms = len(all_positions)
-                    all_image_positions = (
-                        all_positions[None, :, :] + periodic_shifts[:, None, :]
-                    ).reshape(
-                        -1,
-                        3,
-                    )
-                    all_image_to_index = np.tile(np.arange(n_atoms), n_images)
-                    all_tree = KDTree(all_image_positions)
-                    gb_edge_indices = []
-                    total_image_atoms = len(all_image_positions)
+                    finder = NearestNeighborFinder(nearest_n, self.data)
+                # ptypes = self.data.particles.particle_types
 
-                    for bulk_index in bulk_ions_list:
-                        k = min(total_image_atoms, nearest_n + n_images)
-                        unique_neighbors: list[int] = []
-                        while True:
-                            _, image_neighbor_indices = all_tree.query(
-                                all_positions[bulk_index],
-                                k=k,
-                            )
-                            image_neighbor_indices = np.atleast_1d(image_neighbor_indices)
-                            unique_neighbors = []
-                            seen = {bulk_index}
-
-                            for image_neighbor_index in image_neighbor_indices:
-                                neighbor_index = int(all_image_to_index[int(image_neighbor_index)])
-                                if neighbor_index in seen:
-                                    continue
-                                seen.add(neighbor_index)
-                                unique_neighbors.append(neighbor_index)
-                                if len(unique_neighbors) == nearest_n:
-                                    break
-
-                            if len(unique_neighbors) >= nearest_n or k == total_image_atoms:
-                                break
-                            k = min(total_image_atoms, k * 2)
-
-                        if any(
-                            neighbor_index in gb_ions_set for neighbor_index in unique_neighbors
-                        ):
-                            gb_edge_indices.append(bulk_index)
-
-                ids = np.ravel(self.pylmp.lmp.numpy.extract_atom("id"))
+                gb_edge_ions = []
+                gb_ions_set = gb_ions or self.get_non_crystalline_atoms(return_type="Indices")
+                bulk_ions_list = bulk_ions or self.get_crystalline_atoms(return_type="Indices")
+                gb_ions_set = set(gb_ions_set)
+                for index in bulk_ions_list:
+                    # print("Nearest neighbors of particle %i:" % index)
+                    # for neigh in finder.find(index):
+                    #    print(neigh.index, neigh.distance, neigh.delta)
+                    #    # The index can be used to access properties of the current neighbor, e.g.
+                    #    type_of_neighbor = ptypes[neigh.index]
+                    neighbors = [neigh.index for neigh in finder.find(index)]
+                    if any(x in gb_ions_set for x in neighbors):
+                        gb_edge_ions.append(index)
                 if return_type == "Identifier":
-                    gb_edge_ions = [int(ids[i]) for i in gb_edge_indices]
-                else:
-                    gb_edge_ions = list(gb_edge_indices)
-        else:
-            raise not_implemented(self.backend)
+                    gb_edge_ions = [
+                        self.data.particles["Particle Identifier"][i] for i in gb_edge_ions
+                    ]
+            case "lammps":
+                from scipy.spatial import KDTree  # noqa: PLC0415
+
+                if return_type not in ("Identifier", "Indices"):
+                    raise invalid_return_type(return_type)
+
+                gb_ions_set = (
+                    set(gb_ions)
+                    if gb_ions is not None
+                    else set(self.get_non_crystalline_atoms(return_type="Indices"))
+                )
+                bulk_ions_list = (
+                    list(bulk_ions)
+                    if bulk_ions is not None
+                    else self.get_crystalline_atoms(return_type="Indices")
+                )
+
+                gb_edge_ions = []
+                if gb_ions_set and bulk_ions_list:
+                    all_positions = np.asarray(self.pylmp.lmp.numpy.extract_atom("x"))
+                    box = self.pylmp.lmp.extract_box()
+                    box_lo = np.asarray(box[0], dtype=float)
+                    box_hi = np.asarray(box[1], dtype=float)
+                    periodicity = tuple(int(v) for v in box[5])
+                    box_lengths = box_hi - box_lo
+
+                    shifts_per_axis = [
+                        (-box_lengths[i], 0.0, box_lengths[i]) if periodicity[i] else (0.0,)
+                        for i in range(3)
+                    ]
+                    periodic_shifts = (
+                        np.array(
+                            np.meshgrid(*shifts_per_axis, indexing="ij"),
+                        )
+                        .reshape(3, -1)
+                        .T
+                    )
+                    n_images = len(periodic_shifts)
+
+                    gb_positions = all_positions[sorted(gb_ions_set)]
+                    bulk_positions = all_positions[bulk_ions_list]
+
+                    if cutoff is not None:
+                        gb_image_positions = (
+                            gb_positions[None, :, :] + periodic_shifts[:, None, :]
+                        ).reshape(
+                            -1,
+                            3,
+                        )
+                        tree = KDTree(gb_image_positions)
+                        pairs = tree.query_ball_point(bulk_positions, cutoff)
+                        gb_edge_indices = [
+                            bulk_ions_list[i] for i, nbrs in enumerate(pairs) if nbrs
+                        ]
+                    else:
+                        n_atoms = len(all_positions)
+                        all_image_positions = (
+                            all_positions[None, :, :] + periodic_shifts[:, None, :]
+                        ).reshape(
+                            -1,
+                            3,
+                        )
+                        all_image_to_index = np.tile(np.arange(n_atoms), n_images)
+                        all_tree = KDTree(all_image_positions)
+                        gb_edge_indices = []
+                        total_image_atoms = len(all_image_positions)
+
+                        for bulk_index in bulk_ions_list:
+                            k = min(total_image_atoms, nearest_n + n_images)
+                            unique_neighbors: list[int] = []
+                            while True:
+                                _, image_neighbor_indices = all_tree.query(
+                                    all_positions[bulk_index],
+                                    k=k,
+                                )
+                                image_neighbor_indices = np.atleast_1d(image_neighbor_indices)
+                                unique_neighbors = []
+                                seen = {bulk_index}
+
+                                for image_neighbor_index in image_neighbor_indices:
+                                    neighbor_index = int(
+                                        all_image_to_index[int(image_neighbor_index)],
+                                    )
+                                    if neighbor_index in seen:
+                                        continue
+                                    seen.add(neighbor_index)
+                                    unique_neighbors.append(neighbor_index)
+                                    if len(unique_neighbors) == nearest_n:
+                                        break
+
+                                if len(unique_neighbors) >= nearest_n or k == total_image_atoms:
+                                    break
+                                k = min(total_image_atoms, k * 2)
+
+                            if any(
+                                neighbor_index in gb_ions_set for neighbor_index in unique_neighbors
+                            ):
+                                gb_edge_indices.append(bulk_index)
+
+                    ids = np.ravel(self.pylmp.lmp.numpy.extract_atom("id"))
+                    if return_type == "Identifier":
+                        gb_edge_ions = [int(ids[i]) for i in gb_edge_indices]
+                    else:
+                        gb_edge_ions = list(gb_edge_indices)
+            case _:
+                raise not_implemented(self.backend)
         return gb_edge_ions
 
     def set_gb_type(self) -> None:
@@ -1293,20 +1334,23 @@ class GBStructure:
         Returns:
             fraction (float): Fraction of grain boundary ions.
         """
-        if self.backend == "ovito":
-            fraction = len(self.get_non_crystalline_atoms(mode)) / len(
-                self.data.particles["Particle Identifier"],
-            )
-            warnings.warn(
-                "Using all particles with a particle identifier as the base.",
-                stacklevel=2,
-            )
-        elif self.backend == "lammps":
-            check_lammps_world_size(self.pylmp, "get_gb_fraction")
-            n_atoms = self.pylmp.system.natoms
-            fraction = 0.0 if n_atoms == 0 else len(self.get_non_crystalline_atoms(mode)) / n_atoms
-        else:
-            raise not_implemented(self.backend)
+        match self.backend:
+            case "ovito":
+                fraction = len(self.get_non_crystalline_atoms(mode)) / len(
+                    self.data.particles["Particle Identifier"],
+                )
+                warnings.warn(
+                    "Using all particles with a particle identifier as the base.",
+                    stacklevel=2,
+                )
+            case "lammps":
+                check_lammps_world_size(self.pylmp, "get_gb_fraction")
+                n_atoms = self.pylmp.system.natoms
+                fraction = (
+                    0.0 if n_atoms == 0 else len(self.get_non_crystalline_atoms(mode)) / n_atoms
+                )
+            case _:
+                raise not_implemented(self.backend)
         return fraction
 
     # TODO @ab5424: Rename to particles
@@ -1321,51 +1365,39 @@ class GBStructure:
         Returns:
             List of particles of the specified type.
         """
-        if self.backend == "ovito":
-            # Currently doesn't work!
-            # def assign_particle_types(frame, data):
-            #     atom_types = data.particles_.particle_types_
-            #
-            # self.pipeline.modifiers.append(assign_particle_types)
-            # self.set_analysis()
-            if return_type == "Identifier":
-                atom_list = [
-                    i[0]
-                    for i in zip(
-                        self.data.particles["Particle Identifier"],
-                        self.data.particles["Particle Type"],
-                        strict=True,
-                    )
-                    if i[1] == atom_type
-                ]
-            elif return_type == "Indices":
-                atom_list = list(np.where(self.data.particles["Particle Type"] == atom_type)[0])
-            else:
-                raise invalid_return_type(return_type)
-            # df_temp = pd.DataFrame(
-            #     list(
-            #         zip(
-            #             self.data.particles["Particle Identifier"],
-            #             self.data.particles["Particle Type"],
-            #         )
-            #     ),
-            #     columns=["Particle Identifier", "Particle Type"],
-            # )
-            # df_atom = df_temp[df_temp["Particle Type"].eq(atom_type)]
-            # return list(df_atom["Particle Identifier"])
+        match self.backend:
+            case "ovito":
+                match return_type:
+                    case "Identifier":
+                        atom_list = [
+                            i[0]
+                            for i in zip(
+                                self.data.particles["Particle Identifier"],
+                                self.data.particles["Particle Type"],
+                                strict=True,
+                            )
+                            if i[1] == atom_type
+                        ]
+                    case "Indices":
+                        atom_list = list(
+                            np.where(self.data.particles["Particle Type"] == atom_type)[0],
+                        )
+                    case _:
+                        raise invalid_return_type(return_type)
 
-        elif self.backend == "lammps":
-            check_lammps_world_size(self.pylmp, "get_type")
-            ids = np.ravel(self.pylmp.lmp.numpy.extract_atom("id"))
-            atom_types = np.ravel(self.pylmp.lmp.numpy.extract_atom("type"))
-            if return_type == "Identifier":
-                atom_list = ids[atom_types == atom_type].tolist()
-            elif return_type == "Indices":
-                atom_list = np.where(atom_types == atom_type)[0].tolist()
-            else:
-                raise invalid_return_type(return_type)
-        else:
-            raise not_implemented(self.backend)
+            case "lammps":
+                check_lammps_world_size(self.pylmp, "get_type")
+                ids = np.ravel(self.pylmp.lmp.numpy.extract_atom("id"))
+                atom_types = np.ravel(self.pylmp.lmp.numpy.extract_atom("type"))
+                match return_type:
+                    case "Identifier":
+                        atom_list = ids[atom_types == atom_type].tolist()
+                    case "Indices":
+                        atom_list = np.where(atom_types == atom_type)[0].tolist()
+                    case _:
+                        raise invalid_return_type(return_type)
+            case _:
+                raise not_implemented(self.backend)
         return atom_list
 
     def get_tilt_angle(
@@ -1557,12 +1589,14 @@ class GBStructureTimeseries(GBStructure):
             NotImplementedError: When the current backend does not support
                 this property.
         """
-        if self.backend == "ovito":
-            return self.pipeline.source.num_frames
-        if self.backend == "ase":
-            return len(self.data.atoms)
-        msg = f"num_frames is not supported for the '{self.backend}' backend."
-        raise NotImplementedError(msg)
+        match self.backend:
+            case "ovito":
+                return self.pipeline.source.num_frames
+            case "ase":
+                return len(self.data.atoms)
+            case _:
+                msg = f"num_frames is not supported for the '{self.backend}' backend."
+                raise NotImplementedError(msg)
 
     def get_frame(self, frame_idx: int) -> GBStructure:
         """Return a single frame as a :class:`GBStructure` instance.
@@ -1583,30 +1617,32 @@ class GBStructureTimeseries(GBStructure):
                 "across backends."
             )
             raise ValueError(msg)
-        if self.backend == "ovito":
-            frame_gbs: GBStructure = GBStructure.__new__(GBStructure)
-            frame_gbs.backend = self.backend
-            frame_gbs.filename = self.filename
-            frame_gbs.pipeline = (
-                self.pipeline.clone() if hasattr(self.pipeline, "clone") else self.pipeline
-            )
-            frame_gbs.data = frame_gbs.pipeline.compute(frame=frame_idx)
-            return frame_gbs
-        if self.backend == "ase":
-            if frame_idx >= len(self.data.atoms):
-                msg = (
-                    f"frame_idx={frame_idx} is out of range for a timeseries "
-                    f"with {len(self.data.atoms)} frame(s)."
+        match self.backend:
+            case "ovito":
+                frame_gbs: GBStructure = GBStructure.__new__(GBStructure)
+                frame_gbs.backend = self.backend
+                frame_gbs.filename = self.filename
+                frame_gbs.pipeline = (
+                    self.pipeline.clone() if hasattr(self.pipeline, "clone") else self.pipeline
                 )
-                raise ValueError(msg)
-            frame_gbs = GBStructure.__new__(GBStructure)
-            frame_gbs.backend = self.backend
-            frame_gbs.filename = self.filename
-            frame_gbs.data = types.SimpleNamespace()
-            frame_gbs.data.atoms = self.data.atoms[frame_idx]
-            frame_gbs.data.selection = []
-            return frame_gbs
-        raise not_implemented(self.backend)
+                frame_gbs.data = frame_gbs.pipeline.compute(frame=frame_idx)
+                return frame_gbs
+            case "ase":
+                if frame_idx >= len(self.data.atoms):
+                    msg = (
+                        f"frame_idx={frame_idx} is out of range for a timeseries "
+                        f"with {len(self.data.atoms)} frame(s)."
+                    )
+                    raise ValueError(msg)
+                frame_gbs = GBStructure.__new__(GBStructure)
+                frame_gbs.backend = self.backend
+                frame_gbs.filename = self.filename
+                frame_gbs.data = types.SimpleNamespace()
+                frame_gbs.data.atoms = self.data.atoms[frame_idx]
+                frame_gbs.data.selection = []
+                return frame_gbs
+            case _:
+                raise not_implemented(self.backend)
 
     def remove_timesteps(self, timesteps_to_exclude: int) -> None:
         """Remove timesteps from the beginning of a simulation.
@@ -1656,16 +1692,17 @@ def get_finder(data, cutoff: float | None = None, nearest_n: int | None = None):
 
     finder: CutoffNeighborFinder | NearestNeighborFinder
 
-    if cutoff:
-        finder = CutoffNeighborFinder(cutoff, data)
-    elif nearest_n:
-        finder = NearestNeighborFinder(nearest_n, data)
-    elif cutoff and nearest_n:
-        msg = "Only cutoff or nearest_n can be specified."
-        raise NameError(msg)
-    else:
-        msg = "Either cutoff or nearest_n must be specified."
-        raise NameError(msg)
+    match (cutoff is not None, nearest_n is not None):
+        case (True, False):
+            finder = CutoffNeighborFinder(cutoff, data)
+        case (False, True):
+            finder = NearestNeighborFinder(nearest_n, data)
+        case (True, True):
+            msg = "Only cutoff or nearest_n can be specified."
+            raise NameError(msg)
+        case _:
+            msg = "Either cutoff or nearest_n must be specified."
+            raise NameError(msg)
     return finder
 
 
