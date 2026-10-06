@@ -374,7 +374,12 @@ class GBStructure:
             self.pipeline.modifiers.append(modify)
 
             if expand_nearest_neighbors or expand_cutoff:
-                from ovito.plugins.ParticlesPython import ExpandSelectionModifier  # noqa: PLC0415
+                try:
+                    from ovito.modifiers import ExpandSelectionModifier  # noqa: PLC0415
+                except ImportError:
+                    from ovito.plugins.ParticlesPython import (  # noqa: PLC0415
+                        ExpandSelectionModifier,
+                    )
 
                 if expand_nearest_neighbors:
                     self.pipeline.modifiers.append(
@@ -552,11 +557,18 @@ class GBStructure:
         if compute:
             self.set_analysis()
 
-    def perform_voronoi_analysis(self, compute: bool = False) -> None:
+    def perform_voronoi_analysis(
+        self,
+        compute: bool = False,
+        edge_threshold: float = 0.0,
+        use_radii: bool = False,
+    ) -> None:
         """Perform Voronoi analysis.
 
         Args:
             compute (bool): Compute results.
+            edge_threshold (float): Minimum length for an edge to be counted.
+            use_radii (bool): Use atomic radii for poly-disperse Voronoi tessellation.
             ovito:
                 bonds_vis = False
                 edge_threshold = 0.0
@@ -586,12 +598,15 @@ class GBStructure:
             None
         """
         if self.backend == "ovito":
-            from ovito.plugins.ParticlesPython import VoronoiAnalysisModifier  # noqa: PLC0415
+            try:
+                from ovito.modifiers import VoronoiAnalysisModifier  # noqa: PLC0415
+            except ImportError:
+                from ovito.plugins.ParticlesPython import VoronoiAnalysisModifier  # noqa: PLC0415
 
             voro = VoronoiAnalysisModifier(
                 compute_indices=True,
-                use_radii=False,
-                edge_threshold=0.0,
+                use_radii=use_radii,
+                edge_threshold=edge_threshold,
             )
             self.pipeline.modifiers.append(voro)
 
@@ -712,7 +727,10 @@ class GBStructure:
         Returns:
         """
         if self.backend == "ovito":
-            from ovito.plugins.ParticlesPython import AcklandJonesModifier  # noqa: PLC0415
+            try:
+                from ovito.modifiers import AcklandJonesModifier  # noqa: PLC0415
+            except ImportError:
+                from ovito.plugins.ParticlesPython import AcklandJonesModifier  # noqa: PLC0415
 
             ajm = AcklandJonesModifier()
             self.pipeline.modifiers.append(ajm)
@@ -739,9 +757,12 @@ class GBStructure:
         Returns:
         """
         if self.backend == "ovito":
-            from ovito.plugins.ParticlesPython import CentroSymmetryModifier  # noqa: PLC0415
+            try:
+                from ovito.modifiers import CentroSymmetryModifier  # noqa: PLC0415
+            except ImportError:
+                from ovito.plugins.ParticlesPython import CentroSymmetryModifier  # noqa: PLC0415
 
-            csp = CentroSymmetryModifier()
+            csp = CentroSymmetryModifier(num_neighbors=num_neighbors)
             self.pipeline.modifiers.append(csp)
 
         elif self.backend == "lammps":

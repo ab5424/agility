@@ -54,7 +54,17 @@ ase = [
 pymatgen = [
     "pymatgen>=2025",
 ]
-all = ["agility[tests,ovito,ase,pymatgen]"]
+gui = [
+    "pyside6>=6.5",
+    "matplotlib>=3.8",
+]
+molara = [
+    "molara",
+]
+all = ["agility[tests,ovito,ase,pymatgen,gui]"]
+
+[project.scripts]
+agility-gui = "agility.gui.app:main"
 
 [tool.setuptools.dynamic]
 version = {"attr" = "agility.__version__"}
@@ -99,7 +109,7 @@ possibly-unresolved-reference = "warn"
 invalid-type-form = "ignore"
 
 [tool.ty.analysis]
-replace-imports-with-any = ["ovito", "ovito.**", "lammps", "lammps.**", "ase", "ase.**", "pymatgen", "pymatgen.**"]
+replace-imports-with-any = ["ovito", "ovito.**", "lammps", "lammps.**", "ase", "ase.**", "pymatgen", "pymatgen.**", "molara", "molara.**"]
 
 [tool.ty.src]
 exclude = ["**/tests", "examples"]
