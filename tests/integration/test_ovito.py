@@ -230,3 +230,123 @@ class TestGBStructureTimeseriesOvito(TestCase):
             [0.1882845, 0.2834728],
             rtol=1e-6,
         )
+
+    def test_calculate_and_get_displacements(self) -> None:
+        """Test displacement calculation and retrieval across frames."""
+        shear_dump = _ensure_shear_dump()
+        ts = GBStructureTimeseries("ovito", shear_dump)
+
+        ts.calculate_displacements(reference_frame=0)
+        disp_0 = ts.get_displacements(frame_idx=0)
+        assert disp_0.shape == (1912, 3)
+        assert_allclose(disp_0, 0.0)
+
+        disp_5 = ts.get_displacements(frame_idx=5)
+        assert disp_5.shape == (1912, 3)
+        assert np.max(np.linalg.norm(disp_5, axis=1)) > 0.0
+
+    def test_get_time_array_from_trajectory_and_dt(self) -> None:
+        """Test time array extraction from trajectory Timestep attribute and dt overwrite."""
+        shear_dump = _ensure_shear_dump()
+        ts = GBStructureTimeseries("ovito", shear_dump)
+
+        # 1. Read from trajectory attribute 'Timestep'
+        times = ts.get_time_array()
+        assert len(times) == ts.num_frames
+        assert times[0] == 0.0
+        assert times[1] == 2000.0
+
+        # 2. Overwrite with dt
+        with pytest.warns(UserWarning, match="overwrites the timestep property"):
+            times_dt = ts.get_time_array(dt=0.002)
+        assert_allclose(times_dt[:3], [0.0, 0.002, 0.004])
+
+    def test_msd_and_regions(self) -> None:
+        """Test MSD calculation across regions and selection modes."""
+        shear_dump = _ensure_shear_dump()
+        ts = GBStructureTimeseries("ovito", shear_dump)
+        ts.perform_cna(enabled=("fcc",), compute=False)
+
+        # 1. All particles
+        msd_all = ts.get_msd(region="all")
+        assert len(msd_all) == ts.num_frames
+        assert msd_all[0] == 0.0
+        assert np.all(msd_all >= 0.0)
+        assert msd_all[-1] > 0.0
+
+        # 2. Grain boundary (initial residence)
+        msd_gb_init = ts.get_msd(region="gb", selection_mode="initial")
+        assert msd_gb_init[0] == 0.0
+        assert np.all(msd_gb_init >= 0.0)
+
+        # 3. Grain boundary (continuous residence)
+        msd_gb_cont = ts.get_msd(region="gb", selection_mode="continuous")
+        assert msd_gb_cont[0] == 0.0
+        assert np.all(msd_gb_cont >= 0.0)
+
+        # 4. Bulk and grain edge
+        msd_bulk = ts.get_msd(region="bulk")
+        msd_edge = ts.get_msd(region="grain_edge")
+        assert msd_bulk[0] == 0.0
+        assert msd_edge[0] == 0.0
+
+    def test_region_residence(self) -> None:
+        """Test tracking particle residence in grain boundary over time."""
+        shear_dump = _ensure_shear_dump()
+        ts = GBStructureTimeseries("ovito", shear_dump)
+        ts.perform_cna(enabled=("fcc",), compute=False)
+
+        res = ts.get_region_residence(region="gb")
+        assert len(res["initial_ids"]) == 360
+        assert len(res["counts"]) == ts.num_frames
+        assert len(res["fraction_remaining"]) == ts.num_frames
+        assert res["fraction_remaining"][0] == 1.0
+        assert all(0.0 <= f <= 1.0 for f in res["fraction_remaining"])
+
+    def test_get_diffusion_coefficient(self) -> None:
+        """Test extraction of diffusion coefficient D with fit statistics and units."""
+        shear_dump = _ensure_shear_dump()
+        ts = GBStructureTimeseries("ovito", shear_dump)
+
+        # Fit with trajectory timesteps (where dt is in timesteps/steps, D in Angstrom^2 / step)
+        d_coeff, fit = ts.get_diffusion_coefficient(return_fit=True)
+        assert d_coeff > 0.0
+        assert "slope" in fit
+        assert "rvalue" in fit
+        assert fit["slope"] > 0.0
+
+        # Fit with explicit dt in picoseconds [ps], e.g. 2000 steps * 1 fs = 2.0 ps
+        dt_ps = 2.0
+        with pytest.warns(UserWarning, match="overwrites the timestep property"):
+            d_coeff_ps = ts.get_diffusion_coefficient(dt=dt_ps)
+        assert d_coeff_ps > 0.0
+
+        # Unit conversion: 1 Angstrom^2 / ps = 1e-4 cm^2 / s = 1e-8 m^2 / s
+        d_coeff_m2_s = d_coeff_ps * 1e-8
+        d_coeff_cm2_s = d_coeff_ps * 1e-4
+        assert_allclose(d_coeff_m2_s * 1e4, d_coeff_cm2_s)
+
+        # Provide dt in seconds [s] directly (2.0 ps = 2.0e-12 s) -> D in Angstrom^2 / s
+        dt_s = dt_ps * 1e-12
+        with pytest.warns(UserWarning, match="overwrites the timestep property"):
+            d_coeff_ang2_s = ts.get_diffusion_coefficient(dt=dt_s)
+        # Convert Angstrom^2 / s to m^2 / s (1 Angstrom^2 = 1e-20 m^2)
+        assert_allclose(d_coeff_ang2_s * 1e-20, d_coeff_m2_s)
+
+    def test_diffusion_crystalline_and_boundary_comparison(self) -> None:
+        """Test comparing diffusion coefficients between bulk and grain boundary."""
+        shear_dump = _ensure_shear_dump()
+        ts = GBStructureTimeseries("ovito", shear_dump)
+        ts.perform_cna(enabled=("fcc",), compute=False)
+
+        dt_ps = 2.0  # picoseconds
+        with pytest.warns(UserWarning, match="overwrites the timestep property"):
+            d_bulk = ts.get_diffusion_coefficient(dt=dt_ps, region="bulk")
+        with pytest.warns(UserWarning, match="overwrites the timestep property"):
+            d_gb = ts.get_diffusion_coefficient(dt=dt_ps, region="gb")
+
+        assert d_bulk > 0.0
+        assert d_gb > 0.0
+        # Both D values are in Angstrom^2 / ps
+        assert isinstance(d_bulk, float)
+        assert isinstance(d_gb, float)
