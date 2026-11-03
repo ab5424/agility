@@ -1460,11 +1460,9 @@ class GBStructure:
             convert_to: Backend to convert to.
         """
         if self.backend == "lammps":
-            import datetime  # noqa: PLC0415
+            import datetime as dt  # noqa: PLC0415
 
-            filename = (
-                datetime.datetime.now(tz=datetime.timezone.utc).strftime("%d%m%Y_%H%M%S") + ".lmp"
-            )
+            filename = dt.datetime.now(tz=dt.timezone.utc).strftime("%d%m%Y_%H%M%S") + ".lmp"
             self.save_structure("filename", file_type="data")
             if convert_to == "ovito":
                 try:
