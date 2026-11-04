@@ -16,9 +16,12 @@ from agility.analysis import (
     GBStructure,
     GBStructureTimeseries,
     check_lammps_world_size,
+    diffusion_regions,
     get_finder,
+    handle_missing_modes,
     invalid_return_type,
     not_implemented,
+    selection_modes,
 )
 
 PYTHON_VERSION = sys.version_info
@@ -1916,3 +1919,515 @@ class TestGBStructureTimeseriesReadFile(TestCase):
         with patch.object(GBStructure, "read_file") as mock_super_read:
             ts.read_file("traj.dump")
             mock_super_read.assert_called_once_with("traj.dump")
+
+
+# ---------------------------------------------------------------------------
+# GBStructureTimeseries diffusion methods (unit tests)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+class TestGBStructureTimeseriesDiffusionNotImplemented(TestCase):
+    """Test that diffusion methods raise NotImplementedError on unsupported backends."""
+
+    def setUp(self) -> None:
+        """Set up test instance with unsupported backend."""
+        self.ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        self.ts.backend = "ase"
+        self.ts.data = None
+        self.ts.timestamps = None
+        self.ts.dt = None
+
+    def test_calculate_displacements_raises(self) -> None:
+        """calculate_displacements must raise NotImplementedError for non-ovito."""
+        with pytest.raises(NotImplementedError):
+            self.ts.calculate_displacements()
+
+    def test_get_time_array_raises(self) -> None:
+        """get_time_array must raise NotImplementedError for non-ovito."""
+        with pytest.raises(NotImplementedError):
+            self.ts.get_time_array()
+
+    def test_get_displacements_raises(self) -> None:
+        """get_displacements must raise NotImplementedError for non-ovito."""
+        with pytest.raises(NotImplementedError):
+            self.ts.get_displacements(0)
+
+    def test_get_msd_raises(self) -> None:
+        """get_msd must raise NotImplementedError for non-ovito."""
+        with pytest.raises(NotImplementedError):
+            self.ts.get_msd()
+
+    def test_get_diffusion_coefficient_raises(self) -> None:
+        """get_diffusion_coefficient must raise NotImplementedError for non-ovito."""
+        with pytest.raises(NotImplementedError):
+            self.ts.get_diffusion_coefficient()
+
+    def test_get_region_residence_raises(self) -> None:
+        """get_region_residence must raise NotImplementedError for non-ovito."""
+        with pytest.raises(NotImplementedError):
+            self.ts.get_region_residence()
+
+
+@pytest.mark.unit
+class TestGBStructureTimeseriesGetTimeArray(TestCase):
+    """Unit tests for get_time_array logic."""
+
+    def test_missing_timestep_and_dt_raises_value_error(self) -> None:
+        """ValueError must be raised when neither trajectory timesteps nor dt is provided."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "ovito"
+        ts.timestamps = None
+        ts.dt = None
+        mock_pipeline = MagicMock()
+        mock_pipeline.source.num_frames = 2
+        d0 = MagicMock()
+        d0.attributes = {}
+        mock_pipeline.compute.return_value = d0
+        ts.pipeline = mock_pipeline
+
+        with pytest.raises(ValueError, match="No timestep information"):
+            ts.get_time_array()
+
+    def test_provided_dt_used_when_no_trajectory_timesteps(self) -> None:
+        """User-provided dt parameter must be used to construct time array."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "ovito"
+        ts.timestamps = None
+        ts.dt = None
+        mock_pipeline = MagicMock()
+        mock_pipeline.source.num_frames = 3
+        d0 = MagicMock()
+        d0.attributes = {}
+        mock_pipeline.compute.return_value = d0
+        ts.pipeline = mock_pipeline
+
+        times = ts.get_time_array(dt=2.5)
+        np.testing.assert_allclose(times, [0.0, 2.5, 5.0])
+
+    def test_provided_dt_overwrites_trajectory_timesteps_with_warning(self) -> None:
+        """User-provided dt parameter must overwrite trajectory timesteps with a warning."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "ovito"
+        ts.timestamps = [0, 100, 200]
+        ts.dt = None
+        mock_pipeline = MagicMock()
+        mock_pipeline.source.num_frames = 3
+        ts.pipeline = mock_pipeline
+
+        with pytest.warns(UserWarning, match="overwrites the timestep property"):
+            times = ts.get_time_array(dt=1.0)
+        np.testing.assert_allclose(times, [0.0, 1.0, 2.0])
+
+    def test_trajectory_timestamps_used_when_no_dt_provided(self) -> None:
+        """Trajectory timestamps must be used when no dt is provided."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "ovito"
+        ts.timestamps = [100, 250, 400]
+        ts.dt = None
+        mock_pipeline = MagicMock()
+        mock_pipeline.source.num_frames = 3
+        ts.pipeline = mock_pipeline
+
+        times = ts.get_time_array()
+        np.testing.assert_allclose(times, [0.0, 150.0, 300.0])
+
+
+@pytest.mark.unit
+class TestGBStructureTimeseriesArgumentValidation(TestCase):
+    """Unit tests for diffusion argument validation and selection modes."""
+
+    def test_literal_types_exported(self) -> None:
+        """Verify diffusion Literal types are defined and importable."""
+        assert diffusion_regions is not None
+        assert selection_modes is not None
+        assert handle_missing_modes is not None
+
+    def test_invalid_selection_mode_raises_value_error(self) -> None:
+        """Invalid selection_mode must raise ValueError in match-case routing."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "ovito"
+        with (
+            patch.object(ts, "calculate_displacements"),
+            pytest.raises(ValueError, match="Invalid selection_mode"),
+        ):
+            ts.get_displacements(0, selection_mode="bogus")  # type: ignore[arg-type]
+
+    def test_invalid_region_type_raises_type_error(self) -> None:
+        """Non-string and non-sequence region must raise TypeError."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "ovito"
+        mock_pipeline = MagicMock()
+        mock_data = MagicMock()
+        mock_data.particles = {"Particle Identifier": np.array([1, 2, 3])}
+        mock_pipeline.compute.return_value = mock_data
+        ts.pipeline = mock_pipeline
+        with (
+            patch.object(ts, "calculate_displacements"),
+            pytest.raises(TypeError, match="Unsupported type for region"),
+        ):
+            ts.get_displacements(0, region=12345)  # type: ignore[arg-type]
+
+    def test_invalid_region_string_raises_value_error(self) -> None:
+        """Unrecognized region string must raise ValueError in match-case routing."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "ovito"
+        mock_pipeline = MagicMock()
+        mock_data = MagicMock()
+        mock_data.particles = {"Particle Identifier": np.array([1, 2, 3])}
+        mock_pipeline.compute.return_value = mock_data
+        ts.pipeline = mock_pipeline
+        with (
+            patch.object(ts, "calculate_displacements"),
+            pytest.raises(ValueError, match="Unknown region"),
+        ):
+            ts.get_displacements(0, region="unknown_zone")  # type: ignore[arg-type]
+
+    def test_fit_frames_less_than_two_raises_value_error(self) -> None:
+        """Requesting a fit slice with fewer than 2 frames must raise ValueError."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "ovito"
+        ts.pipeline = MagicMock()
+        ts.pipeline.source.num_frames = 1
+        with (
+            patch.object(ts, "get_time_array", return_value=np.array([0.0])),
+            patch.object(ts, "get_msd", return_value=np.array([0.0])),
+            pytest.raises(ValueError, match="At least 2 frames required"),
+        ):
+            ts.get_diffusion_coefficient(fit_frames=(0, 1))
+
+    def test_fit_frames_invalid_tuple_length_raises_value_error(self) -> None:
+        """fit_frames not of length 2 must raise ValueError."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "ovito"
+        ts.pipeline = MagicMock()
+        ts.pipeline.source.num_frames = 5
+        with (
+            patch.object(ts, "get_time_array", return_value=np.zeros(5)),
+            patch.object(ts, "get_msd", return_value=np.zeros(5)),
+            pytest.raises(ValueError, match="must be a tuple of"),
+        ):
+            ts.get_diffusion_coefficient(fit_frames=(1, 2, 3))  # type: ignore[arg-type]
+
+    def test_fit_frames_negative_start_raises_value_error(self) -> None:
+        """Negative start in fit_frames must raise ValueError."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "ovito"
+        ts.pipeline = MagicMock()
+        ts.pipeline.source.num_frames = 5
+        with (
+            patch.object(ts, "get_time_array", return_value=np.zeros(5)),
+            patch.object(ts, "get_msd", return_value=np.zeros(5)),
+            pytest.raises(ValueError, match=r"start index .* must be non-negative"),
+        ):
+            ts.get_diffusion_coefficient(fit_frames=(-1, 3))
+
+    def test_fit_frames_start_exceeds_num_frames_raises_value_error(self) -> None:
+        """Start in fit_frames >= num_frames must raise ValueError."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "ovito"
+        ts.pipeline = MagicMock()
+        ts.pipeline.source.num_frames = 5
+        with (
+            patch.object(ts, "get_time_array", return_value=np.zeros(5)),
+            patch.object(ts, "get_msd", return_value=np.zeros(5)),
+            pytest.raises(ValueError, match=r"start index .* exceeds the number of frames"),
+        ):
+            ts.get_diffusion_coefficient(fit_frames=(5, 7))
+
+    def test_fit_frames_end_exceeds_num_frames_raises_value_error(self) -> None:
+        """End in fit_frames > num_frames must raise ValueError."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "ovito"
+        ts.pipeline = MagicMock()
+        ts.pipeline.source.num_frames = 5
+        with (
+            patch.object(ts, "get_time_array", return_value=np.zeros(5)),
+            patch.object(ts, "get_msd", return_value=np.zeros(5)),
+            pytest.raises(ValueError, match=r"end index .* exceeds the number of frames"),
+        ):
+            ts.get_diffusion_coefficient(fit_frames=(0, 10))
+
+    def test_fit_frames_start_greater_or_equal_end_raises_value_error(self) -> None:
+        """Start >= end in fit_frames must raise ValueError."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "ovito"
+        ts.pipeline = MagicMock()
+        ts.pipeline.source.num_frames = 5
+        with (
+            patch.object(ts, "get_time_array", return_value=np.zeros(5)),
+            patch.object(ts, "get_msd", return_value=np.zeros(5)),
+            pytest.raises(ValueError, match="must be strictly less than"),
+        ):
+            ts.get_diffusion_coefficient(fit_frames=(3, 3))
+
+    def test_reference_frame_out_of_bounds_raises_value_error(self) -> None:
+        """reference_frame out of bounds when fit_frames is None must raise ValueError."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "ovito"
+        ts.pipeline = MagicMock()
+        ts.pipeline.source.num_frames = 5
+        with (
+            patch.object(ts, "get_time_array", return_value=np.zeros(5)),
+            patch.object(ts, "get_msd", return_value=np.zeros(5)),
+            pytest.raises(ValueError, match="out of bounds"),
+        ):
+            ts.get_diffusion_coefficient(reference_frame=-1)
+
+        with (
+            patch.object(ts, "get_time_array", return_value=np.zeros(5)),
+            patch.object(ts, "get_msd", return_value=np.zeros(5)),
+            pytest.raises(ValueError, match="out of bounds"),
+        ):
+            ts.get_diffusion_coefficient(reference_frame=5)
+
+    def test_handle_missing_invalid_mode_raises_value_error(self) -> None:
+        """Invalid handle_missing mode must raise ValueError."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "ovito"
+        with pytest.raises(ValueError, match="Invalid handle_missing mode"):
+            ts.get_displacements(0, handle_missing="invalid_mode")  # type: ignore[arg-type]
+        with pytest.raises(ValueError, match="Invalid handle_missing mode"):
+            ts.get_msd(handle_missing="invalid_mode")  # type: ignore[arg-type]
+        with pytest.raises(ValueError, match="Invalid handle_missing mode"):
+            ts.get_diffusion_coefficient(handle_missing="invalid_mode")  # type: ignore[arg-type]
+
+    def test_get_displacements_handle_missing_error(self) -> None:
+        """Missing particle in frame must raise ValueError under handle_missing='error'."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "ovito"
+        mock_pipeline = MagicMock()
+        mock_data = MagicMock()
+        mock_data.particles = {
+            "Particle Identifier": np.array([1]),
+            "Displacement": np.array([[1.0, 0.0, 0.0]]),
+        }
+        mock_pipeline.compute.return_value = mock_data
+        ts.pipeline = mock_pipeline
+        with (
+            patch.object(ts, "calculate_displacements"),
+            patch.object(ts, "_get_selected_particle_ids", return_value=[1, 2]),
+            pytest.raises(ValueError, match="is missing 1 of 2 particles"),
+        ):
+            ts.get_displacements(1, handle_missing="error")
+
+    def test_get_displacements_handle_missing_drop(self) -> None:
+        """Missing particle with handle_missing='drop' warns and returns surviving displacements."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "ovito"
+        mock_pipeline = MagicMock()
+        mock_data = MagicMock()
+        mock_data.particles = {
+            "Particle Identifier": np.array([1]),
+            "Displacement": np.array([[1.0, 2.0, 3.0]]),
+        }
+        mock_pipeline.compute.return_value = mock_data
+        ts.pipeline = mock_pipeline
+        with (
+            patch.object(ts, "calculate_displacements"),
+            patch.object(ts, "_get_selected_particle_ids", return_value=[1, 2]),
+            pytest.warns(UserWarning, match="is missing 1 of 2 particles"),
+        ):
+            disp = ts.get_displacements(1, handle_missing="drop")
+        np.testing.assert_array_equal(disp, np.array([[1.0, 2.0, 3.0]]))
+
+    def test_get_displacements_handle_missing_nan(self) -> None:
+        """Missing particle with handle_missing='nan' returns array with NaNs for missing."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "ovito"
+        mock_pipeline = MagicMock()
+        mock_data = MagicMock()
+        mock_data.particles = {
+            "Particle Identifier": np.array([2]),
+            "Displacement": np.array([[2.0, 3.0, 4.0]]),
+        }
+        mock_pipeline.compute.return_value = mock_data
+        ts.pipeline = mock_pipeline
+        with (
+            patch.object(ts, "calculate_displacements"),
+            patch.object(ts, "_get_selected_particle_ids", return_value=[1, 2]),
+        ):
+            disp = ts.get_displacements(1, handle_missing="nan")
+        assert disp.shape == (2, 3)
+        assert np.all(np.isnan(disp[0]))
+        np.testing.assert_array_equal(disp[1], np.array([2.0, 3.0, 4.0]))
+
+    def test_get_msd_handle_missing_error(self) -> None:
+        """Missing particle in frame must raise ValueError under handle_missing='error'."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "ovito"
+        mock_pipeline = MagicMock()
+        mock_pipeline.source.num_frames = 2
+
+        frame0 = MagicMock()
+        frame0.particles = {
+            "Particle Identifier": np.array([1, 2]),
+            "Displacement": np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]),
+        }
+        frame1 = MagicMock()
+        frame1.particles = {
+            "Particle Identifier": np.array([1]),
+            "Displacement": np.array([[1.0, 0.0, 0.0]]),
+        }
+        mock_pipeline.compute.side_effect = [frame0, frame1]
+        ts.pipeline = mock_pipeline
+
+        with (
+            patch.object(ts, "calculate_displacements"),
+            patch.object(ts, "_get_selected_particle_ids", return_value=[1, 2]),
+            pytest.raises(ValueError, match="Frame 1 is missing 1 of 2 particles"),
+        ):
+            ts.get_msd(handle_missing="error")
+
+    def test_get_msd_handle_missing_nan(self) -> None:
+        """Missing particle with handle_missing='nan' sets msd to nan (not 0.0)."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "ovito"
+        mock_pipeline = MagicMock()
+        mock_pipeline.source.num_frames = 3
+
+        frame0 = MagicMock()
+        frame0.particles = {
+            "Particle Identifier": np.array([1, 2]),
+            "Displacement": np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]),
+        }
+        frame1 = MagicMock()
+        frame1.particles = {
+            "Particle Identifier": np.array([1, 2]),
+            "Displacement": np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]),
+        }
+        frame2 = MagicMock()
+        frame2.particles = {
+            "Particle Identifier": np.array([1]),
+            "Displacement": np.array([[2.0, 0.0, 0.0]]),
+        }
+        mock_pipeline.compute.side_effect = [frame0, frame1, frame2]
+        ts.pipeline = mock_pipeline
+
+        with (
+            patch.object(ts, "calculate_displacements"),
+            patch.object(ts, "_get_selected_particle_ids", return_value=[1, 2]),
+        ):
+            msd = ts.get_msd(handle_missing="nan")
+
+        assert msd.shape == (3,)
+        assert msd[0] == 0.0
+        assert msd[1] == 1.0
+        assert np.isnan(msd[2])
+
+    def test_get_msd_handle_missing_drop(self) -> None:
+        """handle_missing='drop' warns and averages surviving particles, sets nan if none."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "ovito"
+        mock_pipeline = MagicMock()
+        mock_pipeline.source.num_frames = 3
+
+        frame0 = MagicMock()
+        frame0.particles = {
+            "Particle Identifier": np.array([1, 2]),
+            "Displacement": np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]),
+        }
+        frame1 = MagicMock()
+        frame1.particles = {
+            "Particle Identifier": np.array([1]),
+            "Displacement": np.array([[2.0, 0.0, 0.0]]),
+        }
+        frame2 = MagicMock()
+        frame2.particles = {
+            "Particle Identifier": np.array([]),
+            "Displacement": np.empty((0, 3)),
+        }
+        mock_pipeline.compute.side_effect = [frame0, frame1, frame2]
+        ts.pipeline = mock_pipeline
+
+        with (
+            patch.object(ts, "calculate_displacements"),
+            patch.object(ts, "_get_selected_particle_ids", return_value=[1, 2]),
+            pytest.warns(UserWarning, match="Frame 1 is missing 1 of 2 particles"),
+        ):
+            msd = ts.get_msd(handle_missing="drop")
+
+        assert msd.shape == (3,)
+        assert msd[0] == 0.0
+        assert msd[1] == 4.0
+        assert np.isnan(msd[2])
+
+    def test_get_diffusion_coefficient_with_nan_frames(self) -> None:
+        """get_diffusion_coefficient ignores NaN frames during linear fit."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "ovito"
+        ts.pipeline = MagicMock()
+        ts.pipeline.source.num_frames = 4
+
+        times = np.array([0.0, 1.0, 2.0, 3.0])
+        msd = np.array([0.0, 6.0, 12.0, np.nan])
+
+        with (
+            patch.object(ts, "get_time_array", return_value=times),
+            patch.object(ts, "get_msd", return_value=msd),
+        ):
+            d_coeff = ts.get_diffusion_coefficient(handle_missing="nan")
+            assert np.isclose(d_coeff, 1.0)
+
+    def test_get_diffusion_coefficient_fewer_than_two_valid_frames(self) -> None:
+        """Fewer than 2 valid frames after NaN filtering must raise ValueError."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "ovito"
+        ts.pipeline = MagicMock()
+        ts.pipeline.source.num_frames = 3
+
+        times = np.array([0.0, 1.0, 2.0])
+        msd = np.array([0.0, np.nan, np.nan])
+
+        with (
+            patch.object(ts, "get_time_array", return_value=times),
+            patch.object(ts, "get_msd", return_value=msd),
+            pytest.raises(ValueError, match="At least 2 valid frames required"),
+        ):
+            ts.get_diffusion_coefficient(handle_missing="nan")
+
+    def test_missing_particle_identifier_raises_in_get_displacements(self) -> None:
+        """get_displacements must reject trajectories lacking 'Particle Identifier'."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "ovito"
+        mock_pipeline = MagicMock()
+        mock_data = MagicMock()
+        mock_data.particles = {"Displacement": np.array([[1.0, 0.0, 0.0]])}
+        mock_pipeline.compute.return_value = mock_data
+        ts.pipeline = mock_pipeline
+        with (
+            patch.object(ts, "calculate_displacements"),
+            patch.object(ts, "_get_selected_particle_ids", return_value=[0]),
+            pytest.raises(ValueError, match="lack the 'Particle Identifier' property"),
+        ):
+            ts.get_displacements(0)
+
+    def test_missing_particle_identifier_raises_in_get_msd(self) -> None:
+        """get_msd must reject trajectories lacking 'Particle Identifier'."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "ovito"
+        mock_pipeline = MagicMock()
+        mock_pipeline.source.num_frames = 1
+        mock_data = MagicMock()
+        mock_data.particles = {"Displacement": np.array([[0.0, 0.0, 0.0]])}
+        mock_pipeline.compute.return_value = mock_data
+        ts.pipeline = mock_pipeline
+        with (
+            patch.object(ts, "calculate_displacements"),
+            patch.object(ts, "_get_selected_particle_ids", return_value=[0]),
+            pytest.raises(ValueError, match="lack the 'Particle Identifier' property"),
+        ):
+            ts.get_msd()
+
+    def test_missing_particle_identifier_raises_in_get_region_residence(self) -> None:
+        """get_region_residence must reject trajectories lacking 'Particle Identifier'."""
+        ts = GBStructureTimeseries.__new__(GBStructureTimeseries)
+        ts.backend = "ovito"
+        mock_pipeline = MagicMock()
+        mock_pipeline.source.num_frames = 1
+        mock_data = MagicMock()
+        mock_data.particles = {}
+        mock_pipeline.compute.return_value = mock_data
+        ts.pipeline = mock_pipeline
+        with pytest.raises(ValueError, match="lack the 'Particle Identifier' property"):
+            ts.get_region_residence()
