@@ -145,23 +145,24 @@ def plot_mdf(
         msg = "at least 2 orientations are required to compute pairwise misorientations"
         raise ValueError(msg)
 
-    if symmetry is None:
-        # Memory-efficient pairwise dot products: compute only the
-        # upper-triangle pairs without materialising the full (N, N) matrix.
-        # Antipodal quaternions (q and -q) are handled by taking the absolute
-        # value before arccos.
-        dots = np.clip(np.abs(np.einsum("ij,ij->i", q[idx_i], q[idx_j])), 0.0, 1.0)
-        angles_deg = np.degrees(2.0 * np.arccos(dots))
-        title = "Misorientation Distribution Function (raw, no symmetry reduction)"
-    elif symmetry == "cubic":
-        angles_deg = cubic_disorientation_angles(q[idx_i], q[idx_j])
-        title = "Misorientation Distribution Function (cubic disorientation)"
-    else:
-        msg = (
-            f"unsupported symmetry '{symmetry}'. "
-            'Supported values: None (no symmetry reduction) or "cubic"'
-        )
-        raise ValueError(msg)
+    match symmetry:
+        case None:
+            # Memory-efficient pairwise dot products: compute only the
+            # upper-triangle pairs without materialising the full (N, N) matrix.
+            # Antipodal quaternions (q and -q) are handled by taking the absolute
+            # value before arccos.
+            dots = np.clip(np.abs(np.einsum("ij,ij->i", q[idx_i], q[idx_j])), 0.0, 1.0)
+            angles_deg = np.degrees(2.0 * np.arccos(dots))
+            title = "Misorientation Distribution Function (raw, no symmetry reduction)"
+        case "cubic":
+            angles_deg = cubic_disorientation_angles(q[idx_i], q[idx_j])
+            title = "Misorientation Distribution Function (cubic disorientation)"
+        case _:
+            msg = (
+                f"unsupported symmetry '{symmetry}'. "
+                'Supported values: None (no symmetry reduction) or "cubic"'
+            )
+            raise ValueError(msg)
 
     fig, ax = plt.subplots()
     ax.hist(angles_deg, bins=bins, density=density, edgecolor="black", alpha=0.7)
